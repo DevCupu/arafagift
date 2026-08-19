@@ -1,0 +1,25 @@
+{
+    "name": "arafahgift",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build"
+    },
+    "devDependencies": {
+        "@tailwindcss/vite": "^4.1.11",
+        "@vitejs/plugin-vue": "^6.0.0",
+        "tailwindcss": "^4.1.1",
+        "vite": "^8.0.0"
+    },
+    "dependencies": {
+        "@inertiajs/vite": "^3.0.0",
+        "@inertiajs/vue3": "^3.0.0",
+        "laravel-vite-plugin": "^3.1",
+        "lucide-vue-next": "^0.454.0",
+        "motion": "^13.1.0",
+        "motion-v": "^2.4.0",
+        "vue": "^3.5.13"
+    }
+}

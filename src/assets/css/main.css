@@ -1,0 +1,209 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   ArafahGift — Design tokens
+   Ganti nilai di sini untuk mengubah seluruh brand color system.
+   Format: channel RGB (agar mendukung opacity Tailwind: bg-forest/10)
+   ============================================================ */
+:root {
+  --c-forest: 14 52 38;        /* #0E3426  primary   */
+  --c-forest-deep: 8 32 22;    /* #082016  header/footer */
+  --c-forest-soft: 22 72 54;   /* #164836  hover      */
+  --c-olive: 82 100 58;        /* #52643A  secondary  */
+  --c-olive-light: 128 142 98; /* #808E62             */
+  --c-gold: 192 154 80;        /* #C09A50  accent     */
+  --c-gold-soft: 225 207 162;  /* #E1CFA2             */
+  --c-ivory: 246 241 232;      /* #F6F1E8  background */
+  --c-surface: 253 251 247;    /* #FDFBF7  surface    */
+  --c-sand: 232 224 208;       /* #E8E0D0             */
+  --c-line: 222 213 196;       /* #DED5C4  hairline   */
+  --c-ink: 24 40 30;           /* #18281E  text       */
+  --c-muted: 96 110 98;        /* #606E62  text muted */
+  --c-danger: 158 68 51;       /* #9E4433             */
+  --c-success: 22 120 72;      /* #167848             */
+
+  --shell-x: 1.25rem;
+}
+
+@media (min-width: 768px) {
+  :root { --shell-x: 2.5rem; }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* Smooth scrolling untuk internal anchor */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ivory font-sans text-ink antialiased;
+    font-size: 15px;
+    line-height: 1.65;
+    /* Hapus highlight tap biru di Android */
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent horizontal overflow on mobile */
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-forest;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    line-height: 1.08;
+  }
+
+  ::selection { background: rgb(var(--c-gold) / 0.25); }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-gold));
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  input, select, textarea {
+    font-family: inherit;
+    /* Pastikan tidak di-zoom iOS (minimal 16px) */
+    font-size: max(16px, 1em);
+  }
+
+  /* Tombol & link: minimal touch area 44×44px di mobile */
+  button, [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  .shell {
+    width: 100%;
+    max-width: 82rem;
+    margin-inline: auto;
+    padding-inline: var(--shell-x);
+  }
+
+  /* Eyebrow label — kiswah thread: hairline + small diamond node */
+  .eyebrow {
+    @apply flex items-center gap-3 text-eyebrow font-medium uppercase text-gold;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: rgb(var(--c-gold) / 0.55);
+    flex: none;
+  }
+  .eyebrow--center::after {
+    content: '';
+    width: 28px;
+    height: 1px;
+    background: rgb(var(--c-gold) / 0.55);
+    flex: none;
+  }
+
+  /* Signature: mihrab arch frame used for every editorial image */
+  .arch {
+    position: relative;
+    overflow: hidden;
+    border-top-left-radius: 50% 22%;
+    border-top-right-radius: 50% 22%;
+    border-bottom-left-radius: 3px;
+    border-bottom-right-radius: 3px;
+  }
+  .arch--deep {
+    border-top-left-radius: 50% 34%;
+    border-top-right-radius: 50% 34%;
+  }
+
+  .hairline { @apply border-line; }
+
+  .link-underline {
+    background-image: linear-gradient(rgb(var(--c-gold)), rgb(var(--c-gold)));
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .link-underline:hover { background-size: 100% 1px; }
+
+  .field {
+    @apply w-full border border-line bg-surface px-3.5 py-2.5 text-[0.9rem] text-ink;
+    @apply placeholder:text-muted/60 focus:border-olive focus:outline-none;
+    border-radius: 2px;
+    transition: border-color 0.2s ease;
+    /* Override font-size di base supaya tidak terlalu besar di input */
+    font-size: 16px;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[0.78rem] font-medium tracking-wide text-forest;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .grain {
+    background-image: radial-gradient(rgb(var(--c-ink) / 0.045) 0.5px, transparent 0.5px);
+    background-size: 4px 4px;
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Safe area untuk notched phones (iPhone X+, Android dengan kamera punch-hole) */
+  .pb-safe        { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .pt-safe        { padding-top: env(safe-area-inset-top, 0px); }
+  .h-safe-bottom  { height: env(safe-area-inset-bottom, 0px); }
+  .mb-safe        { margin-bottom: env(safe-area-inset-bottom, 0px); }
+
+  /* Momentum scroll untuk drawer / overlay di iOS */
+  .scroll-touch { -webkit-overflow-scrolling: touch; }
+}
+
+/* Scroll reveal (progressive enhancement — visible by default if JS/IO absent) */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1), transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal.is-in { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .reveal { opacity: 1; transform: none; }
+}
+
+/* ============================================================
+   Mobile-first overrides — breakpoint < 375px (HP sangat kecil)
+   ============================================================ */
+@media (max-width: 374px) {
+  :root { --shell-x: 0.875rem; }
+  .eyebrow::before, .eyebrow--center::after { width: 18px; }
+}
+
+/* ============================================================
+   Mobile overrides — breakpoint < 768px
+   ============================================================ */
+@media (max-width: 767px) {
+  /* Pastikan input tidak menyebabkan auto-zoom iOS */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="search"],
+  select, textarea {
+    font-size: 16px !important;
+  }
+
+  /* Sticky add-to-cart bar di mobile — safe area inset */
+  .sticky-buy-bar {
+    padding-bottom: calc(0.875rem + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Sembunyikan scroll track di drawer/overlay */
+  .overflow-y-auto { scrollbar-width: none; }
+  .overflow-y-auto::-webkit-scrollbar { display: none; }
+}
