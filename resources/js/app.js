@@ -9,7 +9,7 @@ createInertiaApp({
   title: (title) => (title ? `${title} — ArafahGift.id` : 'ArafahGift.id — Oleh-oleh Umrah & Hajj yang dipilih dengan hati'),
   resolve: async (name) => {
     const page = await resolvePageComponent(`./pages/${name}.vue`, import.meta.glob('./pages/**/*.vue'))
-    page.default.layout ??= StorefrontLayout
+    if (page.default.layout === undefined) page.default.layout = StorefrontLayout
     return page
   },
   setup({ el, App, props, plugin }) {

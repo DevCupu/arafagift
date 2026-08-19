@@ -23,10 +23,11 @@ use Illuminate\Support\Carbon;
  * @property string|null $city
  * @property string|null $customer_tag
  * @property Carbon|null $birth_date
+ * @property bool $is_admin
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'email', 'password', 'phone', 'city', 'customer_tag', 'birth_date'])]
+#[Fillable(['name', 'email', 'password', 'phone', 'city', 'customer_tag', 'birth_date', 'is_admin'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -58,6 +59,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
         ];
     }
 }

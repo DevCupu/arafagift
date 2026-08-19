@@ -27,20 +27,24 @@ Route::get('/akun/pesanan/{id}', fn (string $id) => Inertia::render('account/Ord
 Route::get('/akun/alamat', fn () => Inertia::render('account/AddressPage'))->name('account.address');
 Route::get('/akun/wishlist', fn () => Inertia::render('account/WishlistPage'))->name('account.wishlist');
 
-// ---------- Admin (still static data — deferred phase) ----------
-Route::get('/admin', fn () => Inertia::render('admin/DashboardPage'))->name('admin');
-Route::get('/admin/pesanan', fn () => Inertia::render('admin/OrdersPage'))->name('admin.orders');
-Route::get('/admin/pesanan/{id}', fn (string $id) => Inertia::render('admin/OrderDetailPage', ['id' => $id]))->name('admin.order');
-Route::get('/admin/produk', fn () => Inertia::render('admin/ProductsPage'))->name('admin.products');
-Route::get('/admin/produk/baru', fn () => Inertia::render('admin/ProductFormPage', ['slug' => null]))->name('admin.products.new');
-Route::get('/admin/produk/{slug}', fn (string $slug) => Inertia::render('admin/ProductFormPage', ['slug' => $slug]))->name('admin.products.edit');
-Route::get('/admin/kategori', fn () => Inertia::render('admin/CategoriesPage'))->name('admin.categories');
-Route::get('/admin/pelanggan', fn () => Inertia::render('admin/CustomersPage'))->name('admin.customers');
-Route::get('/admin/pelanggan/{id}', fn (string $id) => Inertia::render('admin/CustomerDetailPage', ['id' => $id]))->name('admin.customer');
-Route::get('/admin/inventori', fn () => Inertia::render('admin/InventoryPage'))->name('admin.inventory');
-Route::get('/admin/promo', fn () => Inertia::render('admin/PromotionsPage'))->name('admin.promotions');
-Route::get('/admin/konten', fn () => Inertia::render('admin/ContentPage'))->name('admin.content');
-Route::get('/admin/laporan', fn () => Inertia::render('admin/ReportsPage'))->name('admin.reports');
-Route::get('/admin/pengaturan', fn () => Inertia::render('admin/SettingsPage'))->name('admin.settings');
+// ---------- Admin (authed + must be admin) ----------
+Route::middleware(['auth', 'admin'])->group(function () {
+    Route::get('/admin', fn () => Inertia::render('admin/DashboardPage'))->name('admin');
+    Route::get('/admin/pesanan', fn () => Inertia::render('admin/OrdersPage'))->name('admin.orders');
+    Route::get('/admin/pesanan/{id}', fn (string $id) => Inertia::render('admin/OrderDetailPage', ['id' => $id]))->name('admin.order');
+    Route::get('/admin/produk', fn () => Inertia::render('admin/ProductsPage'))->name('admin.products');
+    Route::get('/admin/produk/baru', fn () => Inertia::render('admin/ProductFormPage', ['slug' => null]))->name('admin.products.new');
+    Route::get('/admin/produk/{slug}', fn (string $slug) => Inertia::render('admin/ProductFormPage', ['slug' => $slug]))->name('admin.products.edit');
+    Route::get('/admin/kategori', fn () => Inertia::render('admin/CategoriesPage'))->name('admin.categories');
+    Route::get('/admin/pelanggan', fn () => Inertia::render('admin/CustomersPage'))->name('admin.customers');
+    Route::get('/admin/pelanggan/{id}', fn (string $id) => Inertia::render('admin/CustomerDetailPage', ['id' => $id]))->name('admin.customer');
+    Route::get('/admin/inventori', fn () => Inertia::render('admin/InventoryPage'))->name('admin.inventory');
+    Route::get('/admin/promo', fn () => Inertia::render('admin/PromotionsPage'))->name('admin.promotions');
+    Route::get('/admin/konten', fn () => Inertia::render('admin/ContentPage'))->name('admin.content');
+    Route::get('/admin/laporan', fn () => Inertia::render('admin/ReportsPage'))->name('admin.reports');
+    Route::get('/admin/pengaturan', fn () => Inertia::render('admin/SettingsPage'))->name('admin.settings');
+});
 
 Route::fallback(fn () => Inertia::render('shop/NotFoundPage')->toResponse(request())->setStatusCode(404));
+
+require __DIR__.'/auth.php';

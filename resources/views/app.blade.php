@@ -10,6 +10,7 @@
             content="Koleksi oleh-oleh dan hadiah Umrah &amp; Hajj: kurma premium, sajadah, tasbih, dan gift set dengan packaging elegan. Siap untuk keluarga, sahabat, dan rombongan."
         />
         <meta name="theme-color" content="#082016" />
+        <meta name="csrf-token" content="{{ csrf_token() }}" />
         <!-- Mobile web app tags -->
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

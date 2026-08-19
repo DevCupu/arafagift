@@ -1,12 +1,15 @@
 <script setup>
 import { ref, watch } from 'vue'
-import { usePage } from '@inertiajs/vue3'
-import { Bell, Menu, Search } from 'lucide-vue-next'
+import { router, usePage } from '@inertiajs/vue3'
+import { Bell, LogOut, Menu, Search } from 'lucide-vue-next'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
 
 const page = usePage()
 const open = ref(false)
 watch(() => page.url, () => (open.value = false))
+
+const user = page.props.auth.user
+const logout = () => router.post('/logout')
 </script>
 
 <template>
@@ -34,9 +37,17 @@ watch(() => page.url, () => (open.value = false))
           <div class="flex items-center gap-3 border-l border-line pl-3">
             <span class="grid h-9 w-9 place-items-center rounded-full bg-forest text-[0.72rem] font-semibold text-ivory">AG</span>
             <div class="hidden sm:block">
-              <p class="text-[0.8rem] leading-none text-forest">Admin Arafah</p>
+              <p class="text-[0.8rem] leading-none text-forest">{{ user?.name ?? 'Admin' }}</p>
               <p class="mt-1 text-[0.7rem] leading-none text-muted">Pemilik toko</p>
             </div>
+            <button
+              class="ml-1 grid h-9 w-9 place-items-center text-muted transition hover:text-danger"
+              aria-label="Keluar"
+              title="Keluar"
+              @click="logout"
+            >
+              <LogOut class="h-4 w-4" :stroke-width="1.5" />
+            </button>
           </div>
         </div>
       </header>

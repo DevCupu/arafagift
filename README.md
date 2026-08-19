@@ -51,8 +51,10 @@ npm run build             # hasil di public/build/
 halamannya **masih membaca data statis** dari `resources/js/data/{catalog,admin}.js`,
 bukan database. Ini disengaja — fase migrasi berikutnya.
 
-Belum ada autentikasi — `/admin` sengaja dibiarkan terbuka supaya mudah ditinjau.
-Tambahkan route guard sebelum dipakai di produksi.
+**Autentikasi admin** sudah aktif: `/admin` dilindungi middleware `auth` + `admin`
+(cek kolom `is_admin`). Login di `/login`, logout via `POST /logout`. Akun admin default
+dari seeder: `admin@arafahgift.id` / `password` (ganti setelah login pertama).
+Login pelanggan belum ada — `/akun` dan storefront tetap publik.
 
 ---
 
@@ -105,7 +107,7 @@ konten homepage, `addresses`, `wishlists`, kolom profil di `users`). Yang perlu 
    promo, konten, laporan, pengaturan) menggantikan `Route::get(..., fn () => Inertia::render(...))`
    di `routes/web.php` dengan controller yang membaca dari Eloquent.
 2. Ganti import `@/data/catalog` / `@/data/admin` di halaman terkait dengan prop dari controller.
-3. Tambah autentikasi (login admin, login pelanggan) + route guard/middleware.
+3. Login pelanggan (auth pelanggan + sambungkan `addresses`/`wishlists` ke user).
 4. Sambungkan `useWishlist.js` ke tabel `wishlists` (saat ini masih in-memory, terpisah
    dari data produk asli).
 
@@ -113,7 +115,7 @@ konten homepage, `addresses`, `wishlists`, kolom profil di `users`). Yang perlu 
 
 ## Yang belum dikerjakan
 
-- Autentikasi & route guard (login pelanggan, login admin)
+- Login pelanggan (admin login sudah jalan)
 - Controller database untuk halaman admin & akun (lihat bagian di atas)
 - Integrasi pembayaran dan ongkir nyata (checkout sudah menulis order ke DB, tapi
   belum ada gateway pembayaran sungguhan)
