@@ -5,7 +5,7 @@ export const homeContent = {
   announcement: 'Gratis kartu ucapan tulis tangan untuk setiap pesanan hadiah',
   hero: {
     eyebrow: 'Oleh-oleh Umrah & Hajj',
-    headline: 'Hadiah dari Tanah Suci,\nuntuk hati yang dekat.',
+    headline: 'Barokah dari Tanah Suci,\nsampai ke pelukan mereka.',
     sub: 'Koleksi yang dipilih dengan hati — untuk keluarga, sahabat, dan orang-orang terkasih yang menunggu di rumah.',
     cta: { label: 'Jelajahi Koleksi', to: '/koleksi' },
     ctaSecondary: { label: 'Lihat Gift Set', to: '/koleksi/gift-set' },
