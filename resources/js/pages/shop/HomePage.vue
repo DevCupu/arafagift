@@ -87,9 +87,9 @@ const quickview = ref(null)
             class="mt-5 sm:mt-6"
             style="font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.05; font-weight: 700;"
           >
-            <span class="block text-red-600">Hadiah dari</span>
-            <span class="block text-red-600">Tanah Suci,</span>
-            <span class="block text-red-600">untuk hati yang dekat.</span>
+            <span class="block text-ivory">Hadiah dari</span>
+            <span class="block text-ivory">Tanah Suci,</span>
+            <span class="block text-gold">untuk hati yang dekat.</span>
           </h1>
 
           <!-- Sub -->
