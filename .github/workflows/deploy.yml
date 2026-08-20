@@ -1,0 +1,64 @@
+name: Deploy Arafagift
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Upload built assets
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: colorado.iixcp.rumahweb.net
+          username: izim8295
+          port: 2223
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "public/build"
+          target: "/home/izim8295/arafagift/public"
+          strip_components: 1
+          overwrite: true
+
+      - name: Deploy application
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: colorado.iixcp.rumahweb.net
+          username: izim8295
+          port: 2223
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            cd /home/izim8295/arafagift
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            php -d disable_functions=none ~/bin/composer install \
+              --no-dev \
+              --optimize-autoloader \
+              --no-interaction
+
+            php -d disable_functions=none artisan migrate --force
+
+            php -d disable_functions=none artisan config:cache
+            php -d disable_functions=none artisan route:cache
+            php -d disable_functions=none artisan view:cache
