@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowRight, Check, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -36,6 +36,7 @@ const values = [
 const homeContent = props.content
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
+const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
 </script>
 
@@ -87,9 +88,11 @@ const quickview = ref(null)
             class="mt-5 sm:mt-6"
             style="font-size: clamp(2.4rem, 6vw, 4.2rem); line-height: 1.05; font-weight: 700;"
           >
-            <span class="block text-ivory">Hadiah dari</span>
-            <span class="block text-ivory">Tanah Suci,</span>
-            <span class="block text-gold">untuk hati yang dekat.</span>
+            <span
+              v-for="(line, i) in headlineLines" :key="i"
+              class="block"
+              :class="i === headlineLines.length - 1 ? 'text-gold' : 'text-ivory'"
+            >{{ line }}</span>
           </h1>
 
           <!-- Sub -->

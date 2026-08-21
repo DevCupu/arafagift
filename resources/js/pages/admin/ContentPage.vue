@@ -4,7 +4,7 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { GripVertical } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -15,6 +15,8 @@ const props = defineProps({
   content: { type: Object, required: true },
   testimonials: { type: Array, required: true },
   featuredProducts: { type: Array, required: true },
+  availableProducts: { type: Array, required: true },
+  products: { type: Array, required: true },
 })
 
 const { push } = useToast()
@@ -70,6 +72,29 @@ const addTestimonial = () => {
   })
 }
 
+const editingTestimonialId = ref(null)
+const editTestimonialForm = useForm({ rating: 5, quote: '', name: '', city: '', context: '' })
+
+const startEditTestimonial = (testimonial) => {
+  showTestimonialForm.value = false
+  editingTestimonialId.value = testimonial.id
+  editTestimonialForm.rating = testimonial.rating
+  editTestimonialForm.quote = testimonial.quote
+  editTestimonialForm.name = testimonial.name
+  editTestimonialForm.city = testimonial.city
+  editTestimonialForm.context = testimonial.context ?? ''
+}
+
+const saveTestimonial = () => {
+  editTestimonialForm.put(`/admin/konten/testimoni/${editingTestimonialId.value}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      push('Testimoni diperbarui', { tone: 'success' })
+      editingTestimonialId.value = null
+    },
+  })
+}
+
 const deleteTestimonial = (testimonial) => {
   if (!confirm(`Hapus testimoni dari ${testimonial.name}?`)) return
   router.delete(`/admin/konten/testimoni/${testimonial.id}`, {
@@ -79,9 +104,22 @@ const deleteTestimonial = (testimonial) => {
 }
 
 // ── Produk unggulan ──
+const productToAdd = ref(props.availableProducts[0]?.id ?? null)
+watch(() => props.availableProducts, (list) => {
+  if (!list.some((p) => p.id === productToAdd.value)) productToAdd.value = list[0]?.id ?? null
+})
+
+const addFeatured = () => {
+  if (!productToAdd.value) return
+  router.patch(`/admin/konten/unggulan/${productToAdd.value}/tambah`, {}, {
+    preserveScroll: true,
+    onSuccess: () => push('Produk ditambahkan ke unggulan', { tone: 'success' }),
+  })
+}
+
 const removeFeatured = (product) => {
   if (!confirm(`Keluarkan "${product.name}" dari produk unggulan?`)) return
-  router.patch(`/admin/konten/unggulan/${product.id}`, {}, {
+  router.patch(`/admin/konten/unggulan/${product.id}/keluarkan`, {}, {
     preserveScroll: true,
     onSuccess: () => push('Produk dikeluarkan dari unggulan', { tone: 'success' }),
   })
@@ -164,6 +202,16 @@ const removeFeatured = (product) => {
             </li>
           </ul>
           <p v-else class="mt-6 text-[0.83rem] text-muted">Belum ada produk yang ditandai unggulan.</p>
+
+          <div v-if="availableProducts.length" class="mt-6 flex flex-wrap items-end gap-3">
+            <div class="flex-1">
+              <label class="field-label" for="c-addfeatured">Tambah produk unggulan</label>
+              <select id="c-addfeatured" v-model.number="productToAdd" class="field">
+                <option v-for="p in availableProducts" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+            </div>
+            <AppButton size="sm" variant="quiet" type="button" @click="addFeatured">Tambahkan</AppButton>
+          </div>
         </template>
 
         <template v-else-if="tab === 'giftset'">
@@ -172,16 +220,19 @@ const removeFeatured = (product) => {
             <div>
               <label class="field-label" for="c-sigtitle">Judul</label>
               <input id="c-sigtitle" v-model="form.signature.title" class="field" />
+              <p v-if="form.errors['signature.title']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['signature.title'] }}</p>
             </div>
             <div>
               <label class="field-label" for="c-sigbody">Deskripsi</label>
               <textarea id="c-sigbody" v-model="form.signature.body" rows="3" class="field" />
+              <p v-if="form.errors['signature.body']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['signature.body'] }}</p>
             </div>
             <div>
               <label class="field-label" for="c-sigprod">Produk yang ditampilkan</label>
               <select id="c-sigprod" v-model="form.signature.productSlug" class="field">
-                <option v-for="p in featuredProducts" :key="p.id" :value="p.slug">{{ p.name }}</option>
+                <option v-for="p in products" :key="p.id" :value="p.slug">{{ p.name }}</option>
               </select>
+              <p v-if="form.errors['signature.productSlug']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['signature.productSlug'] }}</p>
             </div>
           </div>
         </template>
@@ -190,11 +241,52 @@ const removeFeatured = (product) => {
           <h2 class="font-display text-2xl">Testimoni</h2>
           <ul class="mt-6 space-y-4">
             <li v-for="t in testimonials" :key="t.id" class="border border-line p-5">
-              <p class="font-display text-[1.1rem] italic leading-snug text-forest">“{{ t.quote }}”</p>
-              <div class="mt-3 flex items-center justify-between gap-4">
-                <p class="text-[0.78rem] text-muted">{{ t.name }} · {{ t.city }} · {{ t.rating }} bintang</p>
-                <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteTestimonial(t)">Hapus</button>
-              </div>
+              <template v-if="editingTestimonialId === t.id">
+                <div class="space-y-4">
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label class="field-label" :for="`t-edit-name-${t.id}`">Nama</label>
+                      <input :id="`t-edit-name-${t.id}`" v-model="editTestimonialForm.name" class="field" required />
+                      <p v-if="editTestimonialForm.errors.name" class="mt-1.5 text-[0.72rem] text-danger">{{ editTestimonialForm.errors.name }}</p>
+                    </div>
+                    <div>
+                      <label class="field-label" :for="`t-edit-city-${t.id}`">Kota</label>
+                      <input :id="`t-edit-city-${t.id}`" v-model="editTestimonialForm.city" class="field" required />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="field-label" :for="`t-edit-quote-${t.id}`">Testimoni</label>
+                    <textarea :id="`t-edit-quote-${t.id}`" v-model="editTestimonialForm.quote" rows="3" class="field" required />
+                    <p v-if="editTestimonialForm.errors.quote" class="mt-1.5 text-[0.72rem] text-danger">{{ editTestimonialForm.errors.quote }}</p>
+                  </div>
+                  <div class="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label class="field-label" :for="`t-edit-context-${t.id}`">Konteks (opsional)</label>
+                      <input :id="`t-edit-context-${t.id}`" v-model="editTestimonialForm.context" class="field" placeholder="Nama produk / pesanan" />
+                    </div>
+                    <div>
+                      <label class="field-label" :for="`t-edit-rating-${t.id}`">Rating</label>
+                      <select :id="`t-edit-rating-${t.id}`" v-model.number="editTestimonialForm.rating" class="field">
+                        <option v-for="n in [5, 4, 3, 2, 1]" :key="n" :value="n">{{ n }} bintang</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex gap-3">
+                    <AppButton size="sm" type="button" :loading="editTestimonialForm.processing" @click="saveTestimonial">Simpan</AppButton>
+                    <AppButton size="sm" variant="quiet" type="button" @click="editingTestimonialId = null">Batal</AppButton>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <p class="font-display text-[1.1rem] italic leading-snug text-forest">“{{ t.quote }}”</p>
+                <div class="mt-3 flex items-center justify-between gap-4">
+                  <p class="text-[0.78rem] text-muted">{{ t.name }} · {{ t.city }} · {{ t.rating }} bintang</p>
+                  <div class="flex gap-4">
+                    <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-forest" @click="startEditTestimonial(t)">Edit</button>
+                    <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteTestimonial(t)">Hapus</button>
+                  </div>
+                </div>
+              </template>
             </li>
           </ul>
 
@@ -241,6 +333,7 @@ const removeFeatured = (product) => {
             <div>
               <label class="field-label" for="c-ig">Username</label>
               <input id="c-ig" v-model="form.instagram.handle" class="field" />
+              <p v-if="form.errors['instagram.handle']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['instagram.handle'] }}</p>
             </div>
             <div>
               <label class="field-label" for="c-igurl">Tautan profil</label>

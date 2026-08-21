@@ -44,8 +44,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/konten', [ContentController::class, 'edit'])->name('admin.content');
     Route::put('/admin/konten', [ContentController::class, 'update'])->name('admin.content.update');
     Route::post('/admin/konten/testimoni', [ContentController::class, 'storeTestimonial'])->name('admin.content.testimonials.store');
+    Route::put('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'updateTestimonial'])->name('admin.content.testimonials.update');
     Route::delete('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'destroyTestimonial'])->name('admin.content.testimonials.destroy');
-    Route::patch('/admin/konten/unggulan/{product}', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');
+    Route::patch('/admin/konten/unggulan/{product}/tambah', [ContentController::class, 'addFeatured'])->name('admin.content.featured.add');
+    Route::patch('/admin/konten/unggulan/{product}/keluarkan', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');
     Route::get('/admin/laporan', fn () => Inertia::render('admin/ReportsPage'))->name('admin.reports');
     Route::get('/admin/pengaturan', fn () => Inertia::render('admin/SettingsPage'))->name('admin.settings');
 });

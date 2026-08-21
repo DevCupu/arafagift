@@ -18,6 +18,8 @@ class ContentController extends Controller
             'content' => Content::where('key', 'home')->firstOrFail()->data,
             'testimonials' => Testimonial::orderBy('id')->get(),
             'featuredProducts' => Product::where('featured', true)->orderBy('id')->get()->map->toCatalog()->values(),
+            'availableProducts' => Product::where('featured', false)->orderBy('name')->get(['id', 'name', 'slug']),
+            'products' => Product::orderBy('name')->get(['id', 'name', 'slug']),
         ]);
     }
 
@@ -72,9 +74,31 @@ class ContentController extends Controller
         return back();
     }
 
+    public function updateTestimonial(Request $request, Testimonial $testimonial): RedirectResponse
+    {
+        $validated = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'quote' => ['required', 'string', 'max:400'],
+            'name' => ['required', 'string', 'max:80'],
+            'city' => ['required', 'string', 'max:80'],
+            'context' => ['nullable', 'string', 'max:120'],
+        ]);
+
+        $testimonial->update($validated);
+
+        return back();
+    }
+
     public function destroyTestimonial(Testimonial $testimonial): RedirectResponse
     {
         $testimonial->delete();
+
+        return back();
+    }
+
+    public function addFeatured(Product $product): RedirectResponse
+    {
+        $product->update(['featured' => true]);
 
         return back();
     }
