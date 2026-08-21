@@ -14,22 +14,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Checkout source
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 2. Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
 
+      # 3. Install frontend dependencies
       - name: Install Node dependencies
         run: npm ci
 
+      # 4. Build frontend di GitHub Actions
       - name: Build frontend
         run: npm run build
 
-      - name: Update source on server
+      # 5. Update source + Composer di server
+      - name: Update source and install PHP dependencies
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: colorado.iixcp.rumahweb.net
@@ -50,6 +55,7 @@ jobs:
               --no-interaction \
               --prefer-dist
 
+      # 6. Upload hasil Vite
       - name: Upload Vite build
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -62,6 +68,7 @@ jobs:
           strip_components: 1
           overwrite: true
 
+      # 7. Maintenance + migration + optimize
       - name: Run Laravel deployment tasks
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -74,6 +81,13 @@ jobs:
 
             cd /home/izim8295/arafagift
 
-            php -d disable_functions=none artisan migrate --force
+            # Pastikan maintenance dimatikan walaupun deployment gagal
+            trap 'php artisan up || true' EXIT
 
-            php -d disable_functions=none artisan optimize
+            php artisan down --render="errors::503"
+
+            php artisan migrate --force
+            php artisan optimize
+
+            php artisan up
+            trap - EXIT
