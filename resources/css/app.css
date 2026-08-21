@@ -9,13 +9,13 @@
    Format: channel RGB (agar mendukung opacity Tailwind: bg-forest/10)
    ============================================================ */
 :root {
-    --c-forest: 14 52 38; /* #0E3426  primary   */
-    --c-forest-deep: 8 32 22; /* #082016  header/footer */
-    --c-forest-soft: 22 72 54; /* #164836  hover      */
+    --c-forest: 22 152 137; /* #169889  primary   */
+    --c-forest-deep: 12 84 75; /* #0C544B  header/footer */
+    --c-forest-soft: 57 167 155; /* #39A79B  hover      */
     --c-olive: 82 100 58; /* #52643A  secondary  */
     --c-olive-light: 128 142 98; /* #808E62             */
-    --c-gold: 192 154 80; /* #C09A50  accent     */
-    --c-gold-soft: 225 207 162; /* #E1CFA2             */
+    --c-gold: 213 174 48; /* #D5AE30  accent     */
+    --c-gold-soft: 236 219 162; /* #ECDBA2             */
     --c-ivory: 246 241 232; /* #F6F1E8  background */
     --c-surface: 253 251 247; /* #FDFBF7  surface    */
     --c-sand: 232 224 208; /* #E8E0D0             */
