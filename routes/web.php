@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CollectionController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\OrderConfirmationController;
 use App\Http\Controllers\PageController;
@@ -40,7 +41,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/pelanggan/{id}', fn (string $id) => Inertia::render('admin/CustomerDetailPage', ['id' => $id]))->name('admin.customer');
     Route::get('/admin/inventori', fn () => Inertia::render('admin/InventoryPage'))->name('admin.inventory');
     Route::get('/admin/promo', fn () => Inertia::render('admin/PromotionsPage'))->name('admin.promotions');
-    Route::get('/admin/konten', fn () => Inertia::render('admin/ContentPage'))->name('admin.content');
+    Route::get('/admin/konten', [ContentController::class, 'edit'])->name('admin.content');
+    Route::put('/admin/konten', [ContentController::class, 'update'])->name('admin.content.update');
+    Route::post('/admin/konten/testimoni', [ContentController::class, 'storeTestimonial'])->name('admin.content.testimonials.store');
+    Route::delete('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'destroyTestimonial'])->name('admin.content.testimonials.destroy');
+    Route::patch('/admin/konten/unggulan/{product}', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');
     Route::get('/admin/laporan', fn () => Inertia::render('admin/ReportsPage'))->name('admin.reports');
     Route::get('/admin/pengaturan', fn () => Inertia::render('admin/SettingsPage'))->name('admin.settings');
 });
