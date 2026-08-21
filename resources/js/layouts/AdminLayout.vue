@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import { Bell, LogOut, Menu, Search } from 'lucide-vue-next'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
+import ToastHost from '@/components/ui/ToastHost.vue'
 
 const page = usePage()
 const open = ref(false)
@@ -54,5 +55,7 @@ const logout = () => router.post('/logout')
 
       <main class="px-5 py-8 sm:px-8 sm:py-10"><slot /></main>
     </div>
+
+    <ToastHost />
   </div>
 </template>

@@ -3,6 +3,7 @@ import AnnouncementBar from '@/components/storefront/AnnouncementBar.vue'
 import SiteNavbar from '@/components/storefront/SiteNavbar.vue'
 import SiteFooter from '@/components/storefront/SiteFooter.vue'
 import CartDrawer from '@/components/storefront/CartDrawer.vue'
+import ToastHost from '@/components/ui/ToastHost.vue'
 import { homeContent } from '@/data/content'
 </script>
 
@@ -16,5 +17,6 @@ import { homeContent } from '@/data/content'
     <main id="konten" class="flex-1"><slot /></main>
     <SiteFooter />
     <CartDrawer />
+    <ToastHost />
   </div>
 </template>
