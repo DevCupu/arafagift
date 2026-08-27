@@ -34,16 +34,19 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    /** @return HasMany<Order, $this> */
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class);
     }
 
+    /** @return HasMany<Address, $this> */
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);
     }
 
+    /** @return HasMany<Wishlist, $this> */
     public function wishlists(): HasMany
     {
         return $this->hasMany(Wishlist::class);

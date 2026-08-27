@@ -6,7 +6,7 @@ export default { layout: AdminLayout }
 <script setup>
 import { ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
-import { GripVertical } from 'lucide-vue-next'
+import { GripVertical, ImagePlus } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import { useToast } from '@/composables/useToast'
@@ -48,13 +48,25 @@ const form = useForm({
     handle: props.content.instagram.handle,
     url: props.content.instagram.url,
   },
+  hero_image: null,
 })
 
+const heroImagePreview = ref(props.content.hero.image ?? null)
+
+const onHeroImageChange = (e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  form.hero_image = file
+  heroImagePreview.value = URL.createObjectURL(file)
+}
+
 const save = () => {
-  form.put('/admin/konten', {
-    preserveScroll: true,
-    onSuccess: () => push('Konten homepage disimpan', { tone: 'success' }),
-  })
+  form
+    .transform((data) => ({ ...data, _method: 'put' }))
+    .post('/admin/konten', {
+      preserveScroll: true,
+      onSuccess: () => push('Konten homepage disimpan', { tone: 'success' }),
+    })
 }
 
 // ── Testimoni ──
@@ -153,6 +165,20 @@ const removeFeatured = (product) => {
         <template v-if="tab === 'hero'">
           <h2 class="font-display text-2xl">Hero</h2>
           <div class="mt-6 space-y-5">
+            <div>
+              <label class="field-label">Foto hero</label>
+              <div class="mt-2 flex items-center gap-4">
+                <div class="arch aspect-[4/5] w-28 flex-none overflow-hidden border border-line bg-ivory">
+                  <img v-if="heroImagePreview" :src="heroImagePreview" alt="Foto hero" class="h-full w-full object-cover" />
+                </div>
+                <label class="inline-flex cursor-pointer items-center gap-2 border border-dashed border-line px-4 py-2.5 text-[0.8rem] text-muted transition hover:border-olive/60 hover:text-forest">
+                  <ImagePlus class="h-4 w-4 text-gold" :stroke-width="1.4" />
+                  Unggah foto hero
+                  <input type="file" accept="image/*" class="sr-only" @change="onHeroImageChange" />
+                </label>
+              </div>
+              <p v-if="form.errors.hero_image" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.hero_image }}</p>
+            </div>
             <div>
               <label class="field-label" for="c-eyebrow">Label kecil</label>
               <input id="c-eyebrow" v-model="form.hero.eyebrow" class="field" />

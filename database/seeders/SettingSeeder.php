@@ -16,6 +16,7 @@ class SettingSeeder extends Seeder
             'whatsapp' => '+62 812-3456-7890',
             'address' => 'Jl. Cikini Raya 45, Jakarta Pusat 10330',
             'free_shipping_from' => 750000,
+            'free_shipping_cities' => 'Makassar',
             'bulk_minimum' => 50,
         ]);
     }

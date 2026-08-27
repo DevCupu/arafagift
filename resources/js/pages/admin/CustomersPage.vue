@@ -8,9 +8,9 @@ import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { Search } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
-import { customers } from '@/data/admin'
 import { formatDate, formatIDR } from '@/composables/useFormat'
 
+const props = defineProps({ customers: { type: Array, required: true } })
 const query = ref('')
 const columns = [
   { key: 'name', label: 'Nama' },
@@ -22,7 +22,7 @@ const columns = [
 ]
 const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
-  return customers.filter((c) => !q || `${c.name} ${c.email} ${c.city}`.toLowerCase().includes(q))
+  return props.customers.filter((c) => !q || `${c.name} ${c.email} ${c.city}`.toLowerCase().includes(q))
 })
 </script>
 
@@ -30,7 +30,7 @@ const rows = computed(() => {
   <div>
     <header>
       <h1 class="text-[2.1rem] leading-none">Pelanggan</h1>
-      <p class="mt-3 text-[0.85rem] text-muted">{{ customers.length }} pelanggan terdaftar · 2 akun travel</p>
+      <p class="mt-3 text-[0.85rem] text-muted">{{ customers.length }} pelanggan terdaftar</p>
     </header>
 
     <div class="relative mt-8 w-full max-w-sm">
@@ -48,7 +48,7 @@ const rows = computed(() => {
         <template #cell-phone="{ row }"><span class="text-muted">{{ row.phone }}</span></template>
         <template #cell-city="{ row }"><span class="text-muted">{{ row.city }}</span></template>
         <template #cell-spent="{ row }"><span class="font-medium">{{ formatIDR(row.spent) }}</span></template>
-        <template #cell-lastOrder="{ row }"><span class="text-muted">{{ formatDate(row.lastOrder) }}</span></template>
+        <template #cell-lastOrder="{ row }"><span class="text-muted">{{ row.lastOrder ? formatDate(row.lastOrder) : '—' }}</span></template>
       </DataTable>
     </div>
   </div>

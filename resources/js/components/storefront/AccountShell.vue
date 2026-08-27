@@ -1,11 +1,16 @@
 <script setup>
-import { Link, usePage } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, router, usePage } from '@inertiajs/vue3'
 import { Heart, LogOut, MapPin, Package, User } from 'lucide-vue-next'
 import { useWishlist } from '@/composables/useWishlist'
+import { formatDate } from '@/composables/useFormat'
 
 defineProps({ title: String, sub: String })
 const wishlist = useWishlist()
 const page = usePage()
+const user = computed(() => page.props.auth.user)
+
+const logout = () => router.post('/logout')
 
 const nav = [
   { label: 'Profil', to: '/akun', icon: User },
@@ -23,8 +28,8 @@ const nav = [
           <span class="h-1.5 w-1.5 rounded-full bg-gold" />
         </span>
         <div>
-          <p class="font-display text-[1.15rem] leading-none text-forest">Ratna Halim</p>
-          <p class="mt-1.5 text-[0.72rem] text-muted">Anggota sejak Maret 2025</p>
+          <p class="font-display text-[1.15rem] leading-none text-forest">{{ user.name }}</p>
+          <p class="mt-1.5 text-[0.72rem] text-muted">Anggota sejak {{ formatDate(user.created_at) }}</p>
         </div>
       </div>
       <nav class="mt-4 border border-line bg-surface">
@@ -43,7 +48,7 @@ const nav = [
             </Link>
           </li>
           <li>
-            <button class="flex w-full items-center gap-3 px-5 py-3.5 text-[0.85rem] text-muted transition hover:bg-ivory hover:text-forest">
+            <button class="flex w-full items-center gap-3 px-5 py-3.5 text-[0.85rem] text-muted transition hover:bg-ivory hover:text-forest" @click="logout">
               <LogOut class="h-4 w-4 text-gold" :stroke-width="1.5" /> Keluar
             </button>
           </li>

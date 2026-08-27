@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Category;
 use App\Models\Occasion;
 use App\Models\Product;
+use App\Models\StockMovement;
 use Illuminate\Database\Seeder;
 
 class ProductSeeder extends Seeder
@@ -170,6 +171,18 @@ class ProductSeeder extends Seeder
 
             $product = Product::create($data);
             $product->occasions()->attach(array_map(fn ($slug) => $occasionIds[$slug], $occasionSlugs));
+
+            if (($product->stock ?? 0) > 0) {
+                StockMovement::create([
+                    'product_id' => $product->id,
+                    'type' => 'initial',
+                    'delta' => $product->stock,
+                    'balance_before' => 0,
+                    'balance_after' => $product->stock,
+                    'note' => 'Saldo awal data contoh',
+                    'document_number' => sprintf('IN-%s-%04d', now()->format('Ymd'), $product->id),
+                ]);
+            }
         }
     }
 }

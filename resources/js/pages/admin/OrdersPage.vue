@@ -10,9 +10,10 @@ import { Download, Search } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import { orders, orderStatuses, orderTotal } from '@/data/admin'
+import { orderStatuses, orderTotal } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 
+const props = defineProps({ orders: { type: Array, required: true } })
 const query = ref('')
 const filter = ref('semua')
 
@@ -27,7 +28,7 @@ const columns = [
 ]
 
 const rows = computed(() =>
-  orders.filter((o) => {
+  props.orders.filter((o) => {
     const okStatus = filter.value === 'semua' || o.status === filter.value
     const q = query.value.trim().toLowerCase()
     const okQuery = !q || `${o.id} ${o.customer} ${o.email}`.toLowerCase().includes(q)
@@ -35,6 +36,7 @@ const rows = computed(() =>
   }),
 )
 
+const pendingCount = computed(() => props.orders.filter((o) => o.status === 'pending').length)
 const tabs = [{ id: 'semua', label: 'Semua' }, ...orderStatuses.map((s) => ({ id: s.id, label: s.label }))]
 </script>
 
@@ -43,7 +45,7 @@ const tabs = [{ id: 'semua', label: 'Semua' }, ...orderStatuses.map((s) => ({ id
     <header class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-[2.1rem] leading-none">Pesanan</h1>
-        <p class="mt-3 text-[0.85rem] text-muted">{{ orders.length }} pesanan · 5 menunggu pembayaran</p>
+        <p class="mt-3 text-[0.85rem] text-muted">{{ orders.length }} pesanan · {{ pendingCount }} menunggu pembayaran</p>
       </div>
       <AppButton variant="quiet" size="sm">
         <template #icon><Download class="h-3.5 w-3.5" /></template>

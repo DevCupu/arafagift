@@ -5,8 +5,8 @@ export default { layout: BareLayout }
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
-import { ArrowLeft, Check, Gift, Lock } from 'lucide-vue-next'
+import { Link, usePage } from '@inertiajs/vue3'
+import { ArrowLeft, Check, Gift, MessageCircle, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -14,61 +14,122 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 
-const props = defineProps({
-  shippingMethods: { type: Array, required: true },
-  paymentMethods: { type: Array, required: true },
-})
+const page = usePage()
+const store = computed(() => page.props.store)
 
 const cart = useCart()
 
 const steps = [
   { id: 1, label: 'Data pemesan' },
-  { id: 2, label: 'Pengiriman' },
-  { id: 3, label: 'Pembayaran' },
-  { id: 4, label: 'Tinjau' },
+  { id: 2, label: 'Alamat' },
+  { id: 3, label: 'Tinjau' },
 ]
 const step = ref(1)
-const submitting = ref(false)
 const errors = reactive({})
 
 const form = reactive({
   name: '', email: '', phone: '',
   address: '', city: '', province: '', postal: '',
-  shipping: 'reguler', payment: 'transfer',
   giftMessage: '', hideInvoice: true,
 })
-
-const shipping = computed(() => props.shippingMethods.find((s) => s.id === form.shipping))
-const total = computed(() => cart.subtotal.value + (shipping.value?.price ?? 0))
 
 const validate = (current) => {
   Object.keys(errors).forEach((k) => delete errors[k])
   if (current === 1) {
     if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
-    if (!form.email.includes('@')) errors.email = 'Format email belum benar, contoh nama@email.com.'
     if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
   }
   if (current === 2) {
     if (form.address.trim().length < 8) errors.address = 'Tulis alamat lengkap termasuk nomor rumah.'
     if (!form.city.trim()) errors.city = 'Isi kota atau kabupaten.'
-    if (!/^\d{5}$/.test(form.postal)) errors.postal = 'Kode pos terdiri dari 5 angka.'
   }
   return Object.keys(errors).length === 0
 }
 
-const next = () => { if (validate(step.value)) step.value = Math.min(4, step.value + 1) }
+const next = () => { if (validate(step.value)) step.value = Math.min(3, step.value + 1) }
 const back = () => { step.value = Math.max(1, step.value - 1) }
 
-const placeOrder = () => {
+const freeShippingByCity = computed(() =>
+  store.value.freeShippingCities.some((c) => form.city.trim().toLowerCase().includes(c.toLowerCase())),
+)
+const freeShippingByAmount = computed(() =>
+  store.value.freeShippingFrom > 0 && cart.subtotal.value >= store.value.freeShippingFrom,
+)
+const hasFreeShipping = computed(() => freeShippingByCity.value || freeShippingByAmount.value)
+
+const buildWaMessage = (orderNumber) => {
+  const lines = [
+    `Halo ArafahGift, saya mau pesan:`,
+    '',
+    ...cart.items.value.map((i) => `• ${i.name} × ${i.qty} — ${formatIDR(i.lineTotal)}`),
+    '',
+    `Subtotal: ${formatIDR(cart.subtotal.value)}`,
+    '',
+    orderNumber ? `Nomor pesanan: ${orderNumber}` : null,
+    `Nama: ${form.name}`,
+    `WhatsApp: ${form.phone}`,
+    form.email ? `Email: ${form.email}` : null,
+    `Alamat: ${form.address}, ${form.city}${form.postal ? ` ${form.postal}` : ''}${form.province ? `, ${form.province}` : ''}`,
+    hasFreeShipping.value ? `Catatan: sepertinya masuk gratis ongkir, tolong dikonfirmasi ya.` : null,
+    form.giftMessage ? `Kartu ucapan: "${form.giftMessage}"` : null,
+    form.hideInvoice ? `Tolong sembunyikan nota harga di dalam paket.` : null,
+  ]
+  return lines.filter((l) => l !== null).join('\n')
+}
+
+const submitting = ref(false)
+
+const placeOrder = async () => {
+  if (!validate(1) || !validate(2)) return
+  if (submitting.value) return
   submitting.value = true
-  router.post('/checkout', {
-    ...form,
-    items: cart.items.value.map((item) => ({ product_id: item.id, qty: item.qty })),
-  }, {
-    onSuccess: () => cart.clear(),
-    onError: (serverErrors) => Object.assign(errors, serverErrors),
-    onFinish: () => { submitting.value = false },
-  })
+
+  try {
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.content
+    const res = await fetch('/checkout', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': csrf,
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify({
+        name: form.name,
+        phone: form.phone,
+        email: form.email || null,
+        address: form.address,
+        city: form.city,
+        province: form.province || null,
+        postal: form.postal || null,
+        giftMessage: form.giftMessage || null,
+        hideInvoice: form.hideInvoice,
+        items: cart.items.value.map((i) => ({ id: i.id, qty: i.qty, price: i.price })),
+        subtotal: cart.subtotal.value,
+      }),
+    })
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      if (data?.errors) {
+        const first = Object.values(data.errors)[0]
+        alert(Array.isArray(first) ? first[0] : 'Terjadi kesalahan. Coba lagi.')
+      } else {
+        alert('Gagal menyimpan pesanan. Coba lagi.')
+      }
+      return
+    }
+
+    const { order_number } = await res.json()
+
+    const number = (store.value.whatsapp || '').replace(/\D/g, '')
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWaMessage(order_number))}`
+    cart.clear()
+    window.location.href = url
+  } catch {
+    alert('Terjadi kesalahan jaringan. Coba lagi.')
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
@@ -96,14 +157,14 @@ const placeOrder = () => {
               <template v-else>{{ s.id }}</template>
             </span>
             <span class="hidden text-[0.75rem] tracking-wide sm:block" :class="step >= s.id ? 'text-forest' : 'text-muted'">{{ s.label }}</span>
-            <span v-if="s.id < 4" class="h-px flex-1 bg-line" />
+            <span v-if="s.id < 3" class="h-px flex-1 bg-line" />
           </li>
         </ol>
 
         <!-- 1. Data pemesan -->
         <section v-if="step === 1" class="mt-10">
           <h1 class="text-[1.9rem] leading-none">Data pemesan</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Kami pakai ini untuk mengirim status pesanan.</p>
+          <p class="mt-3 text-[0.85rem] text-muted">Kami pakai ini untuk konfirmasi pesanan via WhatsApp.</p>
           <div class="mt-8 space-y-5">
             <div>
               <label class="field-label" for="name">Nama lengkap</label>
@@ -112,23 +173,22 @@ const placeOrder = () => {
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
               <div>
-                <label class="field-label" for="email">Email</label>
-                <input id="email" v-model="form.email" type="email" class="field" placeholder="nama@email.com" :aria-invalid="!!errors.email" />
-                <p v-if="errors.email" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.email }}</p>
-              </div>
-              <div>
                 <label class="field-label" for="phone">Nomor WhatsApp</label>
                 <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
                 <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
+              </div>
+              <div>
+                <label class="field-label" for="email">Email (opsional)</label>
+                <input id="email" v-model="form.email" type="email" class="field" placeholder="nama@email.com" />
               </div>
             </div>
           </div>
         </section>
 
-        <!-- 2. Pengiriman -->
+        <!-- 2. Alamat -->
         <section v-else-if="step === 2" class="mt-10">
-          <h1 class="text-[1.9rem] leading-none">Pengiriman</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Bisa dikirim langsung ke alamat penerima hadiah.</p>
+          <h1 class="text-[1.9rem] leading-none">Alamat pengiriman</h1>
+          <p class="mt-3 text-[0.85rem] text-muted">Ongkos kirim kami hitung dan konfirmasi langsung lewat WhatsApp.</p>
           <div class="mt-8 space-y-5">
             <div>
               <label class="field-label" for="address">Alamat lengkap</label>
@@ -142,45 +202,14 @@ const placeOrder = () => {
                 <p v-if="errors.city" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.city }}</p>
               </div>
               <div>
-                <label class="field-label" for="postal">Kode pos</label>
+                <label class="field-label" for="postal">Kode pos (opsional)</label>
                 <input id="postal" v-model="form.postal" inputmode="numeric" maxlength="5" class="field" placeholder="91114" />
-                <p v-if="errors.postal" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.postal }}</p>
               </div>
             </div>
 
-            <fieldset class="pt-2">
-              <legend class="field-label">Metode pengiriman</legend>
-              <div class="mt-2 divide-y divide-line border border-line">
-                <label
-                  v-for="m in shippingMethods" :key="m.id"
-                  class="flex cursor-pointer items-center gap-4 px-4 py-3.5 transition"
-                  :class="form.shipping === m.id ? 'bg-ivory' : 'hover:bg-ivory/60'"
-                >
-                  <input v-model="form.shipping" type="radio" :value="m.id" class="h-3.5 w-3.5 accent-[rgb(var(--c-forest))]" />
-                  <span class="flex-1 text-[0.87rem] text-forest">{{ m.name }}<span class="ml-2 text-[0.75rem] text-muted">{{ m.eta }}</span></span>
-                  <span class="text-[0.85rem] text-forest">{{ formatIDR(m.price) }}</span>
-                </label>
-              </div>
-            </fieldset>
-          </div>
-        </section>
-
-        <!-- 3. Pembayaran -->
-        <section v-else-if="step === 3" class="mt-10">
-          <h1 class="text-[1.9rem] leading-none">Pembayaran</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Instruksi lengkap dikirim ke email setelah pesanan dibuat.</p>
-          <div class="mt-8 divide-y divide-line border border-line">
-            <label
-              v-for="m in paymentMethods" :key="m.id"
-              class="flex cursor-pointer items-center gap-4 px-4 py-4 transition"
-              :class="form.payment === m.id ? 'bg-ivory' : 'hover:bg-ivory/60'"
-            >
-              <input v-model="form.payment" type="radio" :value="m.id" class="h-3.5 w-3.5 accent-[rgb(var(--c-forest))]" />
-              <span class="flex-1">
-                <span class="block text-[0.9rem] text-forest">{{ m.name }}</span>
-                <span class="block text-[0.75rem] text-muted">{{ m.note }}</span>
-              </span>
-            </label>
+            <p v-if="freeShippingByCity" class="flex items-center gap-2 text-[0.8rem] text-olive">
+              <Truck class="h-4 w-4" :stroke-width="1.5" /> Gratis ongkir untuk area ini.
+            </p>
           </div>
 
           <div class="mt-8 border border-dashed border-gold/40 bg-gold/[0.07] p-5">
@@ -203,26 +232,18 @@ const placeOrder = () => {
           </div>
         </section>
 
-        <!-- 4. Tinjau -->
+        <!-- 3. Tinjau -->
         <section v-else class="mt-10">
           <h1 class="text-[1.9rem] leading-none">Tinjau pesanan</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi sebelum pesanan dibuat.</p>
+          <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi sebelum lanjut ke WhatsApp.</p>
           <dl class="mt-8 divide-y divide-line border-y border-line text-[0.87rem]">
             <div class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Pemesan</dt>
-              <dd class="text-right text-forest">{{ form.name }}<span class="block text-[0.78rem] text-muted">{{ form.email }} · {{ form.phone }}</span></dd>
+              <dd class="text-right text-forest">{{ form.name }}<span class="block text-[0.78rem] text-muted">{{ form.phone }}<template v-if="form.email"> · {{ form.email }}</template></span></dd>
             </div>
             <div class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Kirim ke</dt>
               <dd class="max-w-xs text-right text-forest">{{ form.address }}, {{ form.city }} {{ form.postal }}</dd>
-            </div>
-            <div class="flex justify-between gap-6 py-4">
-              <dt class="text-muted">Pengiriman</dt>
-              <dd class="text-right text-forest">{{ shipping.name }} · {{ shipping.eta }}</dd>
-            </div>
-            <div class="flex justify-between gap-6 py-4">
-              <dt class="text-muted">Pembayaran</dt>
-              <dd class="text-right text-forest">{{ paymentMethods.find((p) => p.id === form.payment).name }}</dd>
             </div>
             <div v-if="form.giftMessage" class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Kartu ucapan</dt>
@@ -233,13 +254,14 @@ const placeOrder = () => {
 
         <div class="mt-10 flex items-center gap-3">
           <AppButton v-if="step > 1" variant="quiet" size="lg" @click="back">Kembali</AppButton>
-          <AppButton v-if="step < 4" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" @click="next">Lanjut</AppButton>
-          <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[14rem]" :loading="submitting" @click="placeOrder">
-            Buat pesanan · {{ formatIDR(total) }}
+          <AppButton v-if="step < 3" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" @click="next">Lanjut</AppButton>
+          <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" @click="placeOrder">
+            <template #icon><MessageCircle class="h-4 w-4" /></template>
+            Pesan via WhatsApp
           </AppButton>
         </div>
-        <p class="mt-5 flex items-center gap-2 text-[0.72rem] text-muted">
-          <Lock class="h-3.5 w-3.5 text-gold" /> Data Anda hanya dipakai untuk memproses pesanan ini.
+        <p class="mt-5 text-[0.72rem] text-muted">
+          Ongkos kirim, metode bayar, dan estimasi kirim dikonfirmasi langsung di chat WhatsApp.
         </p>
       </div>
 
@@ -261,19 +283,21 @@ const placeOrder = () => {
         </ul>
 
         <dl class="mt-8 space-y-3 border-t border-line pt-6 text-[0.87rem]">
-          <div class="flex justify-between"><dt class="text-muted">Subtotal</dt><dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd></div>
-          <div class="flex justify-between"><dt class="text-muted">Ongkos kirim · {{ shipping.name }}</dt><dd class="text-forest">{{ formatIDR(shipping.price) }}</dd></div>
+          <div class="flex justify-between">
+            <dt class="text-muted">Ongkos kirim</dt>
+            <dd :class="hasFreeShipping ? 'text-olive' : 'text-muted'">{{ hasFreeShipping ? 'Gratis' : 'Dibahas via WhatsApp' }}</dd>
+          </div>
           <div class="flex justify-between"><dt class="text-muted">Kartu ucapan</dt><dd class="text-olive">Gratis</dd></div>
         </dl>
         <div class="mt-6 flex items-baseline justify-between border-t border-line pt-5">
-          <span class="text-[0.85rem] text-muted">Total</span>
-          <span class="font-display text-3xl text-forest">{{ formatIDR(total) }}</span>
+          <span class="text-[0.85rem] text-muted">Subtotal <span class="block text-[0.72rem]">(belum termasuk ongkir)</span></span>
+          <span class="font-display text-3xl text-forest">{{ formatIDR(cart.subtotal.value) }}</span>
         </div>
       </aside>
     </div>
 
     <div v-else class="shell py-24">
-      <EmptyState title="Belum ada yang bisa dibayar" body="Keranjang Anda kosong. Pilih dulu hadiahnya, lalu kembali ke sini.">
+      <EmptyState title="Belum ada yang bisa dipesan" body="Keranjang Anda kosong. Pilih dulu hadiahnya, lalu kembali ke sini.">
         <AppButton to="/koleksi">Jelajahi koleksi</AppButton>
       </EmptyState>
     </div>

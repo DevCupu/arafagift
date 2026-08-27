@@ -13,7 +13,7 @@ import TestimonialGrid from '@/components/storefront/TestimonialGrid.vue'
 import InstagramGrid from '@/components/storefront/InstagramGrid.vue'
 import FaqAccordion from '@/components/storefront/FaqAccordion.vue'
 import QuickView from '@/components/storefront/QuickView.vue'
-import heroImg from '@/assets/hero.png'
+import heroImgFallback from '@/assets/hero.png'
 import { formatIDR } from '@/composables/useFormat'
 
 const props = defineProps({
@@ -36,6 +36,7 @@ const values = [
 const homeContent = props.content
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
+const heroImg = hero.image || heroImgFallback
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
 </script>

@@ -4,24 +4,20 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowLeft } from 'lucide-vue-next'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { customers, orders, orderTotal } from '@/data/admin'
+import { orderTotal } from '@/data/admin'
 import { formatDate, formatDateTime, formatIDR } from '@/composables/useFormat'
 
-const props = defineProps({ id: { type: [String, Number], required: true } })
-const customer = computed(() => customers.find((c) => c.id === Number(props.id)))
-const theirOrders = computed(() => orders.filter((o) => o.customer === customer.value?.name))
-
-const activity = [
-  ['Membuka email “Koleksi musim haji”', '18 Ags 2026, 08.20'],
-  ['Menambahkan Arafah Premium Box ke keranjang', '18 Ags 2026, 09.02'],
-  ['Menyelesaikan pembayaran', '18 Ags 2026, 09.12'],
-]
+const props = defineProps({
+  customer: { type: Object, default: null },
+  orders: { type: Array, default: () => [] },
+})
+const customer = props.customer
+const theirOrders = props.orders
 </script>
 
 <template>
@@ -35,7 +31,7 @@ const activity = [
         <h1 class="text-[2.1rem] leading-none">{{ customer.name }}</h1>
         <p class="mt-3 text-[0.85rem] text-muted">{{ customer.email }} · {{ customer.phone }}</p>
       </div>
-      <StatusPill :label="customer.tag" tone="info" />
+      <StatusPill :label="customer.tag || 'Pelanggan'" tone="info" />
     </header>
 
     <div class="mt-8 grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-3">
@@ -75,18 +71,8 @@ const activity = [
         <section class="border border-line bg-surface p-6">
           <h2 class="font-display text-2xl">Alamat tersimpan</h2>
           <p class="mt-4 text-[0.85rem] leading-relaxed text-muted">
-            {{ theirOrders[0]?.address ?? 'Belum ada alamat tersimpan.' }}
+            {{ customer.address ?? 'Belum ada alamat tersimpan.' }}
           </p>
-        </section>
-        <section class="border border-line bg-surface p-6">
-          <h2 class="font-display text-2xl">Aktivitas</h2>
-          <ol class="mt-5 border-l border-line pl-5">
-            <li v-for="([text, time]) in activity" :key="text" class="relative pb-5 last:pb-0">
-              <span class="absolute -left-[1.42rem] top-1.5 h-2 w-2 rounded-full bg-gold" />
-              <p class="text-[0.85rem] text-forest">{{ text }}</p>
-              <p class="mt-0.5 text-[0.72rem] text-muted">{{ time }}</p>
-            </li>
-          </ol>
         </section>
       </div>
     </div>

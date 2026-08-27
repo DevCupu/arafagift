@@ -1,15 +1,14 @@
 <script setup>
-import { computed } from 'vue'
 import AccountShell from '@/components/storefront/AccountShell.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { orders, orderTotal } from '@/data/admin'
+import { orderTotal } from '@/data/admin'
 import { formatDate, formatIDR } from '@/composables/useFormat'
 
-const props = defineProps({ id: { type: String, required: true } })
-const order = computed(() => orders.find((o) => o.id === props.id))
+const props = defineProps({ order: { type: Object, default: null } })
+const order = props.order
 
 const timeline = [
   ['Pesanan dibuat', true], ['Pembayaran diterima', true],

@@ -32,13 +32,13 @@ const submit = () => {
       <div class="relative mt-10 max-w-md">
         <div class="flex items-center gap-3">
           <span class="h-px w-8 bg-gold" />
-          <p class="text-[0.68rem] font-semibold uppercase tracking-[0.25em] text-gold">Panel Admin</p>
+          <p class="text-[0.68rem] font-semibold uppercase tracking-[0.25em] text-gold">ArafahGift.id</p>
         </div>
         <h1 class="mt-6 text-[2.6rem] leading-[1.08] text-ivory sm:text-[3rem]">
-          Kelola toko dari satu tempat.
+          Masuk ke akun Anda.
         </h1>
         <p class="mt-5 max-w-sm text-[0.95rem] leading-relaxed text-ivory/60">
-          Pesanan, katalog, inventori, konten situs — semuanya tersusun rapi di panel ArafahGift.
+          Untuk pelanggan: pantau pesanan dan wishlist. Untuk admin: kelola pesanan, katalog, dan konten situs.
         </p>
 
         <div class="mt-12 max-w-sm">
@@ -59,8 +59,8 @@ const submit = () => {
         </div>
 
         <p class="eyebrow">Selamat datang kembali</p>
-        <h2 class="mt-4 text-[1.9rem] leading-tight">Masuk ke panel admin</h2>
-        <p class="mt-3 text-[0.85rem] text-muted">Gunakan akun admin ArafahGift untuk melanjutkan.</p>
+        <h2 class="mt-4 text-[1.9rem] leading-tight">Masuk</h2>
+        <p class="mt-3 text-[0.85rem] text-muted">Gunakan email dan kata sandi akun Anda.</p>
 
         <form class="mt-9 space-y-5" @submit.prevent="submit">
           <div>
@@ -104,15 +104,14 @@ const submit = () => {
           </div>
 
           <AppButton variant="gold" block type="submit" :loading="form.processing">
-            Masuk ke panel
+            Masuk
             <template #icon><LockKeyhole class="h-4 w-4" /></template>
           </AppButton>
-
-          <p v-if="form.errors" class="text-center text-[0.78rem] text-danger">{{ form.errors }}</p>
         </form>
 
         <p class="mt-10 text-center text-[0.72rem] text-muted">
-          Kembali ke <Link href="/" class="text-forest underline underline-offset-4">storefront</Link>
+          Belum punya akun? <Link href="/register" class="text-forest underline underline-offset-4">Daftar</Link>
+          · <Link href="/" class="text-forest underline underline-offset-4">Kembali ke storefront</Link>
         </p>
       </div>
     </main>

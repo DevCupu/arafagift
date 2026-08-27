@@ -4,23 +4,28 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 import { ArrowLeft, Printer } from 'lucide-vue-next'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { orders, orderStatuses, orderTotal } from '@/data/admin'
+import { orderStatuses, orderTotal } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
 
-const props = defineProps({ id: { type: String, required: true } })
+const props = defineProps({ order: { type: Object, default: null } })
 const { push } = useToast()
-const order = computed(() => orders.find((o) => o.id === props.id))
-const status = ref(order.value?.status ?? 'pending')
+const order = props.order
 
-const save = () => push(`Status ${order.value.id} diperbarui`, { tone: 'success' })
+const form = useForm({ status: order?.status ?? 'pending', awb: order?.shipping.awb ?? '' })
+
+const save = () => {
+  form.put(`/admin/pesanan/${order.id}`, {
+    preserveScroll: true,
+    onSuccess: () => push(`Status ${order.id} diperbarui`, { tone: 'success' }),
+  })
+}
 </script>
 
 <template>
@@ -71,12 +76,12 @@ const save = () => push(`Status ${order.value.id} diperbarui`, { tone: 'success'
         <section class="border border-line bg-surface p-6">
           <h2 class="font-display text-2xl">Ubah status</h2>
           <label class="field-label mt-5" for="status">Status pesanan</label>
-          <select id="status" v-model="status" class="field">
+          <select id="status" v-model="form.status" class="field">
             <option v-for="s in orderStatuses" :key="s.id" :value="s.id">{{ s.label }}</option>
           </select>
           <label class="field-label mt-4" for="awb">Nomor resi</label>
-          <input id="awb" :value="order.shipping.awb" class="field" placeholder="Belum ada resi" />
-          <AppButton block class="mt-5" @click="save">Simpan perubahan</AppButton>
+          <input id="awb" v-model="form.awb" class="field" placeholder="Belum ada resi" />
+          <AppButton block class="mt-5" :loading="form.processing" @click="save">Simpan perubahan</AppButton>
         </section>
 
         <section class="border border-line bg-surface p-6 text-[0.85rem] leading-relaxed text-muted">

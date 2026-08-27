@@ -1,5 +1,6 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import { Gift, Trash2 } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -9,6 +10,10 @@ import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 
 const cart = useCart()
+const store = computed(() => usePage().props.store)
+const freeShippingByAmount = computed(() =>
+  store.value.freeShippingFrom > 0 && cart.subtotal.value >= store.value.freeShippingFrom,
+)
 </script>
 
 <template>
@@ -60,14 +65,17 @@ const cart = useCart()
           <dl class="mt-6 space-y-3 text-[0.87rem]">
             <div class="flex justify-between"><dt class="text-muted">Subtotal</dt><dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd></div>
             <div v-if="cart.savings.value" class="flex justify-between"><dt class="text-muted">Potongan</dt><dd class="text-olive">−{{ formatIDR(cart.savings.value) }}</dd></div>
-            <div class="flex justify-between"><dt class="text-muted">Ongkos kirim</dt><dd class="text-muted">Dihitung saat checkout</dd></div>
+            <div class="flex justify-between">
+              <dt class="text-muted">Ongkos kirim</dt>
+              <dd :class="freeShippingByAmount ? 'text-olive' : 'text-muted'">{{ freeShippingByAmount ? 'Gratis' : 'Dibahas via WhatsApp' }}</dd>
+            </div>
           </dl>
           <div class="mt-6 flex items-baseline justify-between border-t border-line pt-5">
             <span class="text-[0.85rem] text-muted">Total sementara</span>
             <span class="font-display text-3xl text-forest">{{ formatIDR(cart.subtotal.value) }}</span>
           </div>
           <AppButton to="/checkout" block size="lg" class="mt-6">Checkout</AppButton>
-          <p class="mt-4 text-center text-[0.72rem] text-muted">Pembayaran aman · Transfer, QRIS, kartu kredit</p>
+          <p class="mt-4 text-center text-[0.72rem] text-muted">Konfirmasi pesanan & ongkir lewat WhatsApp</p>
         </div>
       </aside>
     </div>

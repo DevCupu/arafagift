@@ -1,15 +1,23 @@
-import { computed, ref } from 'vue'
-import { products } from '@/data/catalog'
-
-const ids = ref([104, 108])
+import { computed } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
+import { useToast } from '@/composables/useToast'
 
 export function useWishlist() {
-  const items = computed(() => products.filter((p) => ids.value.includes(p.id)))
+  const page = usePage()
+  const { push } = useToast()
+
+  const ids = computed(() => page.props.auth?.wishlistIds ?? [])
   const has = (id) => ids.value.includes(id)
+  const count = computed(() => ids.value.length)
+
   const toggle = (id) => {
-    ids.value = has(id) ? ids.value.filter((i) => i !== id) : [...ids.value, id]
-    return has(id)
+    if (!page.props.auth?.user) {
+      push('Masuk dulu untuk menyimpan wishlist', { tone: 'default' })
+      router.visit('/login')
+      return
+    }
+    router.post(`/wishlist/${id}/toggle`, {}, { preserveScroll: true, preserveState: true })
   }
-  const remove = (id) => { ids.value = ids.value.filter((i) => i !== id) }
-  return { ids, items, has, toggle, remove, count: computed(() => ids.value.length) }
+
+  return { ids, has, toggle, count }
 }

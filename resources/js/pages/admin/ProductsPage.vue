@@ -5,15 +5,19 @@ export default { layout: AdminLayout }
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import { Copy, Pencil, Plus, Search, Trash2 } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import { categories, products } from '@/data/catalog'
 import { formatIDR } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
+
+const props = defineProps({
+  products: { type: Array, required: true },
+  categories: { type: Array, required: true },
+})
 
 const { push } = useToast()
 const query = ref('')
@@ -29,12 +33,20 @@ const columns = [
 ]
 
 const rows = computed(() =>
-  products.filter((p) => {
+  props.products.filter((p) => {
     const okCat = category.value === 'semua' || p.categorySlug === category.value
     const q = query.value.trim().toLowerCase()
     return okCat && (!q || `${p.name} ${p.sku}`.toLowerCase().includes(q))
   }),
 )
+
+const deleteProduct = (product) => {
+  if (!confirm(`Hapus "${product.name}"? Tindakan ini tidak bisa dibatalkan.`)) return
+  router.delete(`/admin/produk/${product.slug}`, {
+    preserveScroll: true,
+    onSuccess: () => push(`${product.name} dihapus`, { tone: 'success' }),
+  })
+}
 </script>
 
 <template>
@@ -42,7 +54,7 @@ const rows = computed(() =>
     <header class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-[2.1rem] leading-none">Produk</h1>
-        <p class="mt-3 text-[0.85rem] text-muted">{{ products.length }} produk · 1 draft · 1 stok habis</p>
+        <p class="mt-3 text-[0.85rem] text-muted">{{ products.length }} produk</p>
       </div>
       <AppButton to="/admin/produk/baru" size="sm">
         <template #icon><Plus class="h-3.5 w-3.5" /></template>
@@ -67,7 +79,10 @@ const rows = computed(() =>
       <DataTable :columns="columns" :rows="rows">
         <template #cell-product="{ row }">
           <div class="flex items-center gap-3">
-            <span class="arch h-12 w-9 flex-none overflow-hidden border border-line bg-ivory"><ProductArt :art="row.art" :tone="row.id" /></span>
+            <span class="arch h-12 w-9 flex-none overflow-hidden border border-line bg-ivory">
+              <img v-if="row.image" :src="row.image" :alt="row.name" class="h-full w-full object-cover" />
+              <ProductArt v-else :art="row.art" :tone="row.id" />
+            </span>
             <span>
               <Link :href="`/admin/produk/${row.slug}`" class="link-underline block font-medium">{{ row.name }}</Link>
               <span class="text-[0.72rem] text-muted">{{ row.sku }}</span>
@@ -93,7 +108,7 @@ const rows = computed(() =>
             <button class="grid h-8 w-8 place-items-center text-muted transition hover:text-forest" aria-label="Duplikat" @click="push(`${row.name} diduplikasi sebagai draft`)">
               <Copy class="h-3.5 w-3.5" />
             </button>
-            <button class="grid h-8 w-8 place-items-center text-muted transition hover:text-danger" aria-label="Hapus" @click="push(`${row.name} dipindahkan ke arsip`)">
+            <button class="grid h-8 w-8 place-items-center text-muted transition hover:text-danger" aria-label="Hapus" @click="deleteProduct(row)">
               <Trash2 class="h-3.5 w-3.5" />
             </button>
           </div>

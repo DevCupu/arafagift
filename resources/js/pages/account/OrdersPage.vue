@@ -4,10 +4,11 @@ import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { orders, orderTotal } from '@/data/admin'
+import { orderTotal } from '@/data/admin'
 import { formatDate, formatIDR } from '@/composables/useFormat'
 
-const mine = orders.slice(0, 4)
+const props = defineProps({ orders: { type: Array, required: true } })
+const mine = props.orders
 </script>
 
 <template>

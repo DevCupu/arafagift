@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Content;
+use App\Models\Setting;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -36,15 +37,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $homeData = Content::where('key', 'home')->first()?->data ?? [];
+        $homeData = Content::where('key', 'home')->first()?->data;
+        $settings = Setting::first();
 
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+                'wishlistIds' => $request->user() ? $request->user()->wishlists()->pluck('product_id') : [],
             ],
-            'announcement' => $homeData['announcement'] ?? '',
+            'announcement' => is_array($homeData) ? ($homeData['announcement'] ?? '') : '',
+            'store' => [
+                'whatsapp' => $settings?->whatsapp,
+                'freeShippingFrom' => $settings?->free_shipping_from ?? 0,
+                'freeShippingCities' => $settings?->freeShippingCitiesList() ?? [],
+            ],
         ];
     }
 }

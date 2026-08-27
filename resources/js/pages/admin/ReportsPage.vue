@@ -6,21 +6,14 @@ export default { layout: AdminLayout }
 <script setup>
 import SalesChart from '@/components/admin/SalesChart.vue'
 import StatCard from '@/components/admin/StatCard.vue'
-import { salesSeries, topProducts } from '@/data/admin'
 import { formatShort } from '@/composables/useFormat'
 
-const stats = [
-  { label: 'Pendapatan 14 hari', value: 'Rp 171,2 jt', delta: '+23,1%', trend: 'up', note: 'vs periode lalu' },
-  { label: 'Pesanan', value: '268', delta: '+19', trend: 'up', note: 'vs periode lalu' },
-  { label: 'Nilai rata-rata', value: 'Rp 638 rb', delta: '−2,1%', trend: 'down', note: 'vs periode lalu' },
-  { label: 'Pembeli kembali', value: '41%', delta: '+4,2%', trend: 'up', note: 'vs periode lalu' },
-]
-
-const channels = [
-  { label: 'Website', share: 64 },
-  { label: 'WhatsApp', share: 27 },
-  { label: 'Instagram', share: 9 },
-]
+defineProps({
+  stats: { type: Array, required: true },
+  salesSeries: { type: Array, required: true },
+  topProducts: { type: Array, required: true },
+  channels: { type: Array, required: true },
+})
 </script>
 
 <template>

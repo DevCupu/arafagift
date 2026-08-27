@@ -2,7 +2,7 @@
 import { Link, usePage } from '@inertiajs/vue3'
 import {
   BarChart3, Boxes, FileText, LayoutDashboard, Package, Settings,
-  ShoppingCart, Tag, Ticket, Users, X,
+  ShoppingCart, Tag, Ticket, Truck, Users, X,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 
@@ -25,6 +25,7 @@ const groups = [
       { label: 'Produk', to: '/admin/produk', icon: Package },
       { label: 'Kategori', to: '/admin/kategori', icon: Tag },
       { label: 'Inventori', to: '/admin/inventori', icon: Boxes },
+      { label: 'Supplier', to: '/admin/supplier', icon: Truck },
       { label: 'Promo', to: '/admin/promo', icon: Ticket },
     ],
   },

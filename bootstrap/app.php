@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
         ]);
 
-        $middleware->redirectUsersTo('/admin');
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->is_admin ? '/admin' : '/akun');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

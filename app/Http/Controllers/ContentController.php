@@ -7,8 +7,10 @@ use App\Models\Product;
 use App\Models\Testimonial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
+use RuntimeException;
 
 class ContentController extends Controller
 {
@@ -37,6 +39,7 @@ class ContentController extends Controller
             'signature.productSlug' => ['required', 'string', 'exists:products,slug'],
             'instagram.handle' => ['required', 'string', 'max:60'],
             'instagram.url' => ['required', 'url'],
+            'hero_image' => ['nullable', 'image', 'max:4096'],
         ]);
 
         $content = Content::where('key', 'home')->firstOrFail();
@@ -53,6 +56,16 @@ class ContentController extends Controller
         $data['signature']['productSlug'] = $validated['signature']['productSlug'];
         $data['instagram']['handle'] = $validated['instagram']['handle'];
         $data['instagram']['url'] = $validated['instagram']['url'];
+
+        if ($request->hasFile('hero_image')) {
+            $path = $request->file('hero_image')->store('content', 'public');
+
+            if ($path === false) {
+                throw new RuntimeException('Gagal menyimpan gambar hero.');
+            }
+
+            $data['hero']['image'] = Storage::disk('public')->url($path);
+        }
 
         $content->update(['data' => $data]);
 
