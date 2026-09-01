@@ -97,6 +97,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/konten/testimoni', [ContentController::class, 'storeTestimonial'])->name('admin.content.testimonials.store');
     Route::put('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'updateTestimonial'])->name('admin.content.testimonials.update');
     Route::delete('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'destroyTestimonial'])->name('admin.content.testimonials.destroy');
+    Route::post('/admin/konten/faq', [ContentController::class, 'storeFaq'])->name('admin.content.faqs.store');
+    Route::put('/admin/konten/faq/{faq}', [ContentController::class, 'updateFaq'])->name('admin.content.faqs.update');
+    Route::delete('/admin/konten/faq/{faq}', [ContentController::class, 'destroyFaq'])->name('admin.content.faqs.destroy');
+    Route::patch('/admin/konten/faq/reorder', [ContentController::class, 'reorderFaq'])->name('admin.content.faqs.reorder');
     Route::patch('/admin/konten/unggulan/reorder', [ContentController::class, 'reorderFeatured'])->name('admin.content.featured.reorder');
     Route::patch('/admin/konten/unggulan/{product}/tambah', [ContentController::class, 'addFeatured'])->name('admin.content.featured.add');
     Route::patch('/admin/konten/unggulan/{product}/keluarkan', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');

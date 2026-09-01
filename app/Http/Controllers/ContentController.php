@@ -3,12 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\Content;
+use App\Models\Faq;
 use App\Models\Product;
 use App\Models\Testimonial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use RuntimeException;
@@ -20,6 +22,7 @@ class ContentController extends Controller
         return Inertia::render('admin/ContentPage', [
             'content' => Content::where('key', 'home')->firstOrFail()->data,
             'testimonials' => Testimonial::orderBy('id')->get(),
+            'faqs' => Faq::orderBy('sort_order')->get(),
             'featuredProducts' => Product::with(['category', 'supplier', 'occasions'])->where('featured', true)->orderBy('featured_order')->orderBy('id')->get()->map->toCatalog()->values(),
             'availableProducts' => Product::where('featured', false)->orderBy('name')->get(['id', 'name', 'slug']),
             'products' => Product::orderBy('name')->get(['id', 'name', 'slug']),
@@ -58,6 +61,9 @@ class ContentController extends Controller
             'instagram.handle' => ['required', 'string', 'max:60'],
             'instagram.title' => ['required', 'string', 'max:100'],
             'instagram.url' => ['required', 'url'],
+            'instagram.posts' => ['required', 'array', 'min:1', 'max:12'],
+            'instagram.posts.*.art' => ['required', 'string', Rule::in(['giftset', 'kurma', 'sajadah', 'tasbih', 'madu', 'parfum', 'souvenir'])],
+            'instagram.posts.*.caption' => ['required', 'string', 'max:120'],
             'values' => ['required', 'array', 'min:1', 'max:8'],
             'values.*.icon' => ['required', 'string', 'in:Sparkles,Gift,BadgeCheck,Send'],
             'values.*.title' => ['required', 'string', 'max:60'],
@@ -100,6 +106,7 @@ class ContentController extends Controller
         $data['instagram']['handle'] = $validated['instagram']['handle'];
         $data['instagram']['title'] = $validated['instagram']['title'];
         $data['instagram']['url'] = $validated['instagram']['url'];
+        $data['instagram']['posts'] = $validated['instagram']['posts'];
 
         $data['values'] = $validated['values'];
 
@@ -152,6 +159,53 @@ class ContentController extends Controller
     public function destroyTestimonial(Testimonial $testimonial): RedirectResponse
     {
         $testimonial->delete();
+
+        return back();
+    }
+
+    public function storeFaq(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'max:200'],
+            'answer' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $validated['sort_order'] = (Faq::max('sort_order') ?? -1) + 1;
+
+        Faq::create($validated);
+
+        return back();
+    }
+
+    public function updateFaq(Request $request, Faq $faq): RedirectResponse
+    {
+        $validated = $request->validate([
+            'question' => ['required', 'string', 'max:200'],
+            'answer' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $faq->update($validated);
+
+        return back();
+    }
+
+    public function destroyFaq(Faq $faq): RedirectResponse
+    {
+        $faq->delete();
+
+        return back();
+    }
+
+    public function reorderFaq(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'order' => ['required', 'array', 'max:100'],
+            'order.*' => ['required', 'integer', 'exists:faqs,id'],
+        ]);
+
+        foreach (array_values($validated['order']) as $position => $id) {
+            Faq::whereKey($id)->update(['sort_order' => $position]);
+        }
 
         return back();
     }

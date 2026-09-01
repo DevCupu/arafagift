@@ -14,6 +14,7 @@ import { useToast } from '@/composables/useToast'
 const props = defineProps({
   content: { type: Object, required: true },
   testimonials: { type: Array, required: true },
+  faqs: { type: Array, required: true },
   featuredProducts: { type: Array, required: true },
   availableProducts: { type: Array, required: true },
   products: { type: Array, required: true },
@@ -31,8 +32,11 @@ const tabs = [
   { id: 'story', label: 'Brand story' },
   { id: 'values', label: 'Nilai' },
   { id: 'testimonial', label: 'Testimoni' },
+  { id: 'faq', label: 'FAQ' },
   { id: 'instagram', label: 'Instagram' },
 ]
+
+const artOptions = ['giftset', 'kurma', 'sajadah', 'tasbih', 'madu', 'parfum', 'souvenir']
 
 const form = useForm({
   announcement: props.content.announcement,
@@ -67,6 +71,7 @@ const form = useForm({
     handle: props.content.instagram.handle,
     title: props.content.instagram.title ?? 'Follow the journey',
     url: props.content.instagram.url,
+    posts: props.content.instagram.posts?.length ? props.content.instagram.posts.map((p) => ({ ...p })) : [{ art: 'giftset', caption: '' }],
   },
   values: props.content.values?.length ? props.content.values.map((v) => ({ ...v })) : [],
   hero_image: null,
@@ -190,6 +195,68 @@ const moveValue = (index, dir) => {
   if (target < 0 || target >= form.values.length) return
   const [item] = form.values.splice(index, 1)
   form.values.splice(target, 0, item)
+}
+
+// ── Instagram posts ──
+const addInstagramPost = () => { form.instagram.posts.push({ art: 'giftset', caption: '' }) }
+const removeInstagramPost = (index) => { form.instagram.posts.splice(index, 1) }
+
+// ── FAQ ──
+const showFaqForm = ref(false)
+const faqForm = useForm({ question: '', answer: '' })
+
+const addFaq = () => {
+  faqForm.post('/admin/konten/faq', {
+    preserveScroll: true,
+    onSuccess: () => {
+      faqForm.reset()
+      showFaqForm.value = false
+      push('FAQ ditambahkan', { tone: 'success' })
+    },
+  })
+}
+
+const editingFaqId = ref(null)
+const editFaqForm = useForm({ question: '', answer: '' })
+
+const startEditFaq = (faq) => {
+  showFaqForm.value = false
+  editingFaqId.value = faq.id
+  editFaqForm.question = faq.question
+  editFaqForm.answer = faq.answer
+}
+
+const saveFaq = () => {
+  editFaqForm.put(`/admin/konten/faq/${editingFaqId.value}`, {
+    preserveScroll: true,
+    onSuccess: () => {
+      push('FAQ diperbarui', { tone: 'success' })
+      editingFaqId.value = null
+    },
+  })
+}
+
+const deleteFaq = (faq) => {
+  if (!confirm(`Hapus pertanyaan "${faq.question}"?`)) return
+  router.delete(`/admin/konten/faq/${faq.id}`, {
+    preserveScroll: true,
+    onSuccess: () => push('FAQ dihapus', { tone: 'success' }),
+  })
+}
+
+const faqs = ref([...props.faqs])
+watch(() => props.faqs, (list) => { faqs.value = [...list] })
+
+const moveFaq = (index, dir) => {
+  const target = index + dir
+  if (target < 0 || target >= faqs.value.length) return
+  const [item] = faqs.value.splice(index, 1)
+  faqs.value.splice(target, 0, item)
+  router.patch('/admin/konten/faq/reorder', { order: faqs.value.map((f) => f.id) }, {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => push('Urutan FAQ disimpan', { tone: 'success' }),
+  })
 }
 </script>
 
@@ -561,8 +628,68 @@ const moveValue = (index, dir) => {
           <AppButton v-else variant="quiet" size="sm" class="mt-5" @click="showTestimonialForm = true">Tambah testimoni</AppButton>
         </template>
 
+        <!-- ════════ FAQ ════════ -->
+        <template v-else-if="tab === 'faq'">
+          <h2 class="font-display text-2xl">FAQ</h2>
+          <p class="mt-2 text-[0.83rem] text-muted">Tampil di homepage dan halaman /faq.</p>
+          <ul class="mt-6 space-y-4">
+            <li v-for="(f, i) in faqs" :key="f.id" class="border border-line p-5">
+              <template v-if="editingFaqId === f.id">
+                <div class="space-y-4">
+                  <div>
+                    <label class="field-label" :for="`f-edit-q-${f.id}`">Pertanyaan</label>
+                    <input :id="`f-edit-q-${f.id}`" v-model="editFaqForm.question" class="field" required />
+                    <p v-if="editFaqForm.errors.question" class="mt-1.5 text-[0.72rem] text-danger">{{ editFaqForm.errors.question }}</p>
+                  </div>
+                  <div>
+                    <label class="field-label" :for="`f-edit-a-${f.id}`">Jawaban</label>
+                    <textarea :id="`f-edit-a-${f.id}`" v-model="editFaqForm.answer" rows="3" class="field" required />
+                    <p v-if="editFaqForm.errors.answer" class="mt-1.5 text-[0.72rem] text-danger">{{ editFaqForm.errors.answer }}</p>
+                  </div>
+                  <div class="flex gap-3">
+                    <AppButton size="sm" type="button" :loading="editFaqForm.processing" @click="saveFaq">Simpan</AppButton>
+                    <AppButton size="sm" variant="quiet" type="button" @click="editingFaqId = null">Batal</AppButton>
+                  </div>
+                </div>
+              </template>
+              <template v-else>
+                <div class="flex items-start justify-between gap-4">
+                  <p class="font-display text-[1.05rem] leading-snug text-forest">{{ f.question }}</p>
+                  <div class="flex flex-none items-center gap-2">
+                    <button type="button" class="text-muted transition hover:text-forest disabled:opacity-30" :disabled="i === 0" title="Naikkan posisi" @click="moveFaq(i, -1)"><ArrowUp class="h-4 w-4" /></button>
+                    <button type="button" class="text-muted transition hover:text-forest disabled:opacity-30" :disabled="i === faqs.length - 1" title="Turunkan posisi" @click="moveFaq(i, 1)"><ArrowDown class="h-4 w-4" /></button>
+                  </div>
+                </div>
+                <p class="mt-2 text-[0.85rem] leading-relaxed text-muted">{{ f.answer }}</p>
+                <div class="mt-3 flex gap-4">
+                  <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-forest" @click="startEditFaq(f)">Edit</button>
+                  <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteFaq(f)">Hapus</button>
+                </div>
+              </template>
+            </li>
+          </ul>
+
+          <form v-if="showFaqForm" class="mt-6 space-y-4 border border-line p-5" @submit.prevent="addFaq">
+            <div>
+              <label class="field-label" for="f-q">Pertanyaan</label>
+              <input id="f-q" v-model="faqForm.question" class="field" required />
+              <p v-if="faqForm.errors.question" class="mt-1.5 text-[0.72rem] text-danger">{{ faqForm.errors.question }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="f-a">Jawaban</label>
+              <textarea id="f-a" v-model="faqForm.answer" rows="3" class="field" required />
+              <p v-if="faqForm.errors.answer" class="mt-1.5 text-[0.72rem] text-danger">{{ faqForm.errors.answer }}</p>
+            </div>
+            <div class="flex gap-3">
+              <AppButton size="sm" type="submit" :loading="faqForm.processing">Simpan FAQ</AppButton>
+              <AppButton size="sm" variant="quiet" type="button" @click="showFaqForm = false">Batal</AppButton>
+            </div>
+          </form>
+          <AppButton v-else variant="quiet" size="sm" class="mt-5" @click="showFaqForm = true">Tambah FAQ</AppButton>
+        </template>
+
         <!-- ════════ INSTAGRAM ════════ -->
-        <template v-else>
+        <template v-else-if="tab === 'instagram'">
           <h2 class="font-display text-2xl">Section Instagram</h2>
           <div class="mt-6 space-y-5">
             <div>
@@ -579,6 +706,28 @@ const moveValue = (index, dir) => {
               <label class="field-label" for="c-igurl">Tautan profil</label>
               <input id="c-igurl" v-model="form.instagram.url" class="field" />
               <p v-if="form.errors['instagram.url']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['instagram.url'] }}</p>
+            </div>
+            <div>
+              <label class="field-label">Foto grid (maks. 12)</label>
+              <p class="mt-1 text-[0.78rem] text-muted">Belum ada foto asli — pilih motif placeholder yang paling cocok untuk tiap kotak.</p>
+              <div class="mt-3 space-y-3">
+                <div v-for="(post, i) in form.instagram.posts" :key="i" class="flex items-start gap-2 border border-line p-4">
+                  <span class="arch h-14 w-14 flex-none overflow-hidden border border-line bg-ivory"><ProductArt :art="post.art" :tone="i" /></span>
+                  <div class="flex-1 space-y-2">
+                    <select v-model="form.instagram.posts[i].art" class="field">
+                      <option v-for="a in artOptions" :key="a" :value="a">{{ a }}</option>
+                    </select>
+                    <input v-model="form.instagram.posts[i].caption" class="field" placeholder="Caption" />
+                  </div>
+                  <button v-if="form.instagram.posts.length > 1" type="button" class="mt-2 text-muted hover:text-danger" @click="removeInstagramPost(i)">
+                    <X class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="mt-2 flex items-center gap-1.5 text-[0.78rem] text-forest transition hover:text-forest-deep" @click="addInstagramPost">
+                <Plus class="h-3.5 w-3.5" /> Tambah foto
+              </button>
+              <p v-if="form.errors['instagram.posts']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['instagram.posts'] }}</p>
             </div>
           </div>
         </template>
