@@ -22,6 +22,21 @@ it('lets an admin update an order status and tracking number', function () {
         ->awb->toBe('SC1234567890');
 });
 
+it('recalculates the order total when an admin sets the shipping cost', function () {
+    $order = Order::factory()->create(['status' => 'pending', 'subtotal' => 100000, 'shipping_cost' => 0]);
+
+    $this->actingAs($this->admin)->put(route('admin.order.update', $order), [
+        'status' => 'pending',
+        'shippingCost' => 15000,
+        'adminNote' => 'Kirim via JNE reguler',
+    ])->assertSessionHasNoErrors();
+
+    $fresh = $order->fresh();
+    expect((int) $fresh->shipping_cost)->toBe(15000);
+    expect((int) $fresh->total)->toBe(115000);
+    expect($fresh->admin_note)->toBe('Kirim via JNE reguler');
+});
+
 it('rejects an invalid order status', function () {
     $order = Order::factory()->create();
 

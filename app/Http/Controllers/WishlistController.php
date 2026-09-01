@@ -15,7 +15,7 @@ class WishlistController extends Controller
         $productIds = $request->user()->wishlists()->pluck('product_id');
 
         return Inertia::render('account/WishlistPage', [
-            'products' => Product::with('category')->whereIn('id', $productIds)->get()->map->toCatalog()->values(),
+            'products' => Product::with(['category', 'supplier', 'occasions'])->whereIn('id', $productIds)->get()->map->toCatalog()->values(),
         ]);
     }
 

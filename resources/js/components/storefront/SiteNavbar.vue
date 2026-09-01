@@ -1,14 +1,15 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { Menu, Search, ShoppingBag, User, X } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
-import { products } from '@/data/catalog'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
+import { useStore } from '@/composables/useStore'
 
 const page = usePage()
+const { whatsappHref } = useStore()
 const { count, openDrawer, pulse } = useCart()
 
 const links = [
@@ -24,12 +25,16 @@ const searchOpen = ref(false)
 const query = ref('')
 const scrolled = ref(false)
 
-const results = computed(() => {
-  const q = query.value.trim().toLowerCase()
-  if (!q) return []
-  return products
-    .filter((p) => `${p.name} ${p.category} ${p.short}`.toLowerCase().includes(q))
-    .slice(0, 5)
+const results = ref([])
+let searchTimer = null
+watch(query, (q) => {
+  clearTimeout(searchTimer)
+  const term = q.trim()
+  if (term.length < 2) { results.value = []; return }
+  searchTimer = setTimeout(async () => {
+    const res = await fetch(`/pencarian?q=${encodeURIComponent(term)}`)
+    results.value = res.ok ? await res.json() : []
+  }, 250)
 })
 
 const onScroll = () => { scrolled.value = window.scrollY > 8 }
@@ -129,8 +134,11 @@ watch([menuOpen, searchOpen], ([m, s]) => {
             <Link href="/akun" class="flex items-center gap-2.5 text-[0.9rem] text-ivory/75 transition hover:text-ivory">
               <User class="h-4 w-4 text-gold" :stroke-width="1.5" /> Akun saya
             </Link>
+            <Link href="/lacak-pesanan" class="flex items-center gap-2.5 text-[0.9rem] text-ivory/75 transition hover:text-ivory">
+              <Search class="h-4 w-4 text-gold" :stroke-width="1.5" /> Lacak pesanan
+            </Link>
             <a
-              href="https://wa.me/6281234567890" target="_blank" rel="noopener"
+              :href="whatsappHref()" target="_blank" rel="noopener"
               class="flex items-center gap-2.5 text-[0.9rem] text-ivory/75 transition hover:text-ivory"
             >
               <span class="h-4 w-4 text-gold flex-none">

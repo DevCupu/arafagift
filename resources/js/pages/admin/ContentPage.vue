@@ -6,7 +6,7 @@ export default { layout: AdminLayout }
 <script setup>
 import { ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
-import { GripVertical, ImagePlus } from 'lucide-vue-next'
+import { ArrowDown, ArrowUp, ImagePlus, Plus, X } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import { useToast } from '@/composables/useToast'
@@ -27,6 +27,9 @@ const tabs = [
   { id: 'announcement', label: 'Banner' },
   { id: 'featured', label: 'Produk unggulan' },
   { id: 'giftset', label: 'Gift set' },
+  { id: 'bulk', label: 'Rombongan' },
+  { id: 'story', label: 'Brand story' },
+  { id: 'values', label: 'Nilai' },
   { id: 'testimonial', label: 'Testimoni' },
   { id: 'instagram', label: 'Instagram' },
 ]
@@ -38,16 +41,34 @@ const form = useForm({
     headline: props.content.hero.headline,
     sub: props.content.hero.sub,
     cta: { label: props.content.hero.cta.label, to: props.content.hero.cta.to },
+    ctaSecondary: { label: props.content.hero.ctaSecondary?.label ?? 'Hubungi Kami', to: props.content.hero.ctaSecondary?.to ?? '/faq' },
   },
   signature: {
+    eyebrow: props.content.signature.eyebrow ?? 'Signature',
     title: props.content.signature.title,
     body: props.content.signature.body,
     productSlug: props.content.signature.productSlug,
+    cta: { label: props.content.signature.cta?.label ?? 'Lihat Detail', to: props.content.signature.cta?.to ?? '/koleksi' },
+  },
+  bulk: {
+    eyebrow: props.content.bulk?.eyebrow ?? 'Rombongan',
+    title: props.content.bulk?.title ?? 'Souvenir untuk rombongan?',
+    sub: props.content.bulk?.sub ?? '',
+    points: props.content.bulk?.points?.length ? [...props.content.bulk.points] : ['Mulai 50 pcs'],
+    cta: { label: props.content.bulk?.cta?.label ?? 'Konsultasi via WhatsApp', href: props.content.bulk?.cta?.href ?? '' },
+  },
+  story: {
+    eyebrow: props.content.story?.eyebrow ?? 'Cerita kami',
+    title: props.content.story?.title ?? '',
+    body: props.content.story?.body?.length ? [...props.content.story.body] : [''],
+    signature: props.content.story?.signature ?? '',
   },
   instagram: {
     handle: props.content.instagram.handle,
+    title: props.content.instagram.title ?? 'Follow the journey',
     url: props.content.instagram.url,
   },
+  values: props.content.values?.length ? props.content.values.map((v) => ({ ...v })) : [],
   hero_image: null,
 })
 
@@ -68,6 +89,14 @@ const save = () => {
       onSuccess: () => push('Konten homepage disimpan', { tone: 'success' }),
     })
 }
+
+// ── Bulk points management ──
+const addBulkPoint = () => { form.bulk.points.push('') }
+const removeBulkPoint = (index) => { form.bulk.points.splice(index, 1) }
+
+// ── Story body paragraphs management ──
+const addStoryParagraph = () => { form.story.body.push('') }
+const removeStoryParagraph = (index) => { form.story.body.splice(index, 1) }
 
 // ── Testimoni ──
 const showTestimonialForm = ref(false)
@@ -136,6 +165,32 @@ const removeFeatured = (product) => {
     onSuccess: () => push('Produk dikeluarkan dari unggulan', { tone: 'success' }),
   })
 }
+
+const featured = ref([...props.featuredProducts])
+watch(() => props.featuredProducts, (list) => { featured.value = [...list] })
+
+const moveFeatured = (index, dir) => {
+  const target = index + dir
+  if (target < 0 || target >= featured.value.length) return
+  const [item] = featured.value.splice(index, 1)
+  featured.value.splice(target, 0, item)
+  router.patch('/admin/konten/unggulan/reorder', { order: featured.value.map((p) => p.id) }, {
+    preserveScroll: true,
+    preserveState: true,
+    onSuccess: () => push('Urutan produk unggulan disimpan', { tone: 'success' }),
+  })
+}
+
+// ── Nilai / Value props ──
+const iconOptions = ['Sparkles', 'Gift', 'BadgeCheck', 'Send']
+const addValue = () => { form.values.push({ icon: 'Sparkles', title: '', body: '' }) }
+const removeValue = (index) => { form.values.splice(index, 1) }
+const moveValue = (index, dir) => {
+  const target = index + dir
+  if (target < 0 || target >= form.values.length) return
+  const [item] = form.values.splice(index, 1)
+  form.values.splice(target, 0, item)
+}
 </script>
 
 <template>
@@ -150,7 +205,7 @@ const removeFeatured = (product) => {
 
     <div class="no-scrollbar mt-8 flex gap-6 overflow-x-auto border-b border-line">
       <button
-        v-for="t in tabs" :key="t.id"
+        v-for="t in tabs" :key="t.id" type="button"
         class="relative whitespace-nowrap pb-3 text-[0.83rem] transition"
         :class="tab === t.id ? 'text-forest' : 'text-muted hover:text-forest'"
         @click="tab = t.id"
@@ -162,6 +217,8 @@ const removeFeatured = (product) => {
 
     <div class="mt-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
       <section class="border border-line bg-surface p-6 sm:p-7">
+
+        <!-- ════════ HERO ════════ -->
         <template v-if="tab === 'hero'">
           <h2 class="font-display text-2xl">Hero</h2>
           <div class="mt-6 space-y-5">
@@ -197,17 +254,28 @@ const removeFeatured = (product) => {
             </div>
             <div class="grid gap-5 sm:grid-cols-2">
               <div>
-                <label class="field-label" for="c-cta">Teks tombol</label>
+                <label class="field-label" for="c-cta">Teks tombol utama</label>
                 <input id="c-cta" v-model="form.hero.cta.label" class="field" />
               </div>
               <div>
-                <label class="field-label" for="c-ctalink">Tautan tombol</label>
+                <label class="field-label" for="c-ctalink">Tautan tombol utama</label>
                 <input id="c-ctalink" v-model="form.hero.cta.to" class="field" />
+              </div>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class="field-label" for="c-cta2">Teks tombol kedua</label>
+                <input id="c-cta2" v-model="form.hero.ctaSecondary.label" class="field" />
+              </div>
+              <div>
+                <label class="field-label" for="c-cta2link">Tautan tombol kedua</label>
+                <input id="c-cta2link" v-model="form.hero.ctaSecondary.to" class="field" />
               </div>
             </div>
           </div>
         </template>
 
+        <!-- ════════ BANNER ════════ -->
         <template v-else-if="tab === 'announcement'">
           <h2 class="font-display text-2xl">Banner pengumuman</h2>
           <label class="field-label mt-6" for="c-ann">Teks banner</label>
@@ -216,15 +284,20 @@ const removeFeatured = (product) => {
           <p v-if="form.errors.announcement" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.announcement }}</p>
         </template>
 
+        <!-- ════════ PRODUK UNGGULAN ════════ -->
         <template v-else-if="tab === 'featured'">
           <h2 class="font-display text-2xl">Produk unggulan</h2>
-          <p class="mt-2 text-[0.83rem] text-muted">Empat produk teratas tampil di section “Favorit dari ArafahGift”. Tandai produk sebagai unggulan lewat halaman Produk.</p>
-          <ul v-if="featuredProducts.length" class="mt-6 divide-y divide-line border-y border-line">
-            <li v-for="p in featuredProducts" :key="p.id" class="flex items-center gap-4 py-3.5">
-              <GripVertical class="h-4 w-4 flex-none cursor-grab text-muted" />
+          <p class="mt-2 text-[0.83rem] text-muted">Unggulan tampil di homepage sesuai urutan di bawah ini. Tandai produk lewat halaman Produk, lalu atur posisinya di sini.</p>
+          <ul v-if="featured.length" class="mt-6 divide-y divide-line border-y border-line">
+            <li v-for="(p, i) in featured" :key="p.id" class="flex items-center gap-4 py-3.5">
               <span class="arch h-12 w-9 flex-none overflow-hidden border border-line bg-ivory"><ProductArt :art="p.art" :tone="p.id" /></span>
-              <span class="flex-1 text-[0.87rem] text-forest">{{ p.name }}</span>
-              <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="removeFeatured(p)">Keluarkan</button>
+              <span class="flex-1 min-w-0 text-[0.87rem] text-forest">{{ p.name }}</span>
+              <div class="flex items-center gap-2">
+                <span class="text-[0.7rem] tabular-nums text-muted">{{ i + 1 }} / {{ featured.length }}</span>
+                <button type="button" class="text-muted transition hover:text-forest disabled:opacity-30" :disabled="i === 0" title="Naikkan posisi" @click="moveFeatured(i, -1)"><ArrowUp class="h-4 w-4" /></button>
+                <button type="button" class="text-muted transition hover:text-forest disabled:opacity-30" :disabled="i === featured.length - 1" title="Turunkan posisi" @click="moveFeatured(i, 1)"><ArrowDown class="h-4 w-4" /></button>
+                <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="removeFeatured(p)">Keluarkan</button>
+              </div>
             </li>
           </ul>
           <p v-else class="mt-6 text-[0.83rem] text-muted">Belum ada produk yang ditandai unggulan.</p>
@@ -240,9 +313,15 @@ const removeFeatured = (product) => {
           </div>
         </template>
 
+        <!-- ════════ GIFT SET ════════ -->
         <template v-else-if="tab === 'giftset'">
           <h2 class="font-display text-2xl">Section gift set</h2>
           <div class="mt-6 space-y-5">
+            <div>
+              <label class="field-label" for="c-sigeyebrow">Label kecil</label>
+              <input id="c-sigeyebrow" v-model="form.signature.eyebrow" class="field" />
+              <p v-if="form.errors['signature.eyebrow']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['signature.eyebrow'] }}</p>
+            </div>
             <div>
               <label class="field-label" for="c-sigtitle">Judul</label>
               <input id="c-sigtitle" v-model="form.signature.title" class="field" />
@@ -260,9 +339,138 @@ const removeFeatured = (product) => {
               </select>
               <p v-if="form.errors['signature.productSlug']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['signature.productSlug'] }}</p>
             </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class="field-label" for="c-sigcta">Teks tombol</label>
+                <input id="c-sigcta" v-model="form.signature.cta.label" class="field" />
+              </div>
+              <div>
+                <label class="field-label" for="c-sigctalink">Tautan tombol</label>
+                <input id="c-sigctalink" v-model="form.signature.cta.to" class="field" />
+              </div>
+            </div>
           </div>
         </template>
 
+        <!-- ════════ ROMBONGAN ════════ -->
+        <template v-else-if="tab === 'bulk'">
+          <h2 class="font-display text-2xl">Section rombongan</h2>
+          <p class="mt-2 text-[0.83rem] text-muted">Tampil di bagian "Souvenir untuk satu rombongan?"</p>
+          <div class="mt-6 space-y-5">
+            <div>
+              <label class="field-label" for="c-bulkeyebrow">Label kecil</label>
+              <input id="c-bulkeyebrow" v-model="form.bulk.eyebrow" class="field" />
+            </div>
+            <div>
+              <label class="field-label" for="c-bulktitle">Judul</label>
+              <input id="c-bulktitle" v-model="form.bulk.title" class="field" />
+            </div>
+            <div>
+              <label class="field-label" for="c-bulksub">Deskripsi</label>
+              <textarea id="c-bulksub" v-model="form.bulk.sub" rows="3" class="field" />
+            </div>
+            <div>
+              <label class="field-label">Poin-poin</label>
+              <div class="mt-2 space-y-2">
+                <div v-for="(point, i) in form.bulk.points" :key="i" class="flex items-center gap-2">
+                  <input v-model="form.bulk.points[i]" class="field flex-1" placeholder="Poin ke-1" />
+                  <button v-if="form.bulk.points.length > 1" type="button" class="text-muted hover:text-danger" @click="removeBulkPoint(i)">
+                    <X class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="mt-2 flex items-center gap-1.5 text-[0.78rem] text-forest transition hover:text-forest-deep" @click="addBulkPoint">
+                <Plus class="h-3.5 w-3.5" /> Tambah poin
+              </button>
+              <p v-if="form.errors['bulk.points']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['bulk.points'] }}</p>
+            </div>
+            <div class="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label class="field-label" for="c-bulkcta">Teks tombol</label>
+                <input id="c-bulkcta" v-model="form.bulk.cta.label" class="field" />
+              </div>
+              <div>
+                <label class="field-label" for="c-bulkctahref">Tautan tombol (URL WA)</label>
+                <input id="c-bulkctahref" v-model="form.bulk.cta.href" class="field" placeholder="https://wa.me/6281234567890" />
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- ════════ BRAND STORY ════════ -->
+        <template v-else-if="tab === 'story'">
+          <h2 class="font-display text-2xl">Brand story</h2>
+          <p class="mt-2 text-[0.83rem] text-muted">Section "Setiap perjalanan pulang membawa cerita."</p>
+          <div class="mt-6 space-y-5">
+            <div>
+              <label class="field-label" for="c-storyeyebrow">Label kecil</label>
+              <input id="c-storyeyebrow" v-model="form.story.eyebrow" class="field" />
+            </div>
+            <div>
+              <label class="field-label" for="c-storytitle">Judul</label>
+              <input id="c-storytitle" v-model="form.story.title" class="field" />
+            </div>
+            <div>
+              <label class="field-label">Paragraf</label>
+              <div class="mt-2 space-y-2">
+                <div v-for="(para, i) in form.story.body" :key="i" class="flex items-start gap-2">
+                  <textarea :value="form.story.body[i]" @input="form.story.body[i] = $event.target.value" rows="3" class="field flex-1" :placeholder="`Paragraf ${i + 1}`" />
+                  <button v-if="form.story.body.length > 1" type="button" class="mt-2 text-muted hover:text-danger" @click="removeStoryParagraph(i)">
+                    <X class="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <button type="button" class="mt-2 flex items-center gap-1.5 text-[0.78rem] text-forest transition hover:text-forest-deep" @click="addStoryParagraph">
+                <Plus class="h-3.5 w-3.5" /> Tambah paragraf
+              </button>
+              <p v-if="form.errors['story.body']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['story.body'] }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="c-storysig">Tanda tangan</label>
+              <input id="c-storysig" v-model="form.story.signature" class="field" placeholder="Tim ArafahGift, Jakarta" />
+            </div>
+          </div>
+        </template>
+
+        <!-- ════════ NILAI / VALUE PROPS ════════ -->
+        <template v-else-if="tab === 'values'">
+          <h2 class="font-display text-2xl">Nilai</h2>
+          <p class="mt-2 text-[0.83rem] text-muted">Section "Kenapa ArafahGift". Maksimal 8 kartu, masing-masing dengan ikon, judul, dan deskripsi.</p>
+          <div class="mt-6 space-y-5">
+            <div v-for="(value, i) in form.values" :key="i" class="border border-line p-5">
+              <div class="flex items-center justify-between gap-3">
+                <p class="text-[0.78rem] uppercase tracking-[0.12em] text-muted">Kartu {{ i + 1 }}</p>
+                <div class="flex items-center gap-2">
+                  <button type="button" class="text-muted hover:text-forest disabled:opacity-30" :disabled="i === 0" title="Naikkan" @click="moveValue(i, -1)"><ArrowUp class="h-4 w-4" /></button>
+                  <button type="button" class="text-muted hover:text-forest disabled:opacity-30" :disabled="i === form.values.length - 1" title="Turunkan" @click="moveValue(i, 1)"><ArrowDown class="h-4 w-4" /></button>
+                  <button v-if="form.values.length > 1" type="button" class="text-muted hover:text-danger" @click="removeValue(i)"><X class="h-4 w-4" /></button>
+                </div>
+              </div>
+              <div class="mt-4 space-y-4">
+                <div>
+                  <label class="field-label" :for="`v-icon-${i}`">Ikon</label>
+                  <select :id="`v-icon-${i}`" v-model="form.values[i].icon" class="field">
+                    <option v-for="ic in iconOptions" :key="ic" :value="ic">{{ ic }}</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="field-label" :for="`v-title-${i}`">Judul</label>
+                  <input :id="`v-title-${i}`" v-model="form.values[i].title" class="field" />
+                </div>
+                <div>
+                  <label class="field-label" :for="`v-body-${i}`">Deskripsi</label>
+                  <textarea :id="`v-body-${i}`" v-model="form.values[i].body" rows="3" class="field" />
+                </div>
+              </div>
+            </div>
+            <p v-if="form.errors['values']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['values'] }}</p>
+            <button type="button" class="flex items-center gap-1.5 text-[0.78rem] text-forest transition hover:text-forest-deep" @click="addValue">
+              <Plus class="h-3.5 w-3.5" /> Tambah kartu
+            </button>
+          </div>
+        </template>
+
+        <!-- ════════ TESTIMONI ════════ -->
         <template v-else-if="tab === 'testimonial'">
           <h2 class="font-display text-2xl">Testimoni</h2>
           <ul class="mt-6 space-y-4">
@@ -304,12 +512,12 @@ const removeFeatured = (product) => {
                 </div>
               </template>
               <template v-else>
-                <p class="font-display text-[1.1rem] italic leading-snug text-forest">“{{ t.quote }}”</p>
+                <p class="font-display text-[1.1rem] italic leading-snug text-forest">"{{ t.quote }}"</p>
                 <div class="mt-3 flex items-center justify-between gap-4">
                   <p class="text-[0.78rem] text-muted">{{ t.name }} · {{ t.city }} · {{ t.rating }} bintang</p>
                   <div class="flex gap-4">
-                    <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-forest" @click="startEditTestimonial(t)">Edit</button>
-                    <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteTestimonial(t)">Hapus</button>
+                    <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-forest" @click="startEditTestimonial(t)">Edit</button>
+                    <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteTestimonial(t)">Hapus</button>
                   </div>
                 </div>
               </template>
@@ -353,6 +561,7 @@ const removeFeatured = (product) => {
           <AppButton v-else variant="quiet" size="sm" class="mt-5" @click="showTestimonialForm = true">Tambah testimoni</AppButton>
         </template>
 
+        <!-- ════════ INSTAGRAM ════════ -->
         <template v-else>
           <h2 class="font-display text-2xl">Section Instagram</h2>
           <div class="mt-6 space-y-5">
@@ -360,6 +569,11 @@ const removeFeatured = (product) => {
               <label class="field-label" for="c-ig">Username</label>
               <input id="c-ig" v-model="form.instagram.handle" class="field" />
               <p v-if="form.errors['instagram.handle']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['instagram.handle'] }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="c-igtitle">Judul section</label>
+              <input id="c-igtitle" v-model="form.instagram.title" class="field" />
+              <p v-if="form.errors['instagram.title']" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors['instagram.title'] }}</p>
             </div>
             <div>
               <label class="field-label" for="c-igurl">Tautan profil</label>
@@ -370,13 +584,20 @@ const removeFeatured = (product) => {
         </template>
       </section>
 
+      <!-- ════════ PRATINJAU ════════ -->
       <aside class="border border-line bg-ivory p-6">
         <p class="text-[0.72rem] uppercase tracking-[0.14em] text-muted">Pratinjau</p>
         <div class="mt-5 border border-line bg-surface p-6">
-          <p class="eyebrow">{{ form.hero.eyebrow }}</p>
-          <p class="mt-4 whitespace-pre-line font-display text-[1.9rem] leading-[1.06] text-forest">{{ form.hero.headline }}</p>
-          <p class="mt-4 text-[0.85rem] leading-relaxed text-muted">{{ form.hero.sub }}</p>
-          <span class="mt-6 inline-block border border-forest bg-forest px-5 py-2.5 text-[0.8rem] text-ivory">{{ form.hero.cta.label }}</span>
+          <p class="eyebrow">{{ tab === 'giftset' ? form.signature.eyebrow : tab === 'bulk' ? form.bulk.eyebrow : tab === 'story' ? form.story.eyebrow : form.hero.eyebrow }}</p>
+          <p class="mt-4 whitespace-pre-line font-display text-[1.9rem] leading-[1.06] text-forest">
+            {{ tab === 'giftset' ? form.signature.title : tab === 'bulk' ? form.bulk.title : tab === 'story' ? form.story.title : form.hero.headline }}
+          </p>
+          <p class="mt-4 text-[0.85rem] leading-relaxed text-muted">
+            {{ tab === 'giftset' ? form.signature.body : tab === 'bulk' ? form.bulk.sub : tab === 'story' ? form.story.body[0] : form.hero.sub }}
+          </p>
+          <span v-if="tab === 'hero' || tab === 'giftset' || tab === 'bulk'" class="mt-6 inline-block border border-forest bg-forest px-5 py-2.5 text-[0.8rem] text-ivory">
+            {{ tab === 'giftset' ? form.signature.cta.label : tab === 'bulk' ? form.bulk.cta.label : form.hero.cta.label }}
+          </span>
         </div>
         <div class="mt-4 border border-line bg-forest-deep px-4 py-2.5 text-center text-[0.7rem] uppercase tracking-[0.12em] text-ivory/85">
           {{ form.announcement }}

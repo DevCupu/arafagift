@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'order_number', 'user_id', 'customer_name', 'customer_email', 'customer_phone',
     'address', 'city', 'province', 'postal_code', 'shipping_method_id', 'shipping_cost',
-    'payment_method_id', 'gift_message', 'hide_invoice', 'status', 'channel', 'note', 'awb',
+    'payment_method_id', 'gift_message', 'hide_invoice', 'status', 'channel', 'note', 'awb', 'admin_note',
     'subtotal', 'total',
 ])]
 class Order extends Model
@@ -66,6 +66,7 @@ class Order extends Model
             'status' => $this->status,
             'channel' => $this->channel,
             'note' => $this->note,
+            'admin_note' => $this->admin_note,
             'address' => trim(implode(', ', array_filter([
                 $this->address, $this->city, $this->province,
             ])).' '.$this->postal_code),

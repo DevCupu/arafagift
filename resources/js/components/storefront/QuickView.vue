@@ -26,7 +26,7 @@ const addToCart = () => {
   <AppModal :open="!!product" label="Lihat cepat produk" @close="emit('close')">
     <div v-if="product" class="grid sm:grid-cols-2">
       <div class="aspect-[4/5] border-b border-line bg-ivory sm:border-b-0 sm:border-r">
-        <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-cover" />
+        <img v-if="product.image" :src="product.image" :alt="product.name" loading="lazy" class="h-full w-full object-cover" />
         <ProductArt v-else :art="product.art" :tone="product.id" />
       </div>
       <div class="flex flex-col p-7 sm:p-9">

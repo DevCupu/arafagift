@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import AccountShell from '@/components/storefront/AccountShell.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -6,14 +7,17 @@ import StatusPill from '@/components/admin/StatusPill.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { orderTotal } from '@/data/admin'
 import { formatDate, formatIDR } from '@/composables/useFormat'
+import { useStore } from '@/composables/useStore'
 
 const props = defineProps({ order: { type: Object, default: null } })
 const order = props.order
+const { whatsappHref } = useStore()
 
-const timeline = [
-  ['Pesanan dibuat', true], ['Pembayaran diterima', true],
-  ['Dikemas', true], ['Dikirim', false], ['Diterima', false],
-]
+const steps = ['Pesanan dibuat', 'Pembayaran diterima', 'Dikemas', 'Dikirim', 'Diterima']
+const statusDone = { pending: 1, paid: 2, processing: 3, shipped: 4, completed: 5 }
+const timeline = computed(() =>
+  steps.map((label, i) => ({ label, done: order ? i < (statusDone[order.status] ?? 1) : false })),
+)
 </script>
 
 <template>
@@ -24,13 +28,13 @@ const timeline = [
 
         <!-- Urutan status pesanan memang berurutan -->
         <ol class="mt-8 border-l border-line pl-6">
-          <li v-for="([label, done], i) in timeline" :key="label" class="relative pb-6 last:pb-0">
+          <li v-for="(t, i) in timeline" :key="t.label" class="relative pb-6 last:pb-0">
             <span
               class="absolute -left-[1.72rem] top-1 grid h-3 w-3 place-items-center rounded-full border"
-              :class="done ? 'border-forest bg-forest' : 'border-line bg-surface'"
+              :class="t.done ? 'border-forest bg-forest' : 'border-line bg-surface'"
             />
-            <p class="text-[0.88rem]" :class="done ? 'text-forest' : 'text-muted'">{{ label }}</p>
-            <p v-if="done" class="mt-0.5 text-[0.72rem] text-muted">{{ formatDate(order.date) }}</p>
+            <p class="text-[0.88rem]" :class="t.done ? 'text-forest' : 'text-muted'">{{ t.label }}</p>
+            <p v-if="t.done && i === 0" class="mt-0.5 text-[0.72rem] text-muted">{{ formatDate(order.date) }}</p>
           </li>
         </ol>
 
@@ -64,7 +68,7 @@ const timeline = [
           <p>{{ order.address }}</p>
           <p class="mt-2">{{ order.phone }}</p>
         </div>
-        <AppButton href="https://wa.me/6281234567890" variant="quiet" block>Tanya tentang pesanan ini</AppButton>
+        <AppButton :href="whatsappHref('Halo ArafahGift, saya mau tanya tentang pesanan saya.')" variant="quiet" block target="_blank" rel="noopener">Tanya tentang pesanan ini</AppButton>
       </aside>
     </div>
   </AccountShell>

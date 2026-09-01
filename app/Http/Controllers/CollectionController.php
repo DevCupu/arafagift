@@ -16,7 +16,7 @@ class CollectionController extends Controller
         return Inertia::render('shop/CollectionPage', [
             'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
             'occasions' => Occasion::orderBy('id')->get()->map->toCatalog()->values(),
-            'products' => Product::with(['category', 'occasions'])->get()->map->toCatalog()->values(),
+            'products' => Product::with(['category', 'occasions', 'supplier'])->where('status', 'active')->get()->map->toCatalog()->values(),
             'category' => $category ?? 'semua',
             'untuk' => $request->query('untuk'),
         ]);

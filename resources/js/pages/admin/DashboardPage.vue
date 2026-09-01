@@ -106,15 +106,25 @@ const today = formatDate(new Date(), { weekday: 'long' })
           <Link href="/admin/inventori" class="link-underline text-[0.8rem] text-forest">Inventori</Link>
         </div>
         <ul v-if="lowStockProducts.length" class="divide-y divide-line">
-          <li v-for="p in lowStockProducts" :key="p.id" class="flex items-center gap-4 px-6 py-3.5">
-            <span class="min-w-0 flex-1">
-              <span class="block truncate text-[0.85rem] text-forest">{{ p.name }}</span>
-              <span class="text-[0.72rem] text-muted">{{ p.sku }}</span>
-            </span>
-            <StatusPill
-              :label="p.stock === 0 ? 'Habis' : `${p.stock} tersisa`"
-              :tone="p.stock === 0 ? 'danger' : 'warn'"
-            />
+          <li v-for="p in lowStockProducts" :key="p.id" class="px-6 py-3.5">
+            <div class="flex items-center gap-4">
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[0.85rem] text-forest">{{ p.name }}</span>
+                <span class="text-[0.72rem] text-muted">{{ p.sku }}</span>
+              </span>
+              <StatusPill
+                :label="p.stock === 0 ? 'Habis' : `${p.stock} ${p.unit ?? 'pcs'} tersisa`"
+                :tone="p.stock === 0 ? 'danger' : 'warn'"
+              />
+            </div>
+            <div v-if="p.lowStock > 0" class="mt-2 h-1 w-full bg-line/70">
+              <div
+                class="h-full"
+                :class="p.stock === 0 ? 'bg-danger' : 'bg-gold'"
+                :style="{ width: `${Math.min(100, (p.stock / p.lowStock) * 100)}%` }"
+              />
+            </div>
+            <p class="mt-1 text-right text-[0.68rem] text-muted">Batas menipis {{ p.lowStock }}</p>
           </li>
         </ul>
         <p v-else class="px-6 py-10 text-center text-[0.85rem] text-muted">Semua stok aman.</p>

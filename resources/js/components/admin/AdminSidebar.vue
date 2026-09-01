@@ -9,6 +9,7 @@ import BrandLogo from '@/components/storefront/BrandLogo.vue'
 defineProps({ open: Boolean })
 const emit = defineEmits(['close'])
 const page = usePage()
+const pendingOrdersCount = () => page.props.pendingOrdersCount ?? 0
 
 const groups = [
   {
@@ -66,6 +67,10 @@ const groups = [
             >
               <component :is="item.icon" class="h-4 w-4" :stroke-width="1.5" />
               {{ item.label }}
+              <span
+                v-if="item.to === '/admin/pesanan' && pendingOrdersCount() > 0"
+                class="ml-auto grid h-5 min-w-[1.25rem] place-items-center rounded-full bg-gold px-1 text-[0.68rem] font-bold text-forest-deep"
+              >{{ pendingOrdersCount() }}</span>
             </Link>
           </li>
         </ul>

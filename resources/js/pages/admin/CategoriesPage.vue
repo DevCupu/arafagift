@@ -98,6 +98,7 @@ const destroy = (c) => {
       <div>
         <label class="field-label" for="c-art">Motif ikon</label>
         <input id="c-art" v-model="form.art" class="field" placeholder="giftset, kurma, sajadah, ..." />
+        <p v-if="form.errors.art" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.art }}</p>
       </div>
       <div>
         <label class="field-label" for="c-tagline">Tagline</label>
@@ -136,8 +137,8 @@ const destroy = (c) => {
           <p class="mt-2 text-[0.78rem] text-muted">/koleksi/{{ c.slug }}</p>
           <p class="mt-1 text-[0.78rem] text-muted">{{ c.count }} produk aktif</p>
           <div class="mt-auto flex gap-3 pt-3">
-            <button class="text-[0.78rem] text-forest underline underline-offset-4" @click="startEdit(c)">Ubah</button>
-            <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="destroy(c)">Hapus</button>
+            <button type="button" class="text-[0.78rem] text-forest underline underline-offset-4" @click="startEdit(c)">Ubah</button>
+            <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="destroy(c)">Hapus</button>
           </div>
         </div>
       </article>

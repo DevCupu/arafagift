@@ -1,11 +1,14 @@
 <script setup>
+import { Head } from '@inertiajs/vue3'
 import ProductArt from '@/components/art/ProductArt.vue'
 import ValueProps from '@/components/storefront/ValueProps.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
+import { useStore } from '@/composables/useStore'
 
 const props = defineProps({ content: { type: Object, required: true } })
 const homeContent = props.content
+const { whatsappHref } = useStore()
 
 const values = [
   { icon: 'Sparkles', title: 'Curated with Care', body: 'Kami mencicipi, memegang, dan memakai sendiri semua yang dijual sebelum masuk katalog.' },
@@ -24,6 +27,12 @@ const milestones = [
 
 <template>
   <div>
+    <Head title="Tentang Kami">
+      <meta name="description" content="ArafahGift.id — cerita di balik toko oleh-oleh haji &amp; umrah yang mengemas kurma, sajadah, tasbih, dan gift set dengan hati untuk keluarga dan rombongan Anda." />
+      <link rel="canonical" href="/tentang" />
+      <meta property="og:title" content="Tentang Kami — ArafahGift.id" />
+      <meta property="og:description" content="Cerita di balik toko oleh-oleh haji &amp; umrah ArafahGift.id." />
+    </Head>
     <section class="shell grid items-center gap-12 py-14 lg:grid-cols-2 lg:gap-20 lg:py-20">
       <div>
         <p class="eyebrow">Tentang kami</p>
@@ -64,7 +73,7 @@ const milestones = [
         <h2 class="mx-auto max-w-xl text-[2rem] leading-tight sm:text-[2.5rem]">Sedang menyiapkan oleh-oleh untuk di rumah?</h2>
         <div class="mt-8 flex flex-wrap justify-center gap-3">
           <AppButton to="/koleksi" size="lg">Jelajahi koleksi</AppButton>
-          <AppButton href="https://wa.me/6281234567890" variant="outline" size="lg">Konsultasi rombongan</AppButton>
+          <AppButton :href="whatsappHref('Halo ArafahGift, saya mau konsultasi souvenir rombongan.')" variant="outline" size="lg" target="_blank" rel="noopener">Konsultasi rombongan</AppButton>
         </div>
       </div>
     </section>

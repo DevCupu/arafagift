@@ -6,19 +6,19 @@ export default { layout: AdminLayout }
 <script setup>
 import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { Search } from 'lucide-vue-next'
+import { Search, X } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import { formatDate, formatIDR } from '@/composables/useFormat'
 
 const props = defineProps({ customers: { type: Array, required: true } })
 const query = ref('')
 const columns = [
-  { key: 'name', label: 'Nama' },
-  { key: 'phone', label: 'Telepon' },
-  { key: 'city', label: 'Kota' },
-  { key: 'orders', label: 'Pesanan', align: 'right' },
-  { key: 'spent', label: 'Total belanja', align: 'right' },
-  { key: 'lastOrder', label: 'Pesanan terakhir' },
+  { key: 'name', label: 'Nama', sortKey: 'name' },
+  { key: 'phone', label: 'Telepon', sortKey: 'phone' },
+  { key: 'city', label: 'Kota', sortKey: 'city' },
+  { key: 'orders', label: 'Pesanan', align: 'right', sortKey: 'orders' },
+  { key: 'spent', label: 'Total belanja', align: 'right', sortKey: 'spent' },
+  { key: 'lastOrder', label: 'Pesanan terakhir', sortKey: 'lastOrder' },
 ]
 const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
@@ -36,10 +36,24 @@ const rows = computed(() => {
     <div class="relative mt-8 w-full max-w-sm">
       <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" :stroke-width="1.5" />
       <label class="sr-only" for="cust-q">Cari pelanggan</label>
-      <input id="cust-q" v-model="query" class="field pl-9" placeholder="Cari nama, email, atau kota" />
+      <input
+        id="cust-q" v-model="query" type="search" class="field pl-9" :class="query ? 'pr-9' : ''"
+        placeholder="Cari nama, email, atau kota"
+      />
+      <button
+        v-if="query" type="button" @click="query = ''"
+        class="absolute right-3 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center text-muted transition hover:text-forest"
+        aria-label="Hapus pencarian"
+      >
+        <X class="h-3.5 w-3.5" />
+      </button>
     </div>
 
-    <div class="mt-5">
+    <p class="mt-5 text-[0.78rem] text-muted">
+      Menampilkan <strong class="text-forest">{{ rows.length }}</strong> dari {{ customers.length }} pelanggan
+    </p>
+
+    <div class="mt-4">
       <DataTable :columns="columns" :rows="rows">
         <template #cell-name="{ row }">
           <Link :href="`/admin/pelanggan/${row.id}`" class="link-underline block font-medium">{{ row.name }}</Link>

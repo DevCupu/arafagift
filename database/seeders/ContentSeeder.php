@@ -48,6 +48,12 @@ class ContentSeeder extends Seeder
                     ],
                     'cta' => ['label' => 'Konsultasi via WhatsApp', 'href' => 'https://wa.me/6281234567890'],
                 ],
+                'values' => [
+                    ['icon' => 'Sparkles', 'title' => 'Curated with Care', 'body' => 'Kami mencicipi, memegang, dan memakai sendiri semua yang dijual sebelum masuk katalog.'],
+                    ['icon' => 'Gift', 'title' => 'Elegant Packaging', 'body' => 'Box hardcover, sleeve kertas tebal, dan kartu tulis tangan. Tidak perlu dibungkus ulang.'],
+                    ['icon' => 'BadgeCheck', 'title' => 'Quality Products', 'body' => 'Kurma disortir manual, madu diuji lab, sajadah ditenun bukan dicetak.'],
+                    ['icon' => 'Send', 'title' => 'Ready to Gift', 'body' => 'Bisa dikirim langsung ke alamat penerima tanpa nota harga di dalam paket.'],
+                ],
                 'instagram' => [
                     'handle' => '@arafahajiumrahgift',
                     'title' => 'Follow the journey',

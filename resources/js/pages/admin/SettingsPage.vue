@@ -17,6 +17,7 @@ const form = useForm({
   email: props.settings.email ?? '',
   whatsapp: props.settings.whatsapp ?? '',
   address: props.settings.address ?? '',
+  origin_city: props.settings.origin_city ?? '',
   free_shipping_from: props.settings.free_shipping_from,
   free_shipping_cities: props.settings.free_shipping_cities ?? '',
   bulk_minimum: props.settings.bulk_minimum,
@@ -40,6 +41,13 @@ const save = () => {
       <AppButton size="sm" :loading="form.processing" @click="save">Simpan pengaturan</AppButton>
     </header>
 
+    <div v-if="Object.keys(form.errors).length" class="mt-6 max-w-4xl border border-danger/40 bg-danger/10 px-5 py-4 text-[0.83rem] text-danger">
+      <p class="font-semibold">Simpan gagal — periksa kembali isian di bawah.</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li v-for="(msg, key) in form.errors" :key="key">{{ Array.isArray(msg) ? msg[0] : msg }}</li>
+      </ul>
+    </div>
+
     <div class="mt-8 grid max-w-4xl gap-6 lg:grid-cols-2">
       <section class="border border-line bg-surface p-6 sm:p-7">
         <h2 class="font-display text-2xl">Identitas toko</h2>
@@ -56,6 +64,11 @@ const save = () => {
           <div>
             <label class="field-label" for="s-address">Alamat toko</label>
             <textarea id="s-address" v-model="form.address" rows="3" class="field" />
+          </div>
+          <div>
+            <label class="field-label" for="s-origin">Kota asal pengiriman</label>
+            <input id="s-origin" v-model="form.origin_city" class="field" placeholder="Jakarta" />
+            <p class="mt-1.5 text-[0.72rem] text-muted">Tampil sebagai "Dikirim dari …" di halaman produk.</p>
           </div>
         </div>
       </section>

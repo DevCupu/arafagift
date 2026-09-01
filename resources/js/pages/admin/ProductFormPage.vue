@@ -79,6 +79,13 @@ const save = () => {
       </div>
     </header>
 
+    <div v-if="Object.keys(form.errors).length" class="mt-6 border border-danger/40 bg-danger/10 px-5 py-4 text-[0.83rem] text-danger">
+      <p class="font-semibold">Simpan gagal — periksa kembali isian di bawah.</p>
+      <ul class="mt-2 list-disc space-y-1 pl-5">
+        <li v-for="(msg, key) in form.errors" :key="key">{{ Array.isArray(msg) ? msg[0] : msg }}</li>
+      </ul>
+    </div>
+
     <div class="mt-8 grid gap-6 xl:grid-cols-[1.6fr_1fr]">
       <div class="space-y-6">
         <section class="border border-line bg-surface p-6 sm:p-7">

@@ -54,7 +54,7 @@ onBeforeUnmount(() => {
           <ul class="divide-y divide-line">
             <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 py-5">
               <Link :href="`/produk/${item.slug}`" class="arch h-24 w-[72px] flex-none overflow-hidden border border-line" @click="cart.closeDrawer()">
-                <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
+                <img v-if="item.image" :src="item.image" :alt="item.name" loading="lazy" class="h-full w-full object-cover" />
                 <ProductArt v-else :art="item.art" :tone="item.id" />
               </Link>
               <div class="flex flex-1 flex-col">

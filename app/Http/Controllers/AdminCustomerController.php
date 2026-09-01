@@ -13,6 +13,7 @@ class AdminCustomerController extends Controller
         $customers = User::where('is_admin', false)
             ->withCount('orders')
             ->withSum('orders', 'total')
+            ->withMax('orders', 'created_at')
             ->orderBy('name')
             ->get()
             ->map(fn (User $user) => [
@@ -23,7 +24,7 @@ class AdminCustomerController extends Controller
                 'city' => $user->city,
                 'orders' => $user->orders_count,
                 'spent' => (int) ($user->getAttributes()['orders_sum_total'] ?? 0),
-                'lastOrder' => $user->orders()->latest()->value('created_at'),
+                'lastOrder' => $user->orders_max_created_at,
                 'joined' => $user->created_at,
                 'tag' => $user->customer_tag,
             ]);

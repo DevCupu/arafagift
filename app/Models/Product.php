@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
     'category_id', 'name', 'slug', 'sku', 'unit', 'price', 'compare_price', 'cost',
     'rating', 'reviews_count', 'badge', 'art', 'image', 'stock', 'low_stock_threshold',
     'storage_location', 'supplier_id',
-    'weight', 'status', 'featured', 'short', 'description', 'includes', 'details',
+    'weight', 'status', 'featured', 'featured_order', 'short', 'description', 'includes', 'details',
 ])]
 class Product extends Model
 {

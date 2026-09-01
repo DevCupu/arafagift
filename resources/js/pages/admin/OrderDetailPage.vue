@@ -18,13 +18,71 @@ const props = defineProps({ order: { type: Object, default: null } })
 const { push } = useToast()
 const order = props.order
 
-const form = useForm({ status: order?.status ?? 'pending', awb: order?.shipping.awb ?? '' })
+const form = useForm({
+  status: order?.status ?? 'pending',
+  awb: order?.shipping.awb ?? '',
+  shippingCost: order?.shipping.cost ?? 0,
+  adminNote: order?.admin_note ?? '',
+})
 
 const save = () => {
   form.put(`/admin/pesanan/${order.id}`, {
     preserveScroll: true,
     onSuccess: () => push(`Status ${order.id} diperbarui`, { tone: 'success' }),
   })
+}
+
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
+const itemsRows = () =>
+  order.items.map((it) => `
+    <tr>
+      <td>${esc(it.name)}</td>
+      <td class="num">${it.qty} × ${formatIDR(it.price)}</td>
+      <td class="num">${formatIDR(it.price * it.qty)}</td>
+    </tr>`).join('')
+
+const printLabel = () => {
+  const win = window.open('', '_blank', 'width=420,height=760')
+  if (!win) {
+    push('Blokir pop-up browser mencegah cetak label. Izinkan pop-up lalu coba lagi.', { tone: 'danger' })
+    return
+  }
+  win.document.write(`<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><title>Label ${esc(order.id)}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Courier New', monospace; font-size: 12px; color: #111; padding: 20px; }
+  h1 { font-size: 14px; letter-spacing: 1px; text-transform: uppercase; }
+  .row { display: flex; justify-content: space-between; margin-top: 6px; }
+  .box { border: 1.5px solid #111; padding: 12px; margin-top: 10px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th, td { text-align: left; padding: 5px 4px; border-bottom: 1px solid #999; vertical-align: top; }
+  .num { text-align: right; white-space: nowrap; }
+  .tot { display: flex; justify-content: space-between; margin-top: 10px; font-weight: bold; }
+  .muted { color: #555; }
+  .mt { margin-top: 10px; }
+</style></head><body>
+  <h1>Label pengiriman — ${esc(order.id)}</h1>
+  <div class="row"><span class="muted">Tanggal</span><span>${esc(formatDateTime(order.date))}</span></div>
+  <div class="row"><span class="muted">Status</span><span>${esc(order.status)}</span></div>
+  <div class="box">
+    <b>Dikirim ke</b>
+    <p class="mt">${esc(order.customer)}</p>
+    <p>${esc(order.phone)}</p>
+    <p class="mt">${esc(order.address)}</p>
+  </div>
+  <div class="row mt"><span><b>Resi</b> ${esc(order.shipping.awb || '—')}</span><span><b>Kurir</b> ${esc(order.shipping.courier)}</span></div>
+  <table>
+    <thead><tr><th>Barang</th><th class="num">Jml</th><th class="num">Subtotal</th></tr></thead>
+    <tbody>${itemsRows()}</tbody>
+  </table>
+  <div class="tot"><span>Total</span><span>${formatIDR(orderTotal(order))}</span></div>
+  <p class="muted mt" style="text-align:center">— ArafahGift.id —</p>
+</body></html>`)
+  win.document.close()
+  win.focus()
+  setTimeout(() => { win.print() }, 300)
 }
 </script>
 
@@ -41,7 +99,7 @@ const save = () => {
       </div>
       <div class="flex items-center gap-3">
         <StatusPill :status="order.status" />
-        <AppButton variant="quiet" size="sm">
+        <AppButton variant="quiet" size="sm" @click="printLabel">
           <template #icon><Printer class="h-3.5 w-3.5" /></template>
           Cetak label
         </AppButton>
@@ -81,6 +139,10 @@ const save = () => {
           </select>
           <label class="field-label mt-4" for="awb">Nomor resi</label>
           <input id="awb" v-model="form.awb" class="field" placeholder="Belum ada resi" />
+          <label class="field-label mt-4" for="shippingCost">Ongkir (Rp)</label>
+          <input id="shippingCost" v-model.number="form.shippingCost" type="number" min="0" class="field" placeholder="0" />
+          <label class="field-label mt-4" for="adminNote">Catatan admin</label>
+          <textarea id="adminNote" v-model="form.adminNote" rows="3" class="field" placeholder="Catatan internal, tidak terlihat pembeli" />
           <AppButton block class="mt-5" :loading="form.processing" @click="save">Simpan perubahan</AppButton>
         </section>
 

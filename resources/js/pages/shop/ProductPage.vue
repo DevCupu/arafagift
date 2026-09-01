@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { Gift, Heart, PackageCheck, Truck } from 'lucide-vue-next'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 import { useWishlist } from '@/composables/useWishlist'
+import { useStore } from '@/composables/useStore'
 
 const props = defineProps({
   product: { type: Object, default: null },
@@ -19,13 +20,14 @@ const props = defineProps({
 })
 const cart = useCart()
 const wishlist = useWishlist()
+const { store, whatsappHref } = useStore()
 
 const qty = ref(1)
 const tab = ref('deskripsi')
 watch(() => props.product?.slug, () => { qty.value = 1; tab.value = 'deskripsi' })
 
 const soldOut = computed(() => props.product?.stock === 0)
-const lowStock = computed(() => props.product && props.product.stock > 0 && props.product.stock <= 10)
+const lowStock = computed(() => props.product && props.product.stock > 0 && props.product.stock <= (props.product.lowStock ?? 10))
 
 const tabs = [
   { id: 'deskripsi', label: 'Deskripsi' },
@@ -34,20 +36,49 @@ const tabs = [
   { id: 'ulasan', label: 'Ulasan' },
 ]
 
-const reviews = [
-  { name: 'Ratna H.', city: 'Surabaya', rating: 5, date: '12 Agustus 2026', body: 'Packagingnya rapi sekali, tidak perlu dibungkus ulang. Kartunya ditulis tangan persis seperti pesan saya.' },
-  { name: 'Fajar N.', city: 'Jakarta', rating: 5, date: '3 Agustus 2026', body: 'Dipesan pagi, sore sudah sampai. Kualitas isinya sesuai deskripsi, tidak dilebih-lebihkan.' },
-  { name: 'Dewi A.', city: 'Makassar', rating: 4, date: '28 Juli 2026', body: 'Bagus, hanya saja saya berharap boxnya sedikit lebih besar. Sisanya memuaskan.' },
-]
-
 const buyNow = () => {
   cart.add(props.product, qty.value, { silent: true })
   router.visit('/checkout')
 }
+
+const metaDescription = computed(() => props.product?.short || props.product?.description?.slice(0, 160) || '')
+const productJsonLd = computed(() => {
+  if (!props.product) return null
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: props.product.name,
+    image: props.product.image ? [props.product.image] : undefined,
+    description: metaDescription.value,
+    sku: props.product.sku,
+    category: props.product.category,
+    offers: {
+      '@type': 'Offer',
+      priceCurrency: 'IDR',
+      price: props.product.price,
+      availability: props.product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+      url: `/produk/${props.product.slug}`,
+    },
+    aggregateRating: props.product.reviews > 0 ? {
+      '@type': 'AggregateRating',
+      ratingValue: props.product.rating,
+      reviewCount: props.product.reviews,
+    } : undefined,
+  }
+})
 </script>
 
 <template>
   <div v-if="product">
+    <Head :title="product.name">
+      <meta name="description" :content="metaDescription" />
+      <link rel="canonical" :href="`/produk/${product.slug}`" />
+      <meta property="og:type" content="product" />
+      <meta property="og:title" :content="product.name" />
+      <meta property="og:description" :content="metaDescription" />
+      <meta v-if="product.image" property="og:image" :content="product.image" />
+      <component :is="'script'" type="application/ld+json">{{ JSON.stringify(productJsonLd) }}</component>
+    </Head>
     <div class="shell pt-8">
       <nav class="flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.14em] text-muted" aria-label="Breadcrumb">
         <Link href="/" class="transition hover:text-forest">Home</Link>
@@ -115,7 +146,7 @@ const buyNow = () => {
         <ul class="mt-9 divide-y divide-line border-y border-line text-[0.83rem] text-muted">
           <li class="flex items-center gap-3 py-3.5">
             <Truck class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
-            Dikirim dari Jakarta · reguler 2–4 hari, same day untuk Jabodetabek
+            Dikirim dari {{ store.originCity || 'Jakarta' }} · reguler 2–4 hari, same day untuk Jabodetabek
           </li>
           <li class="flex items-center gap-3 py-3.5">
             <PackageCheck class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
@@ -129,7 +160,7 @@ const buyNow = () => {
     <section id="ulasan" class="shell pt-8">
       <div class="no-scrollbar flex gap-8 overflow-x-auto border-b border-line">
         <button
-          v-for="t in tabs" :key="t.id"
+          v-for="t in tabs" :key="t.id" type="button"
           class="relative whitespace-nowrap pb-4 text-[0.85rem] transition"
           :class="tab === t.id ? 'text-forest' : 'text-muted hover:text-forest'"
           @click="tab = t.id"
@@ -150,7 +181,7 @@ const buyNow = () => {
           </ul>
 
           <dl v-else-if="tab === 'detail'" class="max-w-md divide-y divide-line border-y border-line">
-            <div v-for="row in product.details" :key="row[0]" class="flex justify-between gap-6 py-3.5 text-[0.88rem]">
+            <div v-for="(row, i) in product.details" :key="i" class="flex justify-between gap-6 py-3.5 text-[0.88rem]">
               <dt class="text-muted">{{ row[0] }}</dt>
               <dd class="text-right text-forest">{{ row[1] }}</dd>
             </div>
@@ -164,13 +195,12 @@ const buyNow = () => {
               </div>
               <p class="text-[0.83rem] text-muted">Dari {{ product.reviews }} ulasan pembeli terverifikasi.</p>
             </div>
-            <ul class="mt-8 divide-y divide-line border-t border-line">
-              <li v-for="r in reviews" :key="r.name" class="py-6">
-                <AppRating :value="r.rating" />
-                <p class="mt-3 max-w-xl text-[0.92rem] leading-relaxed text-forest">{{ r.body }}</p>
-                <p class="mt-3 text-[0.75rem] uppercase tracking-[0.12em] text-muted">{{ r.name }} · {{ r.city }} · {{ r.date }}</p>
-              </li>
-            </ul>
+            <div class="mt-10 border border-dashed border-line px-6 py-12 text-center">
+              <p class="font-display text-xl text-forest">Ulasan akan ditampilkan di sini</p>
+              <p class="mt-2 text-[0.85rem] text-muted">
+                Cerita dari pembeli terverifikasi muncul di tab ini begitu sudah terkumpul.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -180,7 +210,7 @@ const buyNow = () => {
           <p class="mt-3 text-[0.85rem] leading-relaxed text-muted">
             Harga menyesuaikan jumlah dan kartu bisa dicetak dengan nama jamaah. Kirim daftar kebutuhan Anda, kami balas dengan penawaran di hari yang sama.
           </p>
-          <AppButton href="https://wa.me/6281234567890" variant="outline" class="mt-6" block>Konsultasi via WhatsApp</AppButton>
+          <AppButton :href="whatsappHref('Halo ArafahGift, saya mau tanya tentang produk ini.')" variant="outline" class="mt-6" block target="_blank" rel="noopener">Konsultasi via WhatsApp</AppButton>
         </aside>
       </div>
     </section>

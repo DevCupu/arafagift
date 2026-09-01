@@ -45,12 +45,13 @@ const savings = computed(() =>
 
 export function useCart() {
   const add = (product, qty = 1, { silent = false } = {}) => {
+    const stock = Math.max(product.stock ?? 99, 1)
     const existing = lines.value.find((l) => l.id === product.id)
-    if (existing) existing.qty += qty
+    if (existing) existing.qty = Math.min(existing.qty + qty, Math.max(existing.stock ?? 99, 1))
     else {
       lines.value = [...lines.value, {
         id: product.id,
-        qty,
+        qty: Math.min(qty, stock),
         name: product.name,
         slug: product.slug,
         price: product.price,
@@ -68,7 +69,7 @@ export function useCart() {
   const setQty = (id, qty) => {
     if (qty < 1) return remove(id)
     const line = lines.value.find((l) => l.id === id)
-    if (line) line.qty = Math.min(qty, 99)
+    if (line) line.qty = Math.min(qty, Math.max(line.stock ?? 99, 1))
   }
 
   const remove = (id) => {

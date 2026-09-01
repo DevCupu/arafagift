@@ -25,7 +25,7 @@ class AdminInventoryController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/InventoryPage', [
-            'products' => Product::with(['category', 'supplier'])
+            'products' => Product::with(['category', 'supplier', 'occasions'])
                 ->orderBy('name')
                 ->get()
                 ->map->toCatalog()

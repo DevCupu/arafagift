@@ -21,16 +21,18 @@ class UserSeeder extends Seeder
         ];
 
         foreach ($users as $user) {
-            User::updateOrCreate(['email' => $user['email']], [
+            $record = User::updateOrCreate(['email' => $user['email']], [
                 'id' => $user['id'],
                 'name' => $user['name'],
                 'password' => Hash::make('password'),
                 'phone' => $user['phone'],
                 'city' => $user['city'],
                 'customer_tag' => $user['tag'],
-                'is_admin' => $user['is_admin'],
                 'email_verified_at' => now(),
             ]);
+
+            // is_admin is intentionally not mass-assignable (see User::Fillable) — set it directly here.
+            $record->forceFill(['is_admin' => $user['is_admin']])->save();
         }
     }
 }

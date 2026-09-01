@@ -96,7 +96,7 @@ const destroy = (promo) => {
           <StatusPill :label="row.status === 'active' ? 'Berjalan' : 'Berakhir'" :tone="row.status === 'active' ? 'success' : 'muted'" />
         </template>
         <template #cell-actions="{ row }">
-          <button class="grid h-8 w-8 place-items-center text-muted transition hover:text-danger" aria-label="Hapus" @click="destroy(row)">
+          <button type="button" class="grid h-8 w-8 place-items-center text-muted transition hover:text-danger" aria-label="Hapus" @click="destroy(row)">
             <Trash2 class="h-3.5 w-3.5" />
           </button>
         </template>

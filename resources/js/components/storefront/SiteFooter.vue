@@ -5,8 +5,10 @@ import { Instagram, MessageCircle } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useToast } from '@/composables/useToast'
+import { useStore } from '@/composables/useStore'
 
 const { push } = useToast()
+const { whatsappHref } = useStore()
 const email = ref('')
 const sending = ref(false)
 
@@ -26,16 +28,16 @@ const columns = [
       { label: 'Tentang kami', to: '/tentang' },
       { label: 'FAQ', to: '/faq' },
       { label: 'Akun saya', to: '/akun' },
-      { label: 'Lacak pesanan', to: '/akun/pesanan' },
+      { label: 'Lacak pesanan', to: '/lacak-pesanan' },
     ],
   },
   {
     title: 'Informasi',
     links: [
-      { label: 'Kebijakan privasi', to: '/faq' },
-      { label: 'Syarat & ketentuan', to: '/faq' },
-      { label: 'Pengiriman', to: '/faq' },
-      { label: 'Pengembalian', to: '/faq' },
+      { label: 'Kebijakan privasi', to: '/legal/kebijakan-privasi' },
+      { label: 'Syarat & ketentuan', to: '/legal/syarat-ketentuan' },
+      { label: 'Pengiriman', to: '/legal/pengiriman-pengembalian' },
+      { label: 'Pengembalian', to: '/legal/pengiriman-pengembalian' },
     ],
   },
 ]
@@ -69,7 +71,7 @@ const subscribe = () => {
             aria-label="Instagram ArafahGift"
           ><Instagram class="h-4 w-4" :stroke-width="1.5" /></a>
           <a
-            href="https://wa.me/6281234567890" target="_blank" rel="noopener"
+            :href="whatsappHref()" target="_blank" rel="noopener"
             class="grid h-10 w-10 place-items-center border border-ivory/20 transition hover:border-gold hover:text-gold"
             aria-label="WhatsApp ArafahGift"
           ><MessageCircle class="h-4 w-4" :stroke-width="1.5" /></a>

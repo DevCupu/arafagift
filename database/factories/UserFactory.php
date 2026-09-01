@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -41,5 +42,14 @@ class UserFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
         ]);
+    }
+
+    /**
+     * is_admin is deliberately not mass-assignable on the model (privilege-escalation guard) — factories
+     * are trusted test fixtures, not attacker input, so bypass that guard here rather than in every test.
+     */
+    public function newModel(array $attributes = [])
+    {
+        return Model::unguarded(fn () => new User($attributes));
     }
 }

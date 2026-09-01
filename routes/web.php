@@ -19,19 +19,28 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// ---------- SEO ----------
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+
 // ---------- Storefront (DB-backed) ----------
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/koleksi/{category?}', [CollectionController::class, 'index'])->name('collection');
+Route::get('/pencarian', [ProductController::class, 'search'])->middleware('throttle:30,1,pencarian')->name('product.search');
 Route::get('/produk/{product:slug}', [ProductController::class, 'show'])->name('product');
 Route::get('/keranjang', fn () => Inertia::render('shop/CartPage'))->name('cart');
 Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
-Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
+Route::get('/lacak-pesanan', [OrderTrackingController::class, 'index'])->middleware('throttle:20,1,lacak-pesanan')->name('order.track');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
+Route::get('/legal/{slug}', [PageController::class, 'legal'])->name('legal');
 
 // ---------- Customer account (authed customers only) ----------
 Route::middleware('auth')->group(function () {
@@ -56,6 +65,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
     Route::get('/admin/pesanan', [AdminOrderController::class, 'index'])->name('admin.orders');
+    Route::get('/admin/pesanan/ekspor', [AdminOrderController::class, 'export'])->name('admin.orders.export');
     Route::get('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'show'])->name('admin.order');
     Route::put('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'update'])->name('admin.order.update');
     Route::get('/admin/produk', [AdminProductController::class, 'index'])->name('admin.products');
@@ -87,6 +97,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/konten/testimoni', [ContentController::class, 'storeTestimonial'])->name('admin.content.testimonials.store');
     Route::put('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'updateTestimonial'])->name('admin.content.testimonials.update');
     Route::delete('/admin/konten/testimoni/{testimonial}', [ContentController::class, 'destroyTestimonial'])->name('admin.content.testimonials.destroy');
+    Route::patch('/admin/konten/unggulan/reorder', [ContentController::class, 'reorderFeatured'])->name('admin.content.featured.reorder');
     Route::patch('/admin/konten/unggulan/{product}/tambah', [ContentController::class, 'addFeatured'])->name('admin.content.featured.add');
     Route::patch('/admin/konten/unggulan/{product}/keluarkan', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');
     Route::get('/admin/laporan', [AdminReportController::class, 'index'])->name('admin.reports');

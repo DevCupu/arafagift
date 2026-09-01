@@ -18,7 +18,7 @@ class AdminProductController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/ProductsPage', [
-            'products' => Product::with('category')->orderBy('name')->get()->map->toCatalog()->values(),
+            'products' => Product::with(['category', 'supplier', 'occasions'])->orderBy('name')->get()->map->toCatalog()->values(),
             'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
             'suppliers' => Supplier::orderBy('name')->get()->map->toCatalog()->values(),
         ]);
@@ -85,7 +85,7 @@ class AdminProductController extends Controller
     public function inventory(): Response
     {
         return Inertia::render('admin/InventoryPage', [
-            'products' => Product::with('category')->orderBy('name')->get()->map->toCatalog()->values(),
+            'products' => Product::with(['category', 'supplier', 'occasions'])->orderBy('name')->get()->map->toCatalog()->values(),
         ]);
     }
 

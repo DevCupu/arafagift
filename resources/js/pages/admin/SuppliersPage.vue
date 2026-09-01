@@ -4,15 +4,24 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
-import { Plus } from 'lucide-vue-next'
+import { Plus, Search, X } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ suppliers: { type: Array, required: true } })
 const { push } = useToast()
+
+const query = ref('')
+const rows = computed(() => {
+  const q = query.value.trim().toLowerCase()
+  if (!q) return props.suppliers
+  return props.suppliers.filter((s) =>
+    `${s.name} ${s.phone ?? ''} ${s.email ?? ''} ${s.address ?? ''}`.toLowerCase().includes(q),
+  )
+})
 
 const showForm = ref(false)
 const editingId = ref(null)
@@ -56,10 +65,10 @@ const destroy = (s) => {
 }
 
 const columns = [
-  { key: 'name', label: 'Supplier' },
+  { key: 'name', label: 'Supplier', sortKey: 'name' },
   { key: 'contact', label: 'Kontak' },
-  { key: 'address', label: 'Alamat' },
-  { key: 'productCount', label: 'Produk', align: 'right' },
+  { key: 'address', label: 'Alamat', sortKey: 'address' },
+  { key: 'productCount', label: 'Produk', align: 'right', sortKey: 'productCount' },
   { key: 'actions', label: '' },
 ]
 </script>
@@ -108,8 +117,27 @@ const columns = [
       </div>
     </form>
 
-    <div class="mt-8">
-      <DataTable :columns="columns" :rows="props.suppliers">
+    <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
+      <div class="relative w-full max-w-sm">
+        <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" :stroke-width="1.5" />
+        <label class="sr-only" for="sup-q">Cari supplier</label>
+        <input
+          id="sup-q" v-model="query" type="search" class="field pl-9" :class="query ? 'pr-9' : ''"
+          placeholder="Cari nama, kontak, atau alamat"
+        />
+        <button
+          v-if="query" type="button" @click="query = ''"
+          class="absolute right-3 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center text-muted transition hover:text-forest"
+          aria-label="Hapus pencarian"
+        >
+          <X class="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <p class="text-[0.78rem] text-muted">Menampilkan <strong class="text-forest">{{ rows.length }}</strong> dari {{ suppliers.length }} supplier</p>
+    </div>
+
+    <div class="mt-4">
+      <DataTable :columns="columns" :rows="rows">
         <template #cell-name="{ row }"><span class="font-medium">{{ row.name }}</span></template>
         <template #cell-contact="{ row }">
           <span class="block text-muted">{{ row.phone ?? '–' }}</span>
@@ -121,8 +149,8 @@ const columns = [
         </template>
         <template #cell-actions="{ row }">
           <div class="flex justify-end gap-3">
-            <button class="text-[0.78rem] text-forest underline underline-offset-4" @click="startEdit(row)">Ubah</button>
-            <button class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="destroy(row)">Hapus</button>
+            <button type="button" class="text-[0.78rem] text-forest underline underline-offset-4" @click="startEdit(row)">Ubah</button>
+            <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="destroy(row)">Hapus</button>
           </div>
         </template>
       </DataTable>

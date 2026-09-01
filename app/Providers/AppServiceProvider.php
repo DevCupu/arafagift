@@ -37,14 +37,16 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
-        Password::defaults(fn (): ?Password => app()->isProduction()
-            ? Password::min(12)
+        // Only the automated test suite gets the relaxed policy — local/staging/production all get the real one,
+        // since a weak-password gap in a non-production-but-real environment is still a real exposure.
+        Password::defaults(fn (): ?Password => app()->environment('testing')
+            ? null
+            : Password::min(12)
                 ->mixedCase()
                 ->letters()
                 ->numbers()
                 ->symbols()
-                ->uncompromised()
-            : null,
+                ->uncompromised(),
         );
     }
 }

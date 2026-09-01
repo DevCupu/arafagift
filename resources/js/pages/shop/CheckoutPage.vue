@@ -5,7 +5,7 @@ export default { layout: BareLayout }
 
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 import { ArrowLeft, Check, Gift, MessageCircle, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
@@ -13,6 +13,7 @@ import ProductArt from '@/components/art/ProductArt.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
+import { statusMeta } from '@/data/admin'
 
 const page = usePage()
 const store = computed(() => page.props.store)
@@ -30,7 +31,7 @@ const errors = reactive({})
 const form = reactive({
   name: '', email: '', phone: '',
   address: '', city: '', province: '', postal: '',
-  giftMessage: '', hideInvoice: true,
+  giftMessage: '', note: '', hideInvoice: true,
 })
 
 const validate = (current) => {
@@ -57,15 +58,16 @@ const freeShippingByAmount = computed(() =>
 )
 const hasFreeShipping = computed(() => freeShippingByCity.value || freeShippingByAmount.value)
 
-const buildWaMessage = (orderNumber) => {
+const buildWaMessage = (order) => {
+  const subtotal = order.items.reduce((sum, i) => sum + i.price * i.qty, 0)
   const lines = [
     `Halo ArafahGift, saya mau pesan:`,
     '',
-    ...cart.items.value.map((i) => `• ${i.name} × ${i.qty} — ${formatIDR(i.lineTotal)}`),
+    ...order.items.map((i) => `• ${i.name} × ${i.qty} — ${formatIDR(i.price * i.qty)}`),
     '',
-    `Subtotal: ${formatIDR(cart.subtotal.value)}`,
+    `Subtotal: ${formatIDR(subtotal)}`,
     '',
-    orderNumber ? `Nomor pesanan: ${orderNumber}` : null,
+    `Nomor pesanan: ${order.id}`,
     `Nama: ${form.name}`,
     `WhatsApp: ${form.phone}`,
     form.email ? `Email: ${form.email}` : null,
@@ -78,6 +80,7 @@ const buildWaMessage = (orderNumber) => {
 }
 
 const submitting = ref(false)
+const placedOrder = ref(null)
 
 const placeOrder = async () => {
   if (!validate(1) || !validate(2)) return
@@ -102,9 +105,9 @@ const placeOrder = async () => {
         province: form.province || null,
         postal: form.postal || null,
         giftMessage: form.giftMessage || null,
+        note: form.note || null,
         hideInvoice: form.hideInvoice,
-        items: cart.items.value.map((i) => ({ id: i.id, qty: i.qty, price: i.price })),
-        subtotal: cart.subtotal.value,
+        items: cart.items.value.map((i) => ({ id: i.id, qty: i.qty })),
       }),
     })
 
@@ -119,23 +122,59 @@ const placeOrder = async () => {
       return
     }
 
-    const { order_number } = await res.json()
-
-    const number = (store.value.whatsapp || '').replace(/\D/g, '')
-    const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWaMessage(order_number))}`
+    placedOrder.value = await res.json()
     cart.clear()
-    window.location.href = url
   } catch {
     alert('Terjadi kesalahan jaringan. Coba lagi.')
   } finally {
     submitting.value = false
   }
 }
+
+const confirmViaWhatsapp = () => {
+  const number = (store.value.whatsapp || '').replace(/\D/g, '')
+  const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWaMessage(placedOrder.value))}`
+  window.open(url, '_blank', 'noopener')
+}
 </script>
 
 <template>
+  <Head title="Checkout">
+    <meta name="robots" content="noindex,follow" />
+  </Head>
   <div class="min-h-screen bg-surface">
-    <div v-if="cart.items.value.length" class="mx-auto grid max-w-6xl lg:grid-cols-[1.2fr_1fr]">
+    <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-16 sm:px-10">
+      <BrandLogo size="sm" />
+      <div class="mt-8 border border-line bg-ivory p-8 text-center">
+        <span class="grid h-12 w-12 place-items-center rounded-full bg-forest text-ivory mx-auto"><Check class="h-6 w-6" /></span>
+        <h1 class="mt-5 text-[1.9rem] leading-none">Pesanan berhasil dibuat</h1>
+        <p class="mt-3 text-[0.85rem] text-muted">Nomor pesanan Anda</p>
+        <p class="mt-1 font-display text-3xl text-forest">{{ placedOrder.id }}</p>
+        <p class="mt-2 text-[0.78rem] text-muted">Status: {{ statusMeta(placedOrder.status).label }}</p>
+      </div>
+
+      <dl class="mt-6 divide-y divide-line border-y border-line text-[0.87rem]">
+        <div v-for="(it, i) in placedOrder.items" :key="i" class="flex justify-between gap-6 py-3">
+          <dt class="text-muted">{{ it.name }} × {{ it.qty }}</dt>
+          <dd class="text-forest">{{ formatIDR(it.price * it.qty) }}</dd>
+        </div>
+      </dl>
+
+      <div class="mt-8 flex flex-col gap-3">
+        <AppButton size="lg" @click="confirmViaWhatsapp">
+          <template #icon><MessageCircle class="h-4 w-4" /></template>
+          Konfirmasi via WhatsApp
+        </AppButton>
+        <Link href="/lacak-pesanan" class="text-center text-[0.8rem] text-muted underline transition hover:text-forest">
+          Lacak status pesanan ini nanti
+        </Link>
+        <Link href="/" class="text-center text-[0.8rem] text-muted transition hover:text-forest">
+          Kembali ke beranda
+        </Link>
+      </div>
+    </div>
+
+    <div v-else-if="cart.items.value.length" class="mx-auto grid max-w-6xl lg:grid-cols-[1.2fr_1fr]">
       <!-- Form -->
       <div class="px-5 py-10 sm:px-10 lg:py-14">
         <div class="flex items-center justify-between">
@@ -230,6 +269,14 @@ const placeOrder = async () => {
               <span class="text-[0.72rem] text-muted">{{ form.giftMessage.length }}/180</span>
             </div>
           </div>
+
+          <div class="mt-6">
+            <label class="field-label" for="note">Catatan pesanan (opsional)</label>
+            <textarea
+              id="note" v-model="form.note" rows="2" maxlength="500"
+              class="field" placeholder="Contoh: tolong kirim sore hari, atau titip pesan ke kurir"
+            />
+          </div>
         </section>
 
         <!-- 3. Tinjau -->
@@ -256,8 +303,7 @@ const placeOrder = async () => {
           <AppButton v-if="step > 1" variant="quiet" size="lg" @click="back">Kembali</AppButton>
           <AppButton v-if="step < 3" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" @click="next">Lanjut</AppButton>
           <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" @click="placeOrder">
-            <template #icon><MessageCircle class="h-4 w-4" /></template>
-            Pesan via WhatsApp
+            Buat Pesanan
           </AppButton>
         </div>
         <p class="mt-5 text-[0.72rem] text-muted">

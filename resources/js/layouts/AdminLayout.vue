@@ -1,16 +1,31 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { router, usePage } from '@inertiajs/vue3'
-import { Bell, LogOut, Menu, Search } from 'lucide-vue-next'
+import { computed, ref, watch } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
+import { Menu } from 'lucide-vue-next'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
-import ToastHost from '@/components/ui/ToastHost.vue'
 
-const page = usePage()
+const route = usePage()
 const open = ref(false)
-watch(() => page.url, () => (open.value = false))
+watch(() => route.url, () => (open.value = false))
 
-const user = page.props.auth.user
-const logout = () => router.post('/logout')
+const SEG_LABELS = {
+  dashboard: 'Dashboard',
+  pesanan: 'Pesanan',
+  produk: 'Produk',
+  kategori: 'Kategori',
+  pelanggan: 'Pelanggan',
+  inventori: 'Inventori',
+  supplier: 'Supplier',
+  promo: 'Promo',
+  konten: 'Konten',
+  laporan: 'Laporan',
+  pengaturan: 'Pengaturan',
+}
+
+const title = computed(() => {
+  const seg = route.url.split('?')[0].split('/')[2]
+  return SEG_LABELS[seg] ?? 'Admin'
+})
 </script>
 
 <template>
@@ -24,38 +39,24 @@ const logout = () => router.post('/logout')
           <Menu class="h-5 w-5" :stroke-width="1.5" />
         </button>
 
-        <div class="relative hidden max-w-sm flex-1 sm:block">
-          <Search class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" :stroke-width="1.5" />
-          <label class="sr-only" for="admin-search">Cari</label>
-          <input id="admin-search" class="field pl-9" placeholder="Cari pesanan, produk, pelanggan…" />
+        <div class="flex min-w-0 items-center gap-3">
+          <span class="hidden h-4 w-px bg-line sm:block" />
+          <p class="truncate text-[0.9rem] font-medium text-forest">{{ title }}</p>
         </div>
 
         <div class="ml-auto flex items-center gap-3">
-          <button class="relative grid h-10 w-10 place-items-center text-forest" aria-label="Notifikasi">
-            <Bell class="h-[18px] w-[18px]" :stroke-width="1.5" />
-            <span class="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-gold" />
-          </button>
+          <Link href="/" class="hidden text-[0.78rem] text-muted transition hover:text-forest sm:block">Lihat storefront →</Link>
           <div class="flex items-center gap-3 border-l border-line pl-3">
             <span class="grid h-9 w-9 place-items-center rounded-full bg-forest text-[0.72rem] font-semibold text-ivory">AG</span>
             <div class="hidden sm:block">
-              <p class="text-[0.8rem] leading-none text-forest">{{ user?.name ?? 'Admin' }}</p>
+              <p class="text-[0.8rem] leading-none text-forest">Admin</p>
               <p class="mt-1 text-[0.7rem] leading-none text-muted">Pemilik toko</p>
             </div>
-            <button
-              class="ml-1 grid h-9 w-9 place-items-center text-muted transition hover:text-danger"
-              aria-label="Keluar"
-              title="Keluar"
-              @click="logout"
-            >
-              <LogOut class="h-4 w-4" :stroke-width="1.5" />
-            </button>
           </div>
         </div>
       </header>
 
       <main class="px-5 py-8 sm:px-8 sm:py-10"><slot /></main>
     </div>
-
-    <ToastHost />
   </div>
 </template>

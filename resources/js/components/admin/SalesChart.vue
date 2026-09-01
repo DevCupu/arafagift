@@ -5,7 +5,7 @@ const props = defineProps({ series: { type: Array, required: true } })
 
 const W = 720
 const H = 220
-const max = computed(() => Math.max(...props.series.map((d) => d.value)) * 1.15)
+const max = computed(() => Math.max(Math.max(...props.series.map((d) => d.value)), 1))
 const pts = computed(() =>
   props.series.map((d, i) => ({
     ...d,

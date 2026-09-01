@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import { ArrowRight, Check, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
@@ -13,8 +13,9 @@ import TestimonialGrid from '@/components/storefront/TestimonialGrid.vue'
 import InstagramGrid from '@/components/storefront/InstagramGrid.vue'
 import FaqAccordion from '@/components/storefront/FaqAccordion.vue'
 import QuickView from '@/components/storefront/QuickView.vue'
-import heroImgFallback from '@/assets/hero.png'
+import heroImgFallback from '@/assets/hero.webp'
 import { formatIDR } from '@/composables/useFormat'
+import { useStore } from '@/composables/useStore'
 
 const props = defineProps({
   categories: { type: Array, required: true },
@@ -26,22 +27,38 @@ const props = defineProps({
   faqs: { type: Array, required: true },
 })
 
-const values = [
+const { whatsappHref } = useStore()
+
+const homeContent = props.content
+
+const values = homeContent.values ?? [
   { icon: 'Sparkles', title: 'Curated with Care', body: 'Kami mencicipi, memegang, dan memakai sendiri semua yang dijual sebelum masuk katalog.' },
   { icon: 'Gift', title: 'Elegant Packaging', body: 'Box hardcover, sleeve kertas tebal, dan kartu tulis tangan. Tidak perlu dibungkus ulang.' },
   { icon: 'BadgeCheck', title: 'Quality Products', body: 'Kurma disortir manual, madu diuji lab, sajadah ditenun bukan dicetak.' },
   { icon: 'Send', title: 'Ready to Gift', body: 'Bisa dikirim langsung ke alamat penerima tanpa nota harga di dalam paket.' },
 ]
-
-const homeContent = props.content
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
 const heroImg = hero.image || heroImgFallback
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
+
+const bulkCtaHref = computed(() => {
+  const href = homeContent.bulk.cta.href
+  if (!href || href.includes('6281234567890')) {
+    return whatsappHref('Halo ArafahGift, saya mau konsultasi souvenir rombongan.')
+  }
+  return href
+})
 </script>
 
 <template>
+  <Head title="Oleh-Oleh Haji &amp; Umrah Elegan">
+    <meta name="description" content="ArafahGift.id — toko oleh-oleh haji &amp; umrah: kurma premium, sajadah, tasbih, kalung, sarung, dan gift set elegan untuk keluarga, sahabat, dan rombongan." />
+    <link rel="canonical" href="/" />
+    <meta property="og:title" content="ArafahGift.id — Oleh-Oleh Haji &amp; Umrah Elegan" />
+    <meta property="og:description" content="Kurma premium, sajadah, tasbih, kalung, sarung, dan gift set hadiah haji umrah dengan packaging elegan." />
+  </Head>
   <div>
     <!-- ============ HERO ============ -->
     <!--
@@ -239,7 +256,7 @@ const quickview = ref(null)
               <Check class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.6" />{{ p }}
             </li>
           </ul>
-          <AppButton :href="homeContent.bulk.cta.href" variant="gold" size="lg" class="mt-9">
+          <AppButton :href="bulkCtaHref" variant="gold" size="lg" class="mt-9" target="_blank" rel="noopener">
             {{ homeContent.bulk.cta.label }}
             <template #icon><MessageCircle class="h-4 w-4" /></template>
           </AppButton>

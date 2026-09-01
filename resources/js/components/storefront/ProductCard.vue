@@ -35,7 +35,7 @@ const discount = computed(() =>
         :aria-label="product.name"
       >
         <div class="h-full w-full transition-transform duration-[900ms] ease-calm group-hover:scale-[1.04]">
-          <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-cover" />
+          <img v-if="product.image" :src="product.image" :alt="product.name" loading="lazy" class="h-full w-full object-cover" />
           <ProductArt v-else :art="product.art" :tone="index" />
         </div>
       </Link>

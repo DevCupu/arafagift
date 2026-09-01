@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Link, usePage } from '@inertiajs/vue3'
+import { Head, Link, usePage } from '@inertiajs/vue3'
 import { Gift, Trash2 } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -8,8 +8,10 @@ import QuantityInput from '@/components/ui/QuantityInput.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
+import { useStore } from '@/composables/useStore'
 
 const cart = useCart()
+const { whatsappHref } = useStore()
 const store = computed(() => usePage().props.store)
 const freeShippingByAmount = computed(() =>
   store.value.freeShippingFrom > 0 && cart.subtotal.value >= store.value.freeShippingFrom,
@@ -17,6 +19,9 @@ const freeShippingByAmount = computed(() =>
 </script>
 
 <template>
+  <Head title="Keranjang">
+    <meta name="robots" content="noindex,follow" />
+  </Head>
   <div class="shell py-14 sm:py-20">
     <h1 class="text-[2.4rem] leading-none sm:text-[3rem]">Keranjang</h1>
 
@@ -67,7 +72,12 @@ const freeShippingByAmount = computed(() =>
             <div v-if="cart.savings.value" class="flex justify-between"><dt class="text-muted">Potongan</dt><dd class="text-olive">−{{ formatIDR(cart.savings.value) }}</dd></div>
             <div class="flex justify-between">
               <dt class="text-muted">Ongkos kirim</dt>
-              <dd :class="freeShippingByAmount ? 'text-olive' : 'text-muted'">{{ freeShippingByAmount ? 'Gratis' : 'Dibahas via WhatsApp' }}</dd>
+              <dd :class="freeShippingByAmount ? 'text-olive' : 'text-forest'">
+                <span v-if="freeShippingByAmount">Gratis</span>
+                <a v-else :href="whatsappHref('Halo ArafahGift, saya mau tanya ongkos kirim pesanan saya.')" target="_blank" rel="noopener" class="underline underline-offset-4 transition hover:text-forest-deep">
+                  Dibahas via WhatsApp
+                </a>
+              </dd>
             </div>
           </dl>
           <div class="mt-6 flex items-baseline justify-between border-t border-line pt-5">

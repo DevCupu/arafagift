@@ -6,7 +6,10 @@ export default { layout: AdminLayout }
 <script setup>
 import { computed, ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
-import { Download, History, PackageMinus, PackagePlus, Scale, Search } from 'lucide-vue-next'
+import {
+  AlertTriangle, Boxes, Download, Filter, History, Layers,
+  PackageMinus, PackagePlus, PackageX, Scale, Search, Wallet, X,
+} from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -31,11 +34,11 @@ const filter = ref('semua')
 const search = ref('')
 const sortBy = ref('nama')
 
-const tabs = [
-  { id: 'semua', label: 'Semua' },
-  { id: 'low', label: 'Menipis' },
-  { id: 'out', label: 'Habis' },
-]
+const tabs = computed(() => [
+  { id: 'semua', label: 'Semua', count: countOf('semua') },
+  { id: 'low', label: 'Menipis', count: countOf('low') },
+  { id: 'out', label: 'Habis', count: countOf('out') },
+])
 
 const sortOptions = [
   { id: 'nama', label: 'Nama A–Z' },
@@ -49,6 +52,12 @@ const matches = (p) => {
   if (!q) return true
   return [p.name, p.sku, p.category, p.storageLocation, p.supplier]
     .some((v) => v && String(v).toLowerCase().includes(q))
+}
+
+function countOf(filterId) {
+  return props.products.filter((p) =>
+    (filterId === 'semua' || state(p).id === filterId) && matches(p),
+  ).length
 }
 
 const rows = computed(() => {
@@ -78,6 +87,17 @@ const saveThreshold = (p, value) => {
   })
 }
 
+// Indikator stok relatif terhadap batas menipis
+const levelPct = (p) => {
+  if (p.lowStock <= 0) return p.stock > 0 ? 100 : 0
+  return Math.max(0, Math.min(100, (p.stock / p.lowStock) * 100))
+}
+const levelBarClass = (p) => {
+  if (p.stock === 0) return 'bg-danger'
+  if (p.stock <= p.lowStock) return 'bg-gold'
+  return 'bg-olive'
+}
+
 // ── Modal pencatatan gerakan ──
 
 const IN_TYPES = [
@@ -100,9 +120,9 @@ const showForm = ref(false)
 const target = ref(null)
 const form = useForm({ type: 'purchase', qty: 1, delta: 0, supplier_id: '', note: '' })
 
-const startRecord = (p) => {
+const startRecord = (p, type = 'purchase') => {
   target.value = p
-  form.type = 'purchase'
+  form.type = type
   form.qty = 1
   form.delta = 0
   form.supplier_id = ''
@@ -158,22 +178,22 @@ const openHistory = async (p) => {
 }
 
 const columns = [
-  { key: 'name', label: 'Produk' },
-  { key: 'sku', label: 'SKU / Satuan' },
-  { key: 'location', label: 'Lokasi' },
-  { key: 'stock', label: 'Stok', align: 'right' },
-  { key: 'lowStock', label: 'Batas menipis', align: 'right' },
-  { key: 'value', label: 'Nilai stok', align: 'right' },
+  { key: 'name', label: 'Produk', sortKey: 'name' },
+  { key: 'sku', label: 'SKU / Satuan', sortKey: 'sku' },
+  { key: 'location', label: 'Lokasi', sortKey: 'storageLocation' },
+  { key: 'stock', label: 'Stok', align: 'right', sortKey: 'stock' },
+  { key: 'lowStock', label: 'Batas menipis', align: 'right', sortKey: 'lowStock' },
+  { key: 'value', label: 'Nilai stok', align: 'right', sortFn: (r) => (r.cost ?? 0) * r.stock },
   { key: 'state', label: 'Status' },
   { key: 'actions', label: '' },
 ]
 
 const summaryCards = computed(() => [
-  { label: 'Total SKU', value: fmt(props.summary.skuCount), hint: `${props.products.length} produk terdaftar` },
-  { label: 'Total unit stok', value: fmt(props.summary.unitCount), hint: 'seluruh gudang' },
-  { label: 'Nilai stok (HPP)', value: `Rp ${fmt(props.summary.stockValue)}`, hint: 'harga beli × stok' },
-  { label: 'Stok menipis', value: fmt(props.summary.lowCount), hint: 'perlu restock' },
-  { label: 'Stok habis', value: fmt(props.summary.outCount), hint: 'tidak bisa dijual' },
+  { label: 'Total SKU', value: fmt(props.summary.skuCount), hint: 'semua produk terdaftar', icon: Boxes, fid: 'semua' },
+  { label: 'Total unit stok', value: fmt(props.summary.unitCount), hint: 'jumlah unit seluruh gudang', icon: Layers, fid: null },
+  { label: 'Nilai stok (HPP)', value: `Rp ${fmt(props.summary.stockValue)}`, hint: 'harga beli × stok', icon: Wallet, fid: null },
+  { label: 'Stok menipis', value: fmt(props.summary.lowCount), hint: 'klik untuk filter', icon: AlertTriangle, fid: 'low' },
+  { label: 'Stok habis', value: fmt(props.summary.outCount), hint: 'klik untuk filter', icon: PackageX, fid: 'out' },
 ])
 </script>
 
@@ -193,24 +213,46 @@ const summaryCards = computed(() => [
     </header>
 
     <section class="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
-      <article v-for="card in summaryCards" :key="card.label" class="border border-line bg-surface px-5 py-5">
-        <p class="text-[0.68rem] uppercase tracking-[0.14em] text-muted">{{ card.label }}</p>
-        <p class="mt-3 font-display text-[1.6rem] leading-none text-forest">{{ card.value }}</p>
-        <p class="mt-2 text-[0.72rem] text-muted">{{ card.hint }}</p>
-      </article>
+      <button
+        v-for="card in summaryCards"
+        :key="card.label"
+        type="button"
+        :disabled="!card.fid"
+        class="relative border px-5 py-4 text-left transition sm:py-5"
+        :class="card.fid
+          ? (filter === card.fid ? 'border-gold bg-gold/10' : 'border-line bg-surface hover:border-olive/50 hover:shadow-soft')
+          : 'cursor-default border-line bg-surface'"
+        @click="filter = card.fid"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <p class="text-[0.68rem] font-medium uppercase tracking-[0.14em] text-muted">{{ card.label }}</p>
+          <span
+            class="grid h-8 w-8 flex-none place-items-center transition"
+            :class="filter === card.fid && card.fid ? 'bg-gold/20 text-gold' : 'text-muted/50'"
+          >
+            <component :is="card.icon" class="h-4 w-4" :stroke-width="1.5" />
+          </span>
+        </div>
+        <p class="mt-3 font-display text-[1.55rem] leading-none text-forest">{{ card.value }}</p>
+        <p class="mt-2 flex items-center gap-1 text-[0.72rem]" :class="card.fid ? 'text-gold' : 'text-muted'">
+          <Filter v-if="card.fid" class="h-3 w-3" :stroke-width="1.5" />
+          {{ card.hint }}
+        </p>
+      </button>
     </section>
 
     <div class="mt-8 flex flex-wrap items-center justify-between gap-4">
       <div class="flex gap-6 border-b border-line">
-        <button
-          v-for="t in tabs" :key="t.id"
-          class="relative pb-3 text-[0.83rem] transition"
-          :class="filter === t.id ? 'text-forest' : 'text-muted hover:text-forest'"
-          @click="filter = t.id"
-        >
-          {{ t.label }}
-          <span v-if="filter === t.id" class="absolute inset-x-0 -bottom-px h-px bg-gold" />
-        </button>
+<button
+            v-for="t in tabs" :key="t.id"
+            type="button"
+            class="relative pb-3 text-[0.83rem] transition"
+            :class="filter === t.id ? 'text-forest' : 'text-muted hover:text-forest'"
+            @click="filter = t.id"
+          >
+            {{ t.label }} <span class="ml-1 text-[0.72rem]" :class="filter === t.id ? 'text-gold' : 'text-muted/70'">({{ t.count }})</span>
+            <span v-if="filter === t.id" class="absolute inset-x-0 -bottom-px h-px bg-gold" />
+          </button>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <label class="relative">
@@ -218,8 +260,16 @@ const summaryCards = computed(() => [
           <Search class="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted" />
           <input
             v-model="search" type="search" placeholder="Cari nama, SKU, lokasi…"
-            class="w-56 border border-line bg-surface py-2 pl-9 pr-3 text-[0.82rem] focus:border-olive focus:outline-none"
+            class="w-56 border border-line bg-surface py-2 pl-9 text-[0.82rem] focus:border-olive focus:outline-none"
+            :class="search ? 'pr-8' : 'pr-3'"
           />
+          <button
+            v-if="search" type="button" @click="search = ''"
+            class="absolute right-2 top-1/2 grid h-5 w-5 -translate-y-1/2 place-items-center text-muted transition hover:text-forest"
+            aria-label="Hapus pencarian"
+          >
+            <X class="h-3.5 w-3.5" />
+          </button>
         </label>
         <select v-model="sortBy" class="field w-auto py-2 text-[0.82rem]">
           <option v-for="o in sortOptions" :key="o.id" :value="o.id">{{ o.label }}</option>
@@ -227,7 +277,12 @@ const summaryCards = computed(() => [
       </div>
     </div>
 
-    <div class="mt-6">
+    <p class="mt-5 text-[0.78rem] text-muted">
+      Menampilkan <strong class="text-forest">{{ rows.length }}</strong> dari {{ props.products.length }} produk
+      <template v-if="filter !== 'semua'"> dengan status <strong class="text-forest">{{ tabs.find((t) => t.id === filter).label }}</strong></template>
+    </p>
+
+    <div class="mt-4">
       <DataTable :columns="columns" :rows="rows">
         <template #cell-name="{ row }">
           <span class="font-medium">{{ row.name }}</span>
@@ -243,11 +298,25 @@ const summaryCards = computed(() => [
           </span>
         </template>
         <template #cell-stock="{ row }">
-          <span class="font-medium tabular-nums">{{ fmt(row.stock) }}</span>
+          <div class="ml-auto max-w-[7rem]">
+            <p class="flex items-baseline justify-end gap-1.5">
+              <span
+                class="font-medium tabular-nums"
+                :class="row.stock === 0 ? 'text-danger' : row.stock <= row.lowStock ? 'text-gold' : ''"
+              >{{ fmt(row.stock) }}</span>
+              <span class="text-[0.72rem] text-muted">{{ row.unit }}</span>
+            </p>
+            <div class="mt-1.5 flex justify-end">
+              <div class="h-1 w-full overflow-hidden bg-line/70" :title="`${Math.round(levelPct(row))}% dari batas menipis`">
+                <div class="h-full transition-all" :class="levelBarClass(row)" :style="{ width: `${levelPct(row)}%` }" />
+              </div>
+            </div>
+          </div>
         </template>
         <template #cell-lowStock="{ row }">
           <input
-            :value="thresholds[row.id]" inputmode="numeric"
+            :value="thresholds[row.id]" inputmode="numeric" :aria-label="`Batas menipis ${row.name}`"
+            title="Ubah batas menipis, simpan otomatis"
             class="w-16 border border-line bg-surface px-2 py-1 text-right text-[0.82rem] tabular-nums focus:border-olive focus:outline-none"
             @change="saveThreshold(row, $event.target.value)"
           />
@@ -257,14 +326,29 @@ const summaryCards = computed(() => [
         </template>
         <template #cell-state="{ row }"><StatusPill :label="state(row).label" :tone="state(row).tone" /></template>
         <template #cell-actions="{ row }">
-          <div class="flex justify-end gap-2">
+          <div class="flex items-center justify-end gap-2.5">
+            <div class="flex overflow-hidden border border-line" role="group" :aria-label="`Aksi cepat ${row.name}`">
+              <button
+                type="button"
+                class="grid h-7 w-8 place-items-center border-r border-line text-muted transition hover:bg-olive hover:text-ivory"
+                :title="`Tambah stok — restock ${row.name}`"
+                aria-label="Catat stok masuk"
+                @click="startRecord(row, 'purchase')"
+              >
+                <PackagePlus class="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                class="grid h-7 w-8 place-items-center text-muted transition hover:bg-gold hover:text-forest-deep"
+                :title="`Kurangi stok ${row.name}`"
+                aria-label="Catat stok keluar"
+                @click="startRecord(row, 'internal_use')"
+              >
+                <PackageMinus class="h-3.5 w-3.5" />
+              </button>
+            </div>
             <button
-              class="inline-flex items-center gap-1.5 text-[0.76rem] text-forest underline underline-offset-4"
-              @click="startRecord(row)"
-            >
-              <PackagePlus class="h-3.5 w-3.5" /> Catat gerakan
-            </button>
-            <button
+              type="button"
               class="inline-flex items-center gap-1.5 text-[0.76rem] text-muted underline underline-offset-4 hover:text-forest"
               @click="openHistory(row)"
             >

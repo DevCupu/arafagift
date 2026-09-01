@@ -18,6 +18,7 @@ defineProps({
           v-if="category.image"
           :src="category.image"
           :alt="category.name"
+          loading="lazy"
           class="h-full w-full object-cover"
         />
         <ProductArt v-else :art="category.art" :tone="index" />
