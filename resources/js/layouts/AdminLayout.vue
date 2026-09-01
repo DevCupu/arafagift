@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { Menu } from 'lucide-vue-next'
 import AdminSidebar from '@/components/admin/AdminSidebar.vue'
+import ToastHost from '@/components/ui/ToastHost.vue'
 
 const route = usePage()
 const open = ref(false)
@@ -58,5 +59,6 @@ const title = computed(() => {
 
       <main class="px-5 py-8 sm:px-8 sm:py-10"><slot /></main>
     </div>
+    <ToastHost />
   </div>
 </template>
