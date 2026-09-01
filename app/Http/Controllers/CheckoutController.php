@@ -3,10 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\Product;
+use App\Services\OrderPricing;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
@@ -28,30 +27,11 @@ class CheckoutController extends Controller
             'items.*.qty' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
 
-        $ids = array_column($validated['items'], 'id');
-        $products = Product::whereIn('id', $ids)->get()->keyBy('id');
-
         // Harga & stok dihitung dari database, bukan dari input klien, supaya tidak bisa dimanipulasi.
-        $shortages = [];
-        $subtotal = 0;
-        foreach ($validated['items'] as $item) {
-            $product = $products[$item['id']];
-            if ($item['qty'] > $product->stock) {
-                $shortages["items.{$item['id']}"] = "Stok {$product->name} tinggal {$product->stock}.";
-            }
-            $subtotal += $product->price * $item['qty'];
-        }
-        if ($shortages) {
-            throw ValidationException::withMessages($shortages);
-        }
-
-        $orderNumber = 'AGF-' . str_pad((string) mt_rand(10000, 99999), 5, '0', STR_PAD_LEFT);
-        while (Order::where('order_number', $orderNumber)->exists()) {
-            $orderNumber = 'AGF-' . str_pad((string) mt_rand(10000, 99999), 5, '0', STR_PAD_LEFT);
-        }
+        $priced = OrderPricing::priceItems($validated['items']);
 
         $order = Order::create([
-            'order_number' => $orderNumber,
+            'order_number' => OrderPricing::nextOrderNumber(),
             'user_id' => $request->user()?->id,
             'customer_name' => $validated['name'],
             'customer_email' => $validated['email'] ?? '',
@@ -65,19 +45,18 @@ class CheckoutController extends Controller
             'hide_invoice' => $validated['hideInvoice'] ?? true,
             'status' => 'pending',
             'channel' => 'Website',
-            'subtotal' => $subtotal,
-            'total' => $subtotal,
+            'subtotal' => $priced['subtotal'],
+            'total' => $priced['subtotal'],
         ]);
 
-        foreach ($validated['items'] as $item) {
-            $product = $products[$item['id']];
+        foreach ($priced['lines'] as $line) {
             $order->items()->create([
-                'product_id' => $item['id'],
-                'name' => $product->name,
-                'sku' => $product->sku ?? '-',
-                'art' => $product->art ?? '-',
-                'qty' => $item['qty'],
-                'price' => $product->price,
+                'product_id' => $line['product']->id,
+                'name' => $line['product']->name,
+                'sku' => $line['product']->sku ?? '-',
+                'art' => $line['product']->art ?? '-',
+                'qty' => $line['qty'],
+                'price' => $line['product']->price,
             ]);
         }
 

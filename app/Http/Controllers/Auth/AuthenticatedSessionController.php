@@ -17,7 +17,9 @@ class AuthenticatedSessionController extends Controller
      */
     public function create(): Response
     {
-        return Inertia::render('auth/Login');
+        return Inertia::render('auth/Login', [
+            'checkoutRedirect' => str_contains((string) redirect()->getIntendedUrl(), '/checkout'),
+        ]);
     }
 
     /**

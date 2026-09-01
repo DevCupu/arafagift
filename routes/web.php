@@ -35,8 +35,10 @@ Route::get('/koleksi/{category?}', [CollectionController::class, 'index'])->name
 Route::get('/pencarian', [ProductController::class, 'search'])->middleware('throttle:30,1,pencarian')->name('product.search');
 Route::get('/produk/{product:slug}', [ProductController::class, 'show'])->name('product');
 Route::get('/keranjang', fn () => Inertia::render('shop/CartPage'))->name('cart');
-Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
-Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
+Route::middleware('auth')->group(function () {
+    Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
+});
 Route::get('/lacak-pesanan', [OrderTrackingController::class, 'index'])->middleware('throttle:20,1,lacak-pesanan')->name('order.track');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
@@ -65,9 +67,13 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin', [AdminDashboardController::class, 'index'])->name('admin');
     Route::get('/admin/pesanan', [AdminOrderController::class, 'index'])->name('admin.orders');
+    Route::get('/admin/pesanan/baru', [AdminOrderController::class, 'create'])->name('admin.orders.new');
+    Route::post('/admin/pesanan', [AdminOrderController::class, 'store'])->name('admin.orders.store');
     Route::get('/admin/pesanan/ekspor', [AdminOrderController::class, 'export'])->name('admin.orders.export');
+    Route::patch('/admin/pesanan/{order_number}/pulihkan', [AdminOrderController::class, 'restore'])->name('admin.order.restore');
     Route::get('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'show'])->name('admin.order');
     Route::put('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'update'])->name('admin.order.update');
+    Route::delete('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'destroy'])->name('admin.order.destroy');
     Route::get('/admin/produk', [AdminProductController::class, 'index'])->name('admin.products');
     Route::get('/admin/produk/baru', [AdminProductController::class, 'create'])->name('admin.products.new');
     Route::post('/admin/produk', [AdminProductController::class, 'store'])->name('admin.products.store');

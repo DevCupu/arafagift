@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 #[Fillable([
     'order_number', 'user_id', 'customer_name', 'customer_email', 'customer_phone',
@@ -18,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Order extends Model
 {
     /** @use HasFactory<OrderFactory> */
-    use HasFactory;
+    use HasFactory, SoftDeletes;
 
     protected function casts(): array
     {
@@ -62,6 +63,7 @@ class Order extends Model
             'email' => $this->customer_email,
             'phone' => $this->customer_phone,
             'date' => $this->created_at->toIso8601String(),
+            'deletedAt' => $this->deleted_at?->toIso8601String(),
             'payment' => optional($this->paymentMethod)->name ?? 'Belum ditentukan',
             'status' => $this->status,
             'channel' => $this->channel,

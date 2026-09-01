@@ -1,11 +1,13 @@
 <script setup>
 import { Link, useForm } from '@inertiajs/vue3'
-import { LockKeyhole } from 'lucide-vue-next'
+import { LockKeyhole, ShoppingBag } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
 defineOptions({ layout: null })
+
+defineProps({ checkoutRedirect: { type: Boolean, default: false } })
 
 const form = useForm({
   email: '',
@@ -56,6 +58,11 @@ const submit = () => {
       <div class="w-full max-w-sm">
         <div class="mb-10 flex items-center justify-center lg:hidden">
           <BrandLogo tone="forest" size="md" />
+        </div>
+
+        <div v-if="checkoutRedirect" class="mb-6 flex items-start gap-3 border border-gold/40 bg-gold/[0.08] p-4">
+          <ShoppingBag class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
+          <p class="text-[0.8rem] leading-relaxed text-forest">Masuk dulu untuk lanjut checkout. Keranjang Anda tetap tersimpan.</p>
         </div>
 
         <p class="eyebrow">Selamat datang kembali</p>

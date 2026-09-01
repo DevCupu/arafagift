@@ -4,8 +4,8 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { Link, useForm } from '@inertiajs/vue3'
-import { ArrowLeft, Printer } from 'lucide-vue-next'
+import { Link, router, useForm } from '@inertiajs/vue3'
+import { ArrowLeft, Printer, Trash2 } from 'lucide-vue-next'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -30,6 +30,11 @@ const save = () => {
     preserveScroll: true,
     onSuccess: () => push(`Status ${order.id} diperbarui`, { tone: 'success' }),
   })
+}
+
+const destroyOrder = () => {
+  if (!confirm(`Hapus pesanan ${order.id}? Pesanan bisa dipulihkan lagi dari daftar pesanan terhapus.`)) return
+  router.delete(`/admin/pesanan/${order.id}`)
 }
 
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
@@ -144,6 +149,9 @@ const printLabel = () => {
           <label class="field-label mt-4" for="adminNote">Catatan admin</label>
           <textarea id="adminNote" v-model="form.adminNote" rows="3" class="field" placeholder="Catatan internal, tidak terlihat pembeli" />
           <AppButton block class="mt-5" :loading="form.processing" @click="save">Simpan perubahan</AppButton>
+          <button type="button" class="mt-4 flex w-full items-center justify-center gap-1.5 text-[0.78rem] text-muted underline underline-offset-4 transition hover:text-danger" @click="destroyOrder">
+            <Trash2 class="h-3.5 w-3.5" /> Hapus pesanan
+          </button>
         </section>
 
         <section class="border border-line bg-surface p-6 text-[0.85rem] leading-relaxed text-muted">

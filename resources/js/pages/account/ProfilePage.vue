@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useForm } from '@inertiajs/vue3'
 import AccountShell from '@/components/storefront/AccountShell.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -35,6 +35,12 @@ const savePassword = () => {
     },
   })
 }
+
+// Laravel selalu menaruh error rule "confirmed" di field `password`, bukan `password_confirmation` —
+// arahkan ke field yang benar biar jelas mana yang harus dibetulkan.
+const isConfirmMismatch = computed(() => passwordForm.errors.password?.startsWith('Konfirmasi'))
+const newPasswordError = computed(() => (isConfirmMismatch.value ? null : passwordForm.errors.password))
+const confirmationError = computed(() => (isConfirmMismatch.value ? passwordForm.errors.password : null))
 </script>
 
 <template>
@@ -77,11 +83,12 @@ const savePassword = () => {
         <div>
           <label class="field-label" for="pw-new">Kata sandi baru</label>
           <input id="pw-new" v-model="passwordForm.password" type="password" class="field" />
-          <p v-if="passwordForm.errors.password" class="mt-1.5 text-[0.72rem] text-danger">{{ passwordForm.errors.password }}</p>
+          <p v-if="newPasswordError" class="mt-1.5 text-[0.72rem] text-danger">{{ newPasswordError }}</p>
         </div>
         <div>
           <label class="field-label" for="pw-confirm">Ulangi kata sandi baru</label>
           <input id="pw-confirm" v-model="passwordForm.password_confirmation" type="password" class="field" />
+          <p v-if="confirmationError" class="mt-1.5 text-[0.72rem] text-danger">{{ confirmationError }}</p>
         </div>
         <div class="flex gap-3">
           <AppButton size="sm" :loading="passwordForm.processing" @click="savePassword">Simpan</AppButton>

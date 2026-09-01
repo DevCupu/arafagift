@@ -52,7 +52,7 @@ class PageController extends Controller
                 'sections' => [
                     [
                         'heading' => 'Data yang kami kumpulkan',
-                        'body' => "Saat Anda memesan, kami meminta nama, nomor WhatsApp, alamat pengiriman, kode pos, dan email (opsional). Data ini hanya diminta saat checkout — kami tidak mewajibkan pembuatan akun untuk berbelanja.",
+                        'body' => "Saat Anda memesan, kami meminta nama, nomor WhatsApp, alamat pengiriman, kode pos, dan email (opsional). Untuk checkout, Anda perlu masuk atau membuat akun terlebih dahulu — ini membantu kami mengonfirmasi dan melacak pesanan Anda dengan lebih akurat.",
                     ],
                     [
                         'heading' => 'Bagaimana data digunakan',

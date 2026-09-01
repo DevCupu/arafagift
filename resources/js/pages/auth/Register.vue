@@ -1,11 +1,14 @@
 <script setup>
+import { computed } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
-import { UserPlus } from 'lucide-vue-next'
+import { ShoppingBag, UserPlus } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
 defineOptions({ layout: null })
+
+defineProps({ checkoutRedirect: { type: Boolean, default: false } })
 
 const form = useForm({
   name: '',
@@ -20,6 +23,12 @@ const submit = () => {
     onFinish: () => form.reset('password', 'password_confirmation'),
   })
 }
+
+// Laravel selalu menaruh error rule "confirmed" di field `password`, bukan `password_confirmation` —
+// arahkan ke field yang benar biar jelas mana yang harus dibetulkan.
+const isConfirmMismatch = computed(() => form.errors.password?.startsWith('Konfirmasi'))
+const passwordError = computed(() => (isConfirmMismatch.value ? null : form.errors.password))
+const confirmationError = computed(() => (isConfirmMismatch.value ? form.errors.password : null))
 </script>
 
 <template>
@@ -60,6 +69,11 @@ const submit = () => {
           <BrandLogo tone="forest" size="md" />
         </div>
 
+        <div v-if="checkoutRedirect" class="mb-6 flex items-start gap-3 border border-gold/40 bg-gold/[0.08] p-4">
+          <ShoppingBag class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
+          <p class="text-[0.8rem] leading-relaxed text-forest">Buat akun dulu untuk lanjut checkout. Keranjang Anda tetap tersimpan.</p>
+        </div>
+
         <p class="eyebrow">Selamat datang</p>
         <h2 class="mt-4 text-[1.9rem] leading-tight">Buat akun baru</h2>
         <p class="mt-3 text-[0.85rem] text-muted">Gratis, cuma butuh beberapa detik.</p>
@@ -85,12 +99,13 @@ const submit = () => {
           <div>
             <label class="field-label" for="password">Kata sandi</label>
             <input id="password" v-model="form.password" type="password" class="field" placeholder="••••••••" autocomplete="new-password" required />
-            <p v-if="form.errors.password" class="mt-2 text-[0.78rem] text-danger">{{ form.errors.password }}</p>
+            <p v-if="passwordError" class="mt-2 text-[0.78rem] text-danger">{{ passwordError }}</p>
           </div>
 
           <div>
             <label class="field-label" for="password_confirmation">Ulangi kata sandi</label>
             <input id="password_confirmation" v-model="form.password_confirmation" type="password" class="field" placeholder="••••••••" autocomplete="new-password" required />
+            <p v-if="confirmationError" class="mt-2 text-[0.78rem] text-danger">{{ confirmationError }}</p>
           </div>
 
           <AppButton variant="gold" block type="submit" :loading="form.processing">

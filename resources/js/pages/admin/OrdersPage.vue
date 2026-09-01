@@ -5,17 +5,30 @@ export default { layout: AdminLayout }
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
-import { Download, Search, X } from 'lucide-vue-next'
+import { Link, router } from '@inertiajs/vue3'
+import { Download, Plus, RotateCcw, Search, X } from 'lucide-vue-next'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { orderStatuses, orderTotal } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
+import { useToast } from '@/composables/useToast'
 
-const props = defineProps({ orders: { type: Array, required: true } })
+const props = defineProps({
+  orders: { type: Array, required: true },
+  trashedOrders: { type: Array, default: () => [] },
+})
+const { push } = useToast()
 const query = ref('')
 const filter = ref('semua')
+const showTrashed = ref(false)
+
+const restoreOrder = (order) => {
+  router.patch(`/admin/pesanan/${order.id}/pulihkan`, {}, {
+    preserveScroll: true,
+    onSuccess: () => push(`Pesanan ${order.id} dipulihkan`, { tone: 'success' }),
+  })
+}
 
 const columns = [
   { key: 'id', label: 'Pesanan', sortKey: 'id' },
@@ -58,10 +71,16 @@ const tabs = computed(() => [
         <h1 class="text-[2.1rem] leading-none">Pesanan</h1>
         <p class="mt-3 text-[0.85rem] text-muted">{{ orders.length }} pesanan · {{ pendingCount }} menunggu pembayaran</p>
       </div>
-      <AppButton href="/admin/pesanan/ekspor" variant="outline" size="sm">
-        <template #icon><Download class="h-3.5 w-3.5" /></template>
-        Ekspor CSV
-      </AppButton>
+      <div class="flex flex-wrap items-center gap-3">
+        <AppButton href="/admin/pesanan/ekspor" variant="outline" size="sm">
+          <template #icon><Download class="h-3.5 w-3.5" /></template>
+          Ekspor CSV
+        </AppButton>
+        <AppButton to="/admin/pesanan/baru" size="sm">
+          <template #icon><Plus class="h-3.5 w-3.5" /></template>
+          Pesanan baru
+        </AppButton>
+      </div>
     </header>
 
     <div class="no-scrollbar mt-8 flex gap-6 overflow-x-auto border-b border-line">
@@ -114,6 +133,24 @@ const tabs = computed(() => [
         <template #cell-payment="{ row }"><span class="text-muted">{{ row.payment }}</span></template>
         <template #cell-status="{ row }"><StatusPill :status="row.status" /></template>
       </DataTable>
+    </div>
+
+    <div v-if="trashedOrders.length" class="mt-10">
+      <button type="button" class="flex items-center gap-2 text-[0.83rem] text-muted transition hover:text-forest" @click="showTrashed = !showTrashed">
+        {{ showTrashed ? 'Sembunyikan' : 'Lihat' }} pesanan terhapus ({{ trashedOrders.length }})
+      </button>
+      <ul v-if="showTrashed" class="mt-4 divide-y divide-line border border-line bg-surface">
+        <li v-for="o in trashedOrders" :key="o.id" class="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5">
+          <div>
+            <span class="text-[0.87rem] text-forest">{{ o.id }}</span>
+            <span class="ml-2 text-[0.78rem] text-muted">{{ o.customer }} · {{ formatIDR(orderTotal(o)) }}</span>
+          </div>
+          <AppButton size="sm" variant="quiet" @click="restoreOrder(o)">
+            <template #icon><RotateCcw class="h-3.5 w-3.5" /></template>
+            Pulihkan
+          </AppButton>
+        </li>
+      </ul>
     </div>
   </div>
 </template>
