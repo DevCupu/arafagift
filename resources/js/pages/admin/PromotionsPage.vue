@@ -106,7 +106,11 @@ const bulkDelete = () => {
         :count="selectedCodes.length" label="kode promo" class="mb-3" :loading="bulkDeleting"
         @clear="selectedCodes = []" @delete="bulkDelete"
       />
-      <DataTable :columns="columns" :rows="promotions" row-key="code" selectable v-model:selected="selectedCodes">
+      <DataTable
+        :columns="columns" :rows="promotions" row-key="code" selectable v-model:selected="selectedCodes"
+        :base-empty="promotions.length === 0" empty-title="Belum ada kode promo"
+        empty-body="Buat kode potongan pertama untuk dipakai pembeli saat checkout."
+      >
         <template #cell-code="{ row }"><span class="font-medium tracking-wide">{{ row.code }}</span></template>
         <template #cell-usage="{ row }"><span class="text-muted">{{ row.usage }}</span></template>
         <template #cell-period="{ row }"><span class="text-muted">{{ row.period }}</span></template>
@@ -117,6 +121,12 @@ const bulkDelete = () => {
           <button type="button" class="grid h-8 w-8 place-items-center text-muted transition hover:text-danger" aria-label="Hapus" @click="destroy(row)">
             <Trash2 class="h-3.5 w-3.5" />
           </button>
+        </template>
+        <template #empty-action>
+          <AppButton size="sm" @click="showForm = !showForm">
+            <template #icon><Plus class="h-3.5 w-3.5" /></template>
+            Buat kode promo
+          </AppButton>
         </template>
       </DataTable>
     </div>

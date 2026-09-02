@@ -54,7 +54,11 @@ const rows = computed(() => {
     </p>
 
     <div class="mt-4">
-      <DataTable :columns="columns" :rows="rows">
+      <DataTable
+        :columns="columns" :rows="rows"
+        :base-empty="customers.length === 0" empty-title="Belum ada pelanggan"
+        empty-body="Pelanggan yang sudah melakukan pembelian akan muncul di sini."
+      >
         <template #cell-name="{ row }">
           <Link :href="`/admin/pelanggan/${row.id}`" class="link-underline block font-medium">{{ row.name }}</Link>
           <span class="text-[0.72rem] text-muted">{{ row.email }}</span>

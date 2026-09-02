@@ -155,7 +155,11 @@ const columns = [
         :count="selected.length" label="supplier" class="mb-3" :loading="bulkDeleting"
         @clear="selected = []" @delete="bulkDelete"
       />
-      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
+      <DataTable
+        :columns="columns" :rows="rows" selectable v-model:selected="selected"
+        :base-empty="suppliers.length === 0" empty-title="Belum ada supplier"
+        empty-body="Tambahkan pemasok barang untuk mulai mencatat pembelian di inventori."
+      >
         <template #cell-name="{ row }"><span class="font-medium">{{ row.name }}</span></template>
         <template #cell-contact="{ row }">
           <span class="block text-muted">{{ row.phone ?? '–' }}</span>
@@ -170,6 +174,12 @@ const columns = [
             <button type="button" class="text-[0.78rem] text-forest underline underline-offset-4" @click="startEdit(row)">Ubah</button>
             <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="destroy(row)">Hapus</button>
           </div>
+        </template>
+        <template #empty-action>
+          <AppButton size="sm" @click="startCreate">
+            <template #icon><Plus class="h-3.5 w-3.5" /></template>
+            Tambah supplier
+          </AppButton>
         </template>
       </DataTable>
     </div>

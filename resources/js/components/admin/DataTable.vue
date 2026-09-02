@@ -10,6 +10,9 @@ const props = defineProps({
   pageSizeOptions: { type: Array, default: () => [25, 50, 100] },
   selectable: { type: Boolean, default: false },
   selected: { type: Array, default: () => [] },
+  baseEmpty: { type: Boolean, default: false },
+  emptyTitle: { type: String, default: 'Tidak ada data pada filter ini' },
+  emptyBody: { type: String, default: '' },
 })
 const emit = defineEmits(['update:selected'])
 
@@ -148,7 +151,12 @@ const togglePage = () => {
           </tr>
         </tbody>
       </table>
-      <div v-if="!paginated.length" class="px-5 py-16 text-center">
+      <div v-if="!paginated.length && baseEmpty" class="px-5 py-16 text-center">
+        <p class="font-display text-xl text-forest">{{ emptyTitle }}</p>
+        <p v-if="emptyBody" class="mx-auto mt-2 max-w-sm text-[0.83rem] text-muted">{{ emptyBody }}</p>
+        <div v-if="$slots['empty-action']" class="mt-6 flex justify-center"><slot name="empty-action" /></div>
+      </div>
+      <div v-else-if="!paginated.length" class="px-5 py-16 text-center">
         <p class="font-display text-xl text-forest">Tidak ada data pada filter ini</p>
         <p class="mt-2 text-[0.83rem] text-muted">Ubah kata kunci atau atur ulang filter untuk melihat baris lainnya.</p>
       </div>

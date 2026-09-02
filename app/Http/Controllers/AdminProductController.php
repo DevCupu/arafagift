@@ -19,7 +19,7 @@ class AdminProductController extends Controller
     {
         return Inertia::render('admin/ProductsPage', [
             'products' => Product::with(['category', 'supplier', 'occasions'])->orderBy('name')->get()->map->toCatalog()->values(),
-            'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
+            'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values(),
             'suppliers' => Supplier::orderBy('name')->get()->map->toCatalog()->values(),
         ]);
     }
@@ -28,7 +28,7 @@ class AdminProductController extends Controller
     {
         return Inertia::render('admin/ProductFormPage', [
             'product' => null,
-            'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
+            'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values(),
             'suppliers' => Supplier::orderBy('name')->get()->map->toCatalog()->values(),
         ]);
     }
@@ -37,7 +37,7 @@ class AdminProductController extends Controller
     {
         return Inertia::render('admin/ProductFormPage', [
             'product' => $product->load('occasions')->toCatalog(),
-            'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
+            'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values(),
             'suppliers' => Supplier::orderBy('name')->get()->map->toCatalog()->values(),
         ]);
     }

@@ -136,7 +136,11 @@ const bulkDelete = () => {
         :count="selected.length" label="pesanan" class="mb-3" :loading="bulkDeleting"
         @clear="selected = []" @delete="bulkDelete"
       />
-      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
+      <DataTable
+        :columns="columns" :rows="rows" selectable v-model:selected="selected"
+        :base-empty="orders.length === 0" empty-title="Belum ada pesanan"
+        empty-body="Pesanan baru dari pelanggan akan muncul di sini."
+      >
         <template #cell-id="{ row }">
           <Link :href="`/admin/pesanan/${row.id}`" class="link-underline font-medium">{{ row.id }}</Link>
         </template>

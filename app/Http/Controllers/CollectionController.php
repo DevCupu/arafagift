@@ -14,7 +14,7 @@ class CollectionController extends Controller
     public function index(Request $request, ?string $category = null): Response
     {
         return Inertia::render('shop/CollectionPage', [
-            'categories' => Category::orderBy('id')->get()->map->toCatalog()->values(),
+            'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values(),
             'occasions' => Occasion::orderBy('id')->get()->map->toCatalog()->values(),
             'products' => Product::with(['category', 'occasions', 'supplier'])->where('status', 'active')->get()->map->toCatalog()->values(),
             'category' => $category ?? 'semua',

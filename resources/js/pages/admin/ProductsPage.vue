@@ -165,7 +165,11 @@ const bulkDelete = () => {
         :count="selected.length" label="produk" class="mb-3" :loading="bulkDeleting"
         @clear="selected = []" @delete="bulkDelete"
       />
-      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
+      <DataTable
+        :columns="columns" :rows="rows" selectable v-model:selected="selected"
+        :base-empty="products.length === 0" empty-title="Belum ada produk"
+        empty-body="Mulai tambahkan produk pertamamu ke katalog."
+      >
         <template #cell-product="{ row }">
           <div class="flex items-center gap-3">
             <span class="arch h-12 w-9 flex-none overflow-hidden border border-line bg-ivory">
@@ -208,6 +212,12 @@ const bulkDelete = () => {
               <Trash2 class="h-3.5 w-3.5" />
             </button>
           </div>
+        </template>
+        <template #empty-action>
+          <AppButton to="/admin/produk/baru" size="sm">
+            <template #icon><Plus class="h-3.5 w-3.5" /></template>
+            Tambah produk
+          </AppButton>
         </template>
       </DataTable>
     </div>

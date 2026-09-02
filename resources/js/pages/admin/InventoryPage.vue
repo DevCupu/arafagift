@@ -283,7 +283,11 @@ const summaryCards = computed(() => [
     </p>
 
     <div class="mt-4">
-      <DataTable :columns="columns" :rows="rows">
+      <DataTable
+        :columns="columns" :rows="rows"
+        :base-empty="props.products.length === 0" empty-title="Belum ada produk"
+        empty-body="Tambahkan produk dahulu untuk mulai mengelola inventori dan stok."
+      >
         <template #cell-name="{ row }">
           <span class="font-medium">{{ row.name }}</span>
           <span class="block text-[0.72rem] text-muted">{{ row.category }}</span>

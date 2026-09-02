@@ -6,6 +6,7 @@ use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -21,6 +22,12 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    /** @param Builder<Category> $query */
+    public function scopeWithCountActiveProducts(Builder $query): Builder
+    {
+        return $query->withCount(['products as products_active_count' => fn ($q) => $q->where('status', 'active')]);
+    }
+
     /**
      * @return array{id: int, name: string, slug: string, art: string|null, image: string|null, tagline: string|null, count: int|null}
      */
@@ -33,7 +40,7 @@ class Category extends Model
             'art' => $this->art,
             'image' => $this->imageUrl(),
             'tagline' => $this->tagline,
-            'count' => $this->products_count ?? $this->product_count,
+            'count' => $this->products_active_count ?? $this->product_count,
         ];
     }
 
