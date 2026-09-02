@@ -163,6 +163,18 @@ class ContentController extends Controller
         return back();
     }
 
+    public function bulkDestroyTestimonials(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:testimonials,id'],
+        ]);
+
+        Testimonial::whereIn('id', $validated['ids'])->delete();
+
+        return back();
+    }
+
     public function storeFaq(Request $request): RedirectResponse
     {
         $validated = $request->validate([
@@ -192,6 +204,18 @@ class ContentController extends Controller
     public function destroyFaq(Faq $faq): RedirectResponse
     {
         $faq->delete();
+
+        return back();
+    }
+
+    public function bulkDestroyFaqs(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:faqs,id'],
+        ]);
+
+        Faq::whereIn('id', $validated['ids'])->delete();
 
         return back();
     }

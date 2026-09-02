@@ -115,6 +115,25 @@ class AdminOrderController extends Controller
         return redirect()->route('admin.orders')->with('success', "Pesanan {$order->order_number} dihapus. Bisa dipulihkan dari daftar pesanan terhapus.");
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'order_numbers' => ['required', 'array', 'min:1'],
+            'order_numbers.*' => ['required', 'string', 'exists:orders,order_number'],
+        ]);
+
+        $orders = Order::whereIn('order_number', $validated['order_numbers'])->get();
+
+        DB::transaction(function () use ($orders, $request): void {
+            foreach ($orders as $order) {
+                $this->restoreDeductedStock($order, $request->user()->id);
+                $order->delete();
+            }
+        });
+
+        return redirect()->route('admin.orders')->with('success', $orders->count().' pesanan dihapus. Bisa dipulihkan dari daftar pesanan terhapus.');
+    }
+
     public function restore(Request $request, string $order_number): RedirectResponse
     {
         $order = Order::onlyTrashed()->where('order_number', $order_number)->firstOrFail();

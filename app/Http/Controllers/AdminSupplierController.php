@@ -42,6 +42,30 @@ class AdminSupplierController extends Controller
         return back()->with('success', "{$supplier->name} dihapus");
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:suppliers,id'],
+        ]);
+
+        $suppliers = Supplier::withCount('products')->whereIn('id', $validated['ids'])->get();
+        $blocked = $suppliers->filter(fn (Supplier $s) => $s->products_count > 0);
+        $deletable = $suppliers->reject(fn (Supplier $s) => $s->products_count > 0);
+
+        $deletable->each->delete();
+
+        if ($blocked->isNotEmpty()) {
+            $prefix = $deletable->isNotEmpty() ? "{$deletable->count()} supplier dihapus. " : '';
+
+            return back()->withErrors([
+                'supplier' => $prefix.'Dilewati karena masih dipakai produk: '.$blocked->pluck('name')->implode(', ').'.',
+            ]);
+        }
+
+        return back()->with('success', "{$deletable->count()} supplier dihapus");
+    }
+
     /**
      * @return array<string, string|null>
      */

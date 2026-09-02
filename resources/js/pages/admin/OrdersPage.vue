@@ -7,6 +7,7 @@ export default { layout: AdminLayout }
 import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import { Download, Plus, RotateCcw, Search, X } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -62,6 +63,18 @@ const tabs = computed(() => [
   { id: 'semua', label: 'Semua', count: countOf('semua') },
   ...orderStatuses.map((s) => ({ id: s.id, label: s.label, count: countOf(s.id) })),
 ])
+
+const selected = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  bulkDeleting.value = true
+  router.delete('/admin/pesanan/bulk', {
+    data: { order_numbers: selected.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selected.value.length} pesanan dihapus`, { tone: 'success' }); selected.value = [] },
+    onFinish: () => { bulkDeleting.value = false },
+  })
+}
 </script>
 
 <template>
@@ -119,7 +132,11 @@ const tabs = computed(() => [
     </p>
 
     <div class="mt-4">
-      <DataTable :columns="columns" :rows="rows">
+      <BulkActionBar
+        :count="selected.length" label="pesanan" class="mb-3" :loading="bulkDeleting"
+        @clear="selected = []" @delete="bulkDelete"
+      />
+      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
         <template #cell-id="{ row }">
           <Link :href="`/admin/pesanan/${row.id}`" class="link-underline font-medium">{{ row.id }}</Link>
         </template>

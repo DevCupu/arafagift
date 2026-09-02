@@ -82,6 +82,25 @@ class AdminProductController extends Controller
         return back()->with('success', "{$product->name} dihapus");
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:products,id'],
+        ]);
+
+        $products = Product::whereIn('id', $validated['ids'])->get();
+
+        foreach ($products as $product) {
+            if ($product->image) {
+                Storage::disk('public')->delete($product->image);
+            }
+            $product->delete();
+        }
+
+        return back()->with('success', $products->count().' produk dihapus');
+    }
+
     public function inventory(): Response
     {
         return Inertia::render('admin/InventoryPage', [
@@ -120,7 +139,7 @@ class AdminProductController extends Controller
             'featured' => ['boolean'],
             'short' => ['nullable', 'string', 'max:200'],
             'description' => ['nullable', 'string'],
-            'image' => ['nullable', 'image', 'max:4096'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:4096'],
         ]);
 
         unset($data['image']);

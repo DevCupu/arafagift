@@ -39,4 +39,16 @@ class AdminPromotionController extends Controller
 
         return back()->with('success', "{$promotion->code} dihapus");
     }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:promotions,id'],
+        ]);
+
+        $count = Promotion::whereIn('id', $validated['ids'])->delete();
+
+        return back()->with('success', "{$count} kode promo dihapus");
+    }
 }

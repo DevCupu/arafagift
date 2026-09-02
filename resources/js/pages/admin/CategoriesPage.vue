@@ -7,6 +7,7 @@ export default { layout: AdminLayout }
 import { ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { ImagePlus, Plus } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useToast } from '@/composables/useToast'
@@ -69,6 +70,19 @@ const destroy = (c) => {
     onError: (errors) => push(errors.category ?? 'Gagal menghapus kategori', { tone: 'danger' }),
   })
 }
+
+const selected = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  bulkDeleting.value = true
+  router.delete('/admin/kategori/bulk', {
+    data: { ids: selected.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selected.value.length} kategori dihapus`, { tone: 'success' }); selected.value = [] },
+    onError: (errors) => push(errors.category ?? 'Gagal menghapus sebagian kategori', { tone: 'danger' }),
+    onFinish: () => { bulkDeleting.value = false },
+  })
+}
 </script>
 
 <template>
@@ -126,8 +140,16 @@ const destroy = (c) => {
       </div>
     </form>
 
+    <BulkActionBar
+      :count="selected.length" label="kategori" class="mt-8" :loading="bulkDeleting"
+      @clear="selected = []" @delete="bulkDelete"
+    />
     <div class="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
       <article v-for="(c, i) in categories" :key="c.slug" class="flex gap-4 border border-line bg-surface p-4">
+        <label class="flex-none pt-1">
+          <span class="sr-only">Pilih {{ c.name }}</span>
+          <input type="checkbox" class="h-3.5 w-3.5 accent-olive" :value="c.id" v-model="selected" />
+        </label>
         <span class="arch h-24 w-[72px] flex-none overflow-hidden border border-line bg-ivory">
           <img v-if="c.image" :src="c.image" :alt="c.name" class="h-full w-full object-cover" />
           <ProductArt v-else :art="c.art" :tone="i" />

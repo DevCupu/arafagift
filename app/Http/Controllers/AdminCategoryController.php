@@ -60,6 +60,35 @@ class AdminCategoryController extends Controller
         return back()->with('success', "{$category->name} dihapus");
     }
 
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:categories,id'],
+        ]);
+
+        $categories = Category::withCount('products')->whereIn('id', $validated['ids'])->get();
+        $blocked = $categories->filter(fn (Category $c) => $c->products_count > 0);
+        $deletable = $categories->reject(fn (Category $c) => $c->products_count > 0);
+
+        foreach ($deletable as $category) {
+            if ($category->image && ! str_starts_with($category->image, '/')) {
+                Storage::disk('public')->delete($category->image);
+            }
+            $category->delete();
+        }
+
+        if ($blocked->isNotEmpty()) {
+            $prefix = $deletable->isNotEmpty() ? "{$deletable->count()} kategori dihapus. " : '';
+
+            return back()->withErrors([
+                'category' => $prefix.'Dilewati karena masih punya produk: '.$blocked->pluck('name')->implode(', ').'.',
+            ]);
+        }
+
+        return back()->with('success', "{$deletable->count()} kategori dihapus");
+    }
+
     /**
      * @return array<string, mixed>
      */

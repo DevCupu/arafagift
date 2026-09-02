@@ -7,6 +7,7 @@ export default { layout: AdminLayout }
 import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import { Pencil, Plus, Search, Trash2, X } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -89,6 +90,18 @@ const destroy = (p) => {
     onError: (errors) => push(errors.product ?? 'Gagal menghapus produk', { tone: 'danger' }),
   })
 }
+
+const selected = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  bulkDeleting.value = true
+  router.delete('/admin/produk/bulk', {
+    data: { ids: selected.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selected.value.length} produk dihapus`, { tone: 'success' }); selected.value = [] },
+    onFinish: () => { bulkDeleting.value = false },
+  })
+}
 </script>
 
 <template>
@@ -148,7 +161,11 @@ const destroy = (p) => {
     </p>
 
     <div class="mt-4">
-      <DataTable :columns="columns" :rows="rows">
+      <BulkActionBar
+        :count="selected.length" label="produk" class="mb-3" :loading="bulkDeleting"
+        @clear="selected = []" @delete="bulkDelete"
+      />
+      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
         <template #cell-product="{ row }">
           <div class="flex items-center gap-3">
             <span class="arch h-12 w-9 flex-none overflow-hidden border border-line bg-ivory">

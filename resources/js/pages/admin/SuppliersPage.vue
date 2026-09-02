@@ -7,6 +7,7 @@ export default { layout: AdminLayout }
 import { computed, ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { Plus, Search, X } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useToast } from '@/composables/useToast'
@@ -61,6 +62,19 @@ const destroy = (s) => {
     preserveScroll: true,
     onSuccess: () => push(`${s.name} dihapus`, { tone: 'success' }),
     onError: (errors) => push(errors.supplier ?? 'Gagal menghapus supplier', { tone: 'danger' }),
+  })
+}
+
+const selected = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  bulkDeleting.value = true
+  router.delete('/admin/supplier/bulk', {
+    data: { ids: selected.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selected.value.length} supplier dihapus`, { tone: 'success' }); selected.value = [] },
+    onError: (errors) => push(errors.supplier ?? 'Gagal menghapus sebagian supplier', { tone: 'danger' }),
+    onFinish: () => { bulkDeleting.value = false },
   })
 }
 
@@ -137,7 +151,11 @@ const columns = [
     </div>
 
     <div class="mt-4">
-      <DataTable :columns="columns" :rows="rows">
+      <BulkActionBar
+        :count="selected.length" label="supplier" class="mb-3" :loading="bulkDeleting"
+        @clear="selected = []" @delete="bulkDelete"
+      />
+      <DataTable :columns="columns" :rows="rows" selectable v-model:selected="selected">
         <template #cell-name="{ row }"><span class="font-medium">{{ row.name }}</span></template>
         <template #cell-contact="{ row }">
           <span class="block text-muted">{{ row.phone ?? '–' }}</span>

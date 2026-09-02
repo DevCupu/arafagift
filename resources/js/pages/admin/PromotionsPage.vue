@@ -7,12 +7,13 @@ export default { layout: AdminLayout }
 import { ref } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { Plus, Trash2 } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useToast } from '@/composables/useToast'
 
-defineProps({ promotions: { type: Array, required: true } })
+const props = defineProps({ promotions: { type: Array, required: true } })
 const { push } = useToast()
 
 const columns = [
@@ -43,6 +44,19 @@ const destroy = (promo) => {
   router.delete(`/admin/promo/${promo.id}`, {
     preserveScroll: true,
     onSuccess: () => push(`${promo.code} dihapus`, { tone: 'success' }),
+  })
+}
+
+const selectedCodes = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  const ids = props.promotions.filter((p) => selectedCodes.value.includes(p.code)).map((p) => p.id)
+  bulkDeleting.value = true
+  router.delete('/admin/promo/bulk', {
+    data: { ids },
+    preserveScroll: true,
+    onSuccess: () => { push(`${ids.length} kode promo dihapus`, { tone: 'success' }); selectedCodes.value = [] },
+    onFinish: () => { bulkDeleting.value = false },
   })
 }
 </script>
@@ -88,7 +102,11 @@ const destroy = (promo) => {
     </form>
 
     <div class="mt-8">
-      <DataTable :columns="columns" :rows="promotions" row-key="code">
+      <BulkActionBar
+        :count="selectedCodes.length" label="kode promo" class="mb-3" :loading="bulkDeleting"
+        @clear="selectedCodes = []" @delete="bulkDelete"
+      />
+      <DataTable :columns="columns" :rows="promotions" row-key="code" selectable v-model:selected="selectedCodes">
         <template #cell-code="{ row }"><span class="font-medium tracking-wide">{{ row.code }}</span></template>
         <template #cell-usage="{ row }"><span class="text-muted">{{ row.usage }}</span></template>
         <template #cell-period="{ row }"><span class="text-muted">{{ row.period }}</span></template>

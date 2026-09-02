@@ -8,7 +8,10 @@ const props = defineProps({
   rowKey: { type: String, default: 'id' },
   defaultPageSize: { type: Number, default: 25 },
   pageSizeOptions: { type: Array, default: () => [25, 50, 100] },
+  selectable: { type: Boolean, default: false },
+  selected: { type: Array, default: () => [] },
 })
+const emit = defineEmits(['update:selected'])
 
 // ── Sortir kolom ──
 const sortKey = ref(null)
@@ -74,6 +77,20 @@ const paginated = computed(() => {
 const prevPage = () => { if (clamped.value > 1) page.value -= 1 }
 const nextPage = () => { if (clamped.value < totalPages.value) page.value += 1 }
 const changeSize = (e) => { size.value = Number(e.target.value); page.value = 1 }
+
+// ── Seleksi baris (untuk bulk action) ──
+const isSelected = (row) => props.selected.includes(row[props.rowKey])
+const toggleRow = (row) => {
+  const key = row[props.rowKey]
+  emit('update:selected', isSelected(row) ? props.selected.filter((k) => k !== key) : [...props.selected, key])
+}
+const pageAllSelected = computed(() => paginated.value.length > 0 && paginated.value.every(isSelected))
+const togglePage = () => {
+  const pageKeys = paginated.value.map((r) => r[props.rowKey])
+  emit('update:selected', pageAllSelected.value
+    ? props.selected.filter((k) => !pageKeys.includes(k))
+    : [...new Set([...props.selected, ...pageKeys])])
+}
 </script>
 
 <template>
@@ -82,6 +99,12 @@ const changeSize = (e) => { size.value = Number(e.target.value); page.value = 1 
       <table class="w-full min-w-[46rem] border-collapse text-left">
         <thead>
           <tr class="border-b border-line">
+            <th v-if="selectable" class="w-10 px-5 py-3.5">
+              <input
+                type="checkbox" class="h-3.5 w-3.5 accent-olive" aria-label="Pilih semua baris di halaman ini"
+                :checked="pageAllSelected" @change="togglePage"
+              />
+            </th>
             <th
               v-for="c in columns" :key="c.key"
               class="whitespace-nowrap px-5 py-3.5 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-muted"
@@ -109,6 +132,12 @@ const changeSize = (e) => { size.value = Number(e.target.value); page.value = 1 
         </thead>
         <tbody class="divide-y divide-line">
           <tr v-for="row in paginated" :key="row[rowKey]" class="group transition hover:bg-ivory/70">
+            <td v-if="selectable" class="px-5 py-4 align-middle">
+              <input
+                type="checkbox" class="h-3.5 w-3.5 accent-olive" :aria-label="`Pilih baris ${row[rowKey]}`"
+                :checked="isSelected(row)" @change="toggleRow(row)"
+              />
+            </td>
             <td
               v-for="c in columns" :key="c.key"
               class="px-5 py-4 align-middle text-[0.85rem] text-forest"

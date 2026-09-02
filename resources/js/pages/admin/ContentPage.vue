@@ -7,6 +7,7 @@ export default { layout: AdminLayout }
 import { ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { ArrowDown, ArrowUp, ImagePlus, Plus, X } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import { useToast } from '@/composables/useToast'
@@ -149,6 +150,18 @@ const deleteTestimonial = (testimonial) => {
   })
 }
 
+const selectedTestimonials = ref([])
+const bulkDeletingTestimonials = ref(false)
+const bulkDeleteTestimonials = () => {
+  bulkDeletingTestimonials.value = true
+  router.delete('/admin/konten/testimoni/bulk', {
+    data: { ids: selectedTestimonials.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selectedTestimonials.value.length} testimoni dihapus`, { tone: 'success' }); selectedTestimonials.value = [] },
+    onFinish: () => { bulkDeletingTestimonials.value = false },
+  })
+}
+
 // ── Produk unggulan ──
 const productToAdd = ref(props.availableProducts[0]?.id ?? null)
 watch(() => props.availableProducts, (list) => {
@@ -241,6 +254,18 @@ const deleteFaq = (faq) => {
   router.delete(`/admin/konten/faq/${faq.id}`, {
     preserveScroll: true,
     onSuccess: () => push('FAQ dihapus', { tone: 'success' }),
+  })
+}
+
+const selectedFaqs = ref([])
+const bulkDeletingFaqs = ref(false)
+const bulkDeleteFaqs = () => {
+  bulkDeletingFaqs.value = true
+  router.delete('/admin/konten/faq/bulk', {
+    data: { ids: selectedFaqs.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selectedFaqs.value.length} FAQ dihapus`, { tone: 'success' }); selectedFaqs.value = [] },
+    onFinish: () => { bulkDeletingFaqs.value = false },
   })
 }
 
@@ -540,8 +565,17 @@ const moveFaq = (index, dir) => {
         <!-- ════════ TESTIMONI ════════ -->
         <template v-else-if="tab === 'testimonial'">
           <h2 class="font-display text-2xl">Testimoni</h2>
+          <BulkActionBar
+            :count="selectedTestimonials.length" label="testimoni" class="mt-6" :loading="bulkDeletingTestimonials"
+            @clear="selectedTestimonials = []" @delete="bulkDeleteTestimonials"
+          />
           <ul class="mt-6 space-y-4">
-            <li v-for="t in testimonials" :key="t.id" class="border border-line p-5">
+            <li v-for="t in testimonials" :key="t.id" class="flex gap-3 border border-line p-5">
+              <label class="flex-none pt-1">
+                <span class="sr-only">Pilih testimoni {{ t.name }}</span>
+                <input type="checkbox" class="h-3.5 w-3.5 accent-olive" :value="t.id" v-model="selectedTestimonials" />
+              </label>
+              <div class="flex-1">
               <template v-if="editingTestimonialId === t.id">
                 <div class="space-y-4">
                   <div class="grid gap-4 sm:grid-cols-2">
@@ -588,6 +622,7 @@ const moveFaq = (index, dir) => {
                   </div>
                 </div>
               </template>
+              </div>
             </li>
           </ul>
 
@@ -632,8 +667,17 @@ const moveFaq = (index, dir) => {
         <template v-else-if="tab === 'faq'">
           <h2 class="font-display text-2xl">FAQ</h2>
           <p class="mt-2 text-[0.83rem] text-muted">Tampil di homepage dan halaman /faq.</p>
+          <BulkActionBar
+            :count="selectedFaqs.length" label="FAQ" class="mt-6" :loading="bulkDeletingFaqs"
+            @clear="selectedFaqs = []" @delete="bulkDeleteFaqs"
+          />
           <ul class="mt-6 space-y-4">
-            <li v-for="(f, i) in faqs" :key="f.id" class="border border-line p-5">
+            <li v-for="(f, i) in faqs" :key="f.id" class="flex gap-3 border border-line p-5">
+              <label class="flex-none pt-1">
+                <span class="sr-only">Pilih FAQ {{ f.question }}</span>
+                <input type="checkbox" class="h-3.5 w-3.5 accent-olive" :value="f.id" v-model="selectedFaqs" />
+              </label>
+              <div class="flex-1">
               <template v-if="editingFaqId === f.id">
                 <div class="space-y-4">
                   <div>
@@ -666,6 +710,7 @@ const moveFaq = (index, dir) => {
                   <button type="button" class="text-[0.78rem] text-muted underline underline-offset-4 hover:text-danger" @click="deleteFaq(f)">Hapus</button>
                 </div>
               </template>
+              </div>
             </li>
           </ul>
 
