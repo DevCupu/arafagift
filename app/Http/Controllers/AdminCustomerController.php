@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -30,6 +32,30 @@ class AdminCustomerController extends Controller
             ]);
 
         return Inertia::render('admin/CustomersPage', ['customers' => $customers]);
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $customers = User::where('is_admin', false)->withCount('orders')->whereIn('id', $validated['ids'])->get();
+        $blocked = $customers->filter(fn (User $c) => $c->orders_count > 0);
+        $deletable = $customers->reject(fn (User $c) => $c->orders_count > 0);
+
+        $deletable->each->delete();
+
+        if ($blocked->isNotEmpty()) {
+            $prefix = $deletable->isNotEmpty() ? "{$deletable->count()} pelanggan dihapus. " : '';
+
+            return back()->withErrors([
+                'customer' => $prefix.'Dilewati karena punya riwayat pesanan: '.$blocked->pluck('name')->implode(', ').'.',
+            ]);
+        }
+
+        return back()->with('success', $deletable->count().' pelanggan dihapus');
     }
 
     public function show(User $customer): Response

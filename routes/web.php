@@ -88,6 +88,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::put('/admin/kategori/{category:slug}', [AdminCategoryController::class, 'update'])->name('admin.categories.update');
     Route::delete('/admin/kategori/{category:slug}', [AdminCategoryController::class, 'destroy'])->name('admin.categories.destroy');
     Route::get('/admin/pelanggan', [AdminCustomerController::class, 'index'])->name('admin.customers');
+    Route::delete('/admin/pelanggan/bulk', [AdminCustomerController::class, 'bulkDestroy'])->name('admin.customers.bulkDestroy');
     Route::get('/admin/pelanggan/{customer}', [AdminCustomerController::class, 'show'])->name('admin.customer');
     Route::get('/admin/inventori', [AdminInventoryController::class, 'index'])->name('admin.inventory');
     Route::get('/admin/inventori/ekspor', [AdminInventoryController::class, 'export'])->name('admin.inventory.export');

@@ -5,12 +5,15 @@ export default { layout: AdminLayout }
 
 <script setup>
 import { computed, ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Link, router } from '@inertiajs/vue3'
 import { Search, X } from 'lucide-vue-next'
+import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import { formatDate, formatIDR } from '@/composables/useFormat'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ customers: { type: Array, required: true } })
+const { push } = useToast()
 const query = ref('')
 const columns = [
   { key: 'name', label: 'Nama', sortKey: 'name' },
@@ -24,6 +27,19 @@ const rows = computed(() => {
   const q = query.value.trim().toLowerCase()
   return props.customers.filter((c) => !q || `${c.name} ${c.email} ${c.city}`.toLowerCase().includes(q))
 })
+
+const selected = ref([])
+const bulkDeleting = ref(false)
+const bulkDelete = () => {
+  bulkDeleting.value = true
+  router.delete('/admin/pelanggan/bulk', {
+    data: { ids: selected.value },
+    preserveScroll: true,
+    onSuccess: () => { push(`${selected.value.length} pelanggan dihapus`, { tone: 'success' }); selected.value = [] },
+    onError: (errors) => push(errors.customer ?? 'Gagal menghapus sebagian pelanggan', { tone: 'danger' }),
+    onFinish: () => { bulkDeleting.value = false },
+  })
+}
 </script>
 
 <template>
@@ -54,8 +70,12 @@ const rows = computed(() => {
     </p>
 
     <div class="mt-4">
+      <BulkActionBar
+        :count="selected.length" label="pelanggan" class="mb-3" :loading="bulkDeleting"
+        @clear="selected = []" @delete="bulkDelete"
+      />
       <DataTable
-        :columns="columns" :rows="rows"
+        :columns="columns" :rows="rows" selectable v-model:selected="selected"
         :base-empty="customers.length === 0" empty-title="Belum ada pelanggan"
         empty-body="Pelanggan yang sudah melakukan pembelian akan muncul di sini."
       >
