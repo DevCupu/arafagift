@@ -21,7 +21,7 @@ const props = defineProps({
   categories: { type: Array, required: true },
   occasions: { type: Array, required: true },
   featuredProducts: { type: Array, required: true },
-  signatureProduct: { type: Object, required: true },
+  signatureProduct: { type: Object, default: null },
   content: { type: Object, required: true },
   testimonials: { type: Array, required: true },
   faqs: { type: Array, required: true },
@@ -194,7 +194,7 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ SIGNATURE GIFT SET ============ -->
-    <section class="mt-24 bg-forest text-ivory sm:mt-32">
+    <section v-if="signatureProduct" class="mt-24 bg-forest text-ivory sm:mt-32">
       <div class="shell grid items-center gap-12 py-16 lg:grid-cols-2 lg:gap-20 lg:py-24">
         <div class="relative" v-reveal>
           <div class="arch arch--deep overflow-hidden border border-ivory/15">
