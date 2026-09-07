@@ -129,6 +129,19 @@ const onInstagramImageChange = (i, e) => {
   instagramPreviews.value[i] = URL.createObjectURL(file)
 }
 
+const instagramPreviews = ref(
+  props.content.instagram.posts?.length
+    ? props.content.instagram.posts.map((p) => p.image ?? null)
+    : [null],
+)
+
+const onInstagramImageChange = (i, e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  form.instagram.posts[i].image = file
+  instagramPreviews.value[i] = URL.createObjectURL(file)
+}
+
 const save = () => {
   const activeTab = tab.value
   const section = sectionByTab[activeTab] ?? activeTab
