@@ -48,4 +48,12 @@ class OrderPricing
 
         return ['subtotal' => $subtotal, 'lines' => $lines];
     }
+
+    /**
+     * @param  array<int, array{product: Product, qty: int}>  $lines
+     */
+    public static function totalWeightGrams(array $lines): int
+    {
+        return array_sum(array_map(fn (array $line) => $line['product']->weight * $line['qty'], $lines));
+    }
 }

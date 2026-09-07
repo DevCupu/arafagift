@@ -6,6 +6,7 @@ export default { layout: AdminLayout }
 <script setup>
 import { useForm } from '@inertiajs/vue3'
 import AppButton from '@/components/ui/AppButton.vue'
+import DestinationSearch from '@/components/shop/DestinationSearch.vue'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ settings: { type: Object, required: true } })
@@ -18,6 +19,7 @@ const form = useForm({
   whatsapp: props.settings.whatsapp ?? '',
   address: props.settings.address ?? '',
   origin_city: props.settings.origin_city ?? '',
+  origin_destination_id: props.settings.origin_destination_id ?? null,
   free_shipping_from: props.settings.free_shipping_from,
   free_shipping_cities: props.settings.free_shipping_cities ?? '',
   bulk_minimum: props.settings.bulk_minimum,
@@ -67,8 +69,13 @@ const save = () => {
           </div>
           <div>
             <label class="field-label" for="s-origin">Kota asal pengiriman</label>
-            <input id="s-origin" v-model="form.origin_city" class="field" placeholder="Jakarta" />
-            <p class="mt-1.5 text-[0.72rem] text-muted">Tampil sebagai "Dikirim dari …" di halaman produk.</p>
+            <DestinationSearch
+              id="s-origin"
+              v-model="form.origin_destination_id"
+              :initial-label="form.origin_city"
+              @select="(d) => { form.origin_city = d ? d.label : '' }"
+            />
+            <p class="mt-1.5 text-[0.72rem] text-muted">Dipakai untuk hitung ongkir RajaOngkir & tampil sebagai "Dikirim dari …" di halaman produk.</p>
           </div>
         </div>
       </section>

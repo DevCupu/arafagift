@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 #[Fillable([
     'order_number', 'user_id', 'customer_name', 'customer_email', 'customer_phone',
     'address', 'city', 'province', 'postal_code', 'shipping_method_id', 'shipping_cost',
+    'shipping_destination_id', 'shipping_courier', 'shipping_service', 'shipping_etd',
     'payment_method_id', 'gift_message', 'hide_invoice', 'status', 'channel', 'note', 'awb', 'admin_note',
     'subtotal', 'total',
 ])]
@@ -53,7 +54,7 @@ class Order extends Model
     }
 
     /**
-     * @return array{id: string, customer: string, email: string, phone: string, date: string, payment: string, status: string, channel: string, note: string|null, address: string, shipping: array{method: string, cost: float|int, courier: string, awb: string|null}, items: array<int, array{name: string, sku: string, qty: int, price: float|int, art: string}>}
+     * @return array{id: string, customer: string, email: string, phone: string, date: string, payment: string, status: string, channel: string, note: string|null, address: string, shipping: array{method: string, cost: float|int, courier: string, etd: string|null, awb: string|null}, items: array<int, array{name: string, sku: string, qty: int, price: float|int, art: string}>}
      */
     public function toCatalog(): array
     {
@@ -73,9 +74,10 @@ class Order extends Model
                 $this->address, $this->city, $this->province,
             ])).' '.$this->postal_code),
             'shipping' => [
-                'method' => optional($this->shippingMethod)->name ?? 'Belum ditentukan',
+                'method' => $this->shipping_service ?? 'Belum ditentukan',
                 'cost' => $this->shipping_cost,
-                'courier' => optional($this->shippingMethod)->name ?? 'Belum ditentukan',
+                'courier' => $this->shipping_courier ?? 'Belum ditentukan',
+                'etd' => $this->shipping_etd,
                 'awb' => $this->awb,
             ],
             'items' => $this->items->map(fn (OrderItem $item) => [

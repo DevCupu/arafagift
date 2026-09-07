@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Testimonial;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
@@ -64,6 +65,7 @@ class ContentController extends Controller
             'instagram.posts' => ['required', 'array', 'min:1', 'max:12'],
             'instagram.posts.*.art' => ['required', 'string', Rule::in(['giftset', 'kurma', 'sajadah', 'tasbih', 'madu', 'parfum', 'souvenir'])],
             'instagram.posts.*.caption' => ['required', 'string', 'max:120'],
+            'instagram.posts.*.image' => ['nullable', 'image', 'max:4096'],
             'values' => ['required', 'array', 'min:1', 'max:8'],
             'values.*.icon' => ['required', 'string', 'in:Sparkles,Gift,BadgeCheck,Send'],
             'values.*.title' => ['required', 'string', 'max:60'],
@@ -106,7 +108,20 @@ class ContentController extends Controller
         $data['instagram']['handle'] = $validated['instagram']['handle'];
         $data['instagram']['title'] = $validated['instagram']['title'];
         $data['instagram']['url'] = $validated['instagram']['url'];
-        $data['instagram']['posts'] = $validated['instagram']['posts'];
+
+        $existingPosts = $data['instagram']['posts'] ?? [];
+        $data['instagram']['posts'] = array_map(function (array $post, int $i) use ($existingPosts) {
+            $file = $post['image'] ?? null;
+            unset($post['image']);
+
+            if ($file instanceof UploadedFile) {
+                $post['image'] = Storage::disk('public')->url($file->store('content', 'public'));
+            } else {
+                $post['image'] = $existingPosts[$i]['image'] ?? null;
+            }
+
+            return $post;
+        }, $validated['instagram']['posts'], array_keys($validated['instagram']['posts']));
 
         $data['values'] = $validated['values'];
 
