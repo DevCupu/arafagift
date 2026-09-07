@@ -20,6 +20,7 @@ use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\OrderTrackingController;
+use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WishlistController;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +39,8 @@ Route::get('/keranjang', fn () => Inertia::render('shop/CartPage'))->name('cart'
 Route::middleware('auth')->group(function () {
     Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
+    Route::get('/shipping/destinations', [ShippingController::class, 'destinations'])->middleware('throttle:30,1,shipping')->name('shipping.destinations');
+    Route::post('/shipping/cost', [ShippingController::class, 'cost'])->middleware('throttle:30,1,shipping')->name('shipping.cost');
 });
 Route::get('/lacak-pesanan', [OrderTrackingController::class, 'index'])->middleware('throttle:20,1,lacak-pesanan')->name('order.track');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');

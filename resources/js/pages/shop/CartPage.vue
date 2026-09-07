@@ -30,7 +30,8 @@ const freeShippingByAmount = computed(() =>
         <ul class="divide-y divide-line border-y border-line">
           <li v-for="item in cart.items.value" :key="item.id" class="flex gap-5 py-6">
             <Link :href="`/produk/${item.slug}`" class="arch h-32 w-24 flex-none overflow-hidden border border-line sm:h-36 sm:w-28">
-              <ProductArt :art="item.art" :tone="item.id" />
+              <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
+              <ProductArt v-else :art="item.art" :tone="item.id" />
             </Link>
             <div class="flex flex-1 flex-col">
               <div class="flex items-start justify-between gap-4">

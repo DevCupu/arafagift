@@ -27,6 +27,7 @@ class AdminSettingsController extends Controller
             'whatsapp' => ['nullable', 'string', 'max:30'],
             'address' => ['nullable', 'string', 'max:400'],
             'origin_city' => ['nullable', 'string', 'max:120'],
+            'origin_destination_id' => ['nullable', 'string', 'max:50'],
             'free_shipping_from' => ['required', 'integer', 'min:0'],
             'free_shipping_cities' => ['nullable', 'string', 'max:500'],
             'bulk_minimum' => ['required', 'integer', 'min:0'],

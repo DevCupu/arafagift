@@ -72,7 +72,9 @@ const form = useForm({
     handle: props.content.instagram.handle,
     title: props.content.instagram.title ?? 'Follow the journey',
     url: props.content.instagram.url,
-    posts: props.content.instagram.posts?.length ? props.content.instagram.posts.map((p) => ({ ...p })) : [{ art: 'giftset', caption: '' }],
+    posts: props.content.instagram.posts?.length
+      ? props.content.instagram.posts.map((p) => ({ art: p.art, caption: p.caption, image: null }))
+      : [{ art: 'giftset', caption: '', image: null }],
   },
   values: props.content.values?.length ? props.content.values.map((v) => ({ ...v })) : [],
   hero_image: null,
@@ -85,6 +87,19 @@ const onHeroImageChange = (e) => {
   if (!file) return
   form.hero_image = file
   heroImagePreview.value = URL.createObjectURL(file)
+}
+
+const instagramPreviews = ref(
+  props.content.instagram.posts?.length
+    ? props.content.instagram.posts.map((p) => p.image ?? null)
+    : [null],
+)
+
+const onInstagramImageChange = (i, e) => {
+  const file = e.target.files[0]
+  if (!file) return
+  form.instagram.posts[i].image = file
+  instagramPreviews.value[i] = URL.createObjectURL(file)
 }
 
 const save = () => {
@@ -211,8 +226,14 @@ const moveValue = (index, dir) => {
 }
 
 // ── Instagram posts ──
-const addInstagramPost = () => { form.instagram.posts.push({ art: 'giftset', caption: '' }) }
-const removeInstagramPost = (index) => { form.instagram.posts.splice(index, 1) }
+const addInstagramPost = () => {
+  form.instagram.posts.push({ art: 'giftset', caption: '', image: null })
+  instagramPreviews.value.push(null)
+}
+const removeInstagramPost = (index) => {
+  form.instagram.posts.splice(index, 1)
+  instagramPreviews.value.splice(index, 1)
+}
 
 // ── FAQ ──
 const showFaqForm = ref(false)
@@ -754,10 +775,19 @@ const moveFaq = (index, dir) => {
             </div>
             <div>
               <label class="field-label">Foto grid (maks. 12)</label>
-              <p class="mt-1 text-[0.78rem] text-muted">Belum ada foto asli — pilih motif placeholder yang paling cocok untuk tiap kotak.</p>
+              <p class="mt-1 text-[0.78rem] text-muted">Unggah foto asli per kotak, atau pakai motif placeholder kalau belum ada fotonya.</p>
               <div class="mt-3 space-y-3">
-                <div v-for="(post, i) in form.instagram.posts" :key="i" class="flex items-start gap-2 border border-line p-4">
-                  <span class="arch h-14 w-14 flex-none overflow-hidden border border-line bg-ivory"><ProductArt :art="post.art" :tone="i" /></span>
+                <div v-for="(post, i) in form.instagram.posts" :key="i" class="flex items-start gap-3 border border-line p-4">
+                  <div class="flex-none text-center">
+                    <span class="arch block h-14 w-14 overflow-hidden border border-line bg-ivory">
+                      <img v-if="instagramPreviews[i]" :src="instagramPreviews[i]" alt="" class="h-full w-full object-cover" />
+                      <ProductArt v-else :art="post.art" :tone="i" />
+                    </span>
+                    <label class="mt-1.5 block cursor-pointer text-[0.62rem] text-forest underline">
+                      Unggah
+                      <input type="file" accept="image/*" class="sr-only" @change="onInstagramImageChange(i, $event)" />
+                    </label>
+                  </div>
                   <div class="flex-1 space-y-2">
                     <select v-model="form.instagram.posts[i].art" class="field">
                       <option v-for="a in artOptions" :key="a" :value="a">{{ a }}</option>

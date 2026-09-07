@@ -4,7 +4,6 @@ import { Head, Link } from '@inertiajs/vue3'
 import { ArrowRight, Check, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
-import ProductArt from '@/components/art/ProductArt.vue'
 import ProductCard from '@/components/storefront/ProductCard.vue'
 import CategoryCard from '@/components/storefront/CategoryCard.vue'
 import OccasionCard from '@/components/storefront/OccasionCard.vue'
@@ -198,7 +197,11 @@ const bulkCtaHref = computed(() => {
       <div class="shell grid items-center gap-12 py-16 lg:grid-cols-2 lg:gap-20 lg:py-24">
         <div class="relative" v-reveal>
           <div class="arch arch--deep overflow-hidden border border-ivory/15">
-            <div class="aspect-[5/6] w-full"><ProductArt art="giftset" dark /></div>
+            <img
+              src="/images/assets/gift-worth-remembering.webp"
+              alt="Gift set ArafahGift diserahkan sebagai hadiah"
+              class="aspect-[5/6] w-full object-cover"
+            />
           </div>
           <div class="absolute -right-4 bottom-8 hidden border border-gold/40 bg-forest-deep px-5 py-3 sm:block">
             <p class="text-[0.62rem] uppercase tracking-[0.16em] text-gold">Mulai</p>
@@ -230,6 +233,13 @@ const bulkCtaHref = computed(() => {
       <div class="shell py-20 sm:py-28">
         <SectionHeader eyebrow="Kenapa ArafahGift" title="Lebih dari sekadar oleh-oleh." align="center" :dark="true" v-reveal />
         <div class="mt-14" v-reveal><ValueProps :items="values" :dark="true" /></div>
+        <div class="arch arch--deep mt-10 overflow-hidden border border-ivory/15" v-reveal>
+          <img
+            src="/images/assets/section-lebih-dari-oleh-oleh.webp"
+            alt="Keluarga membuka gift set ArafahGift bersama"
+            class="aspect-[21/9] w-full object-cover"
+          />
+        </div>
       </div>
     </section>
 
@@ -262,7 +272,11 @@ const bulkCtaHref = computed(() => {
           </AppButton>
         </div>
         <div class="relative min-h-[320px] bg-forest-deep">
-          <ProductArt art="souvenir" :tone="2" dark />
+          <img
+            src="/images/assets/souvenir-satu-rombongan.webp"
+            alt="Souvenir seragam untuk pesanan rombongan"
+            class="absolute inset-0 h-full w-full object-cover"
+          />
           <div class="absolute inset-x-8 bottom-8 border border-forest-soft/40 bg-forest-deep/90 px-5 py-4 backdrop-blur">
             <p class="font-display text-[1.15rem] leading-snug text-ivory">240 pouch untuk rombongan Solo</p>
             <p class="mt-1.5 text-[0.75rem] text-ivory/55">Dicetak nama jamaah, dikirim tepat sebelum keberangkatan.</p>
@@ -275,8 +289,16 @@ const bulkCtaHref = computed(() => {
     <section class="mt-24 border-y border-forest/20 bg-forest-deep/[0.04] sm:mt-32">
       <div class="shell grid gap-12 py-16 lg:grid-cols-[1fr_1.1fr] lg:gap-20 lg:py-24">
         <div class="flex gap-4" v-reveal>
-          <div class="arch mt-10 h-56 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]"><ProductArt art="kurma" :tone="1" /></div>
-          <div class="arch h-64 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]"><ProductArt art="tasbih" :tone="0" /></div>
+          <div class="arch mt-10 h-56 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
+            <img src="/images/assets/img-4.webp" alt="Persiapan oleh-oleh sebelum pulang" class="h-full w-full object-cover" />
+          </div>
+          <div class="arch h-64 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
+            <img
+              src="/images/assets/perjalanan-pulang-membawa-cerita.webp"
+              alt="Perlengkapan perjalanan dan gift set ArafahGift"
+              class="h-full w-full object-cover"
+            />
+          </div>
         </div>
         <div v-reveal="100">
           <p class="eyebrow">{{ homeContent.story.eyebrow }}</p>
