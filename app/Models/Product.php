@@ -98,7 +98,7 @@ class Product extends Model
         ];
     }
 
-    private function imageUrl(): ?string
+    public function imageUrl(): ?string
     {
         if (! $this->image) {
             return null;

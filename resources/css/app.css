@@ -148,18 +148,14 @@
         flex: none;
     }
 
-    /* Signature: mihrab arch frame used for every editorial image */
+    /* Clean rounded-box frame used for every editorial image (was a mihrab-arch curve) */
     .arch {
         position: relative;
         overflow: hidden;
-        border-top-left-radius: 50% 22%;
-        border-top-right-radius: 50% 22%;
-        border-bottom-left-radius: 3px;
-        border-bottom-right-radius: 3px;
+        border-radius: 0.75rem;
     }
     .arch--deep {
-        border-top-left-radius: 50% 34%;
-        border-top-right-radius: 50% 34%;
+        border-radius: 0.75rem;
     }
 
     .hairline {
@@ -238,6 +234,39 @@
     opacity: 1;
     transform: none;
 }
+.reveal-child {
+    opacity: 0;
+    transform: translateY(16px);
+    transition:
+        opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.28s ease,
+        background-color 0.28s ease,
+        box-shadow 0.28s ease;
+    transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal.is-in .reveal-child {
+    opacity: 1;
+    transform: none;
+}
+.slow-zoom {
+    transform: scale(1.01);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .slow-zoom {
+        animation: slowZoom 14s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+}
+
+@keyframes slowZoom {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.045);
+    }
+}
 
 @media (prefers-reduced-motion: reduce) {
     *,
@@ -249,6 +278,15 @@
     }
     .reveal {
         opacity: 1;
+        transform: none;
+    }
+    .reveal-child {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+    .slow-zoom {
+        animation: none;
         transform: none;
     }
 }

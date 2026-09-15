@@ -19,6 +19,7 @@ const SEG_LABELS = {
   supplier: 'Supplier',
   promo: 'Promo',
   konten: 'Konten',
+  landing: 'Landing',
   laporan: 'Laporan',
   pengaturan: 'Pengaturan',
 }

@@ -18,10 +18,16 @@ defineProps({ items: { type: Array, default: () => [] } })
       >
         “{{ t.quote }}”
       </blockquote>
-      <figcaption class="mt-7 border-t pt-4 text-[0.78rem]" :class="i === 0 ? 'border-ivory/15 md:text-ivory/70' : 'border-line text-muted'">
-        <span class="font-medium" :class="i === 0 ? 'md:text-ivory' : 'text-forest'">{{ t.name }}</span>
-        · {{ t.city }}
-        <span class="mt-1 block opacity-70">{{ t.context }}</span>
+      <figcaption
+        class="mt-7 flex items-center gap-3 border-t pt-4 text-[0.78rem]"
+        :class="i === 0 ? 'border-ivory/15 md:text-ivory/70' : 'border-line text-muted'"
+      >
+        <img v-if="t.avatar" :src="t.avatar" :alt="t.name" class="h-9 w-9 flex-none rounded-full object-cover" loading="lazy" />
+        <div class="min-w-0">
+          <span class="font-medium" :class="i === 0 ? 'md:text-ivory' : 'text-forest'">{{ t.name }}</span>
+          · {{ t.city }}
+          <span class="mt-1 block opacity-70">{{ t.context }}</span>
+        </div>
       </figcaption>
     </figure>
   </div>
