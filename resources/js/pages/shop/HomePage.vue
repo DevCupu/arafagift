@@ -196,11 +196,11 @@ const bulkCtaHref = computed(() => {
     <section v-if="signatureProduct" class="mt-24 bg-forest text-ivory sm:mt-32">
       <div class="shell grid items-center gap-12 py-16 lg:grid-cols-2 lg:gap-20 lg:py-24">
         <div class="relative" v-reveal>
-          <div class="arch arch--deep overflow-hidden border border-ivory/15">
+          <div class="arch arch--deep overflow-hidden border border-ivory/15 bg-forest-deep">
             <img
               src="/images/assets/gift-worth-remembering.webp"
               alt="Gift set ArafahGift diserahkan sebagai hadiah"
-              class="aspect-[5/6] w-full object-cover"
+              class="aspect-[5/6] w-full object-contain"
             />
           </div>
           <div class="absolute -right-4 bottom-8 hidden border border-gold/40 bg-forest-deep px-5 py-3 sm:block">
@@ -233,13 +233,12 @@ const bulkCtaHref = computed(() => {
       <div class="shell py-20 sm:py-28">
         <SectionHeader eyebrow="Kenapa ArafahGift" title="Lebih dari sekadar oleh-oleh." align="center" :dark="true" v-reveal />
         <div class="mt-14" v-reveal><ValueProps :items="values" :dark="true" /></div>
-        <div class="arch arch--deep mt-10 overflow-hidden border border-ivory/15" v-reveal>
-          <img
-            src="/images/assets/section-lebih-dari-oleh-oleh.webp"
-            alt="Keluarga membuka gift set ArafahGift bersama"
-            class="aspect-[21/9] w-full object-cover"
-          />
-        </div>
+        <img
+          src="/images/assets/section-lebih-dari-oleh-oleh.webp"
+          alt="Keluarga membuka gift set ArafahGift bersama"
+          class="arch mt-10 w-full border border-ivory/15"
+          v-reveal
+        />
       </div>
     </section>
 

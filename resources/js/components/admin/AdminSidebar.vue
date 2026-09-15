@@ -1,7 +1,7 @@
 <script setup>
 import { Link, usePage } from '@inertiajs/vue3'
 import {
-  BarChart3, Boxes, FileText, LayoutDashboard, Package, Settings,
+  BarChart3, Boxes, FileText, LayoutDashboard, Megaphone, Package, Settings,
   ShoppingCart, Tag, Ticket, Truck, Users, X,
 } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
@@ -34,6 +34,7 @@ const groups = [
     title: 'Situs',
     items: [
       { label: 'Konten', to: '/admin/konten', icon: FileText },
+      { label: 'Landing', to: '/admin/landing', icon: Megaphone },
       { label: 'Laporan', to: '/admin/laporan', icon: BarChart3 },
       { label: 'Pengaturan', to: '/admin/pengaturan', icon: Settings },
     ],

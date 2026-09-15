@@ -7,19 +7,21 @@ use App\Http\Controllers\AdminCategoryController;
 use App\Http\Controllers\AdminCustomerController;
 use App\Http\Controllers\AdminDashboardController;
 use App\Http\Controllers\AdminInventoryController;
+use App\Http\Controllers\AdminLandingController;
 use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminPromotionController;
 use App\Http\Controllers\AdminReportController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSupplierController;
+use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\LandingController;
+use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\CheckoutController;
-use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WishlistController;
@@ -121,11 +123,24 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::patch('/admin/konten/unggulan/reorder', [ContentController::class, 'reorderFeatured'])->name('admin.content.featured.reorder');
     Route::patch('/admin/konten/unggulan/{product}/tambah', [ContentController::class, 'addFeatured'])->name('admin.content.featured.add');
     Route::patch('/admin/konten/unggulan/{product}/keluarkan', [ContentController::class, 'removeFeatured'])->name('admin.content.featured.remove');
+    Route::get('/admin/landing', [AdminLandingController::class, 'index'])->name('admin.landings');
+    Route::get('/admin/landing/baru', [AdminLandingController::class, 'create'])->name('admin.landings.new');
+    Route::post('/admin/landing', [AdminLandingController::class, 'store'])->name('admin.landings.store');
+    Route::post('/admin/landing/unggah', [AdminLandingController::class, 'upload'])->name('admin.landings.upload');
+    Route::get('/admin/landing/{page:slug}', [AdminLandingController::class, 'edit'])->name('admin.landings.edit');
+    Route::put('/admin/landing/{page:slug}', [AdminLandingController::class, 'update'])->name('admin.landings.update');
+    Route::delete('/admin/landing/{page:slug}', [AdminLandingController::class, 'destroy'])->name('admin.landings.destroy');
     Route::get('/admin/laporan', [AdminReportController::class, 'index'])->name('admin.reports');
     Route::get('/admin/pengaturan', [AdminSettingsController::class, 'edit'])->name('admin.settings');
     Route::put('/admin/pengaturan', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
 });
 
-Route::fallback(fn () => Inertia::render('shop/NotFoundPage')->toResponse(request())->setStatusCode(404));
-
 require __DIR__.'/auth.php';
+
+// ---------- Landing page iklan (Meta/Google Ads) ----------
+// Catch-all: WAJIB terdaftar paling akhir, setelah auth.php, supaya setiap route
+// literal (/tentang, /login, /keranjang, ...) menang duluan. Slug yang bentrok
+// dengan route terdaftar juga ditolak saat disimpan di AdminLandingController.
+Route::get('/{slug}', [LandingController::class, 'show'])->where('slug', '[a-z0-9][a-z0-9-]*')->name('landing');
+
+Route::fallback(fn () => Inertia::render('shop/NotFoundPage')->toResponse(request())->setStatusCode(404));
