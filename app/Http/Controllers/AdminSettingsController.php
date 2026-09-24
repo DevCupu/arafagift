@@ -28,10 +28,13 @@ class AdminSettingsController extends Controller
             'address' => ['nullable', 'string', 'max:400'],
             'origin_city' => ['nullable', 'string', 'max:120'],
             'origin_destination_id' => ['nullable', 'string', 'max:50'],
-            'free_shipping_from' => ['required', 'integer', 'min:0'],
+            'free_shipping_from' => ['nullable', 'integer', 'min:0'],
             'free_shipping_cities' => ['nullable', 'string', 'max:500'],
-            'bulk_minimum' => ['required', 'integer', 'min:0'],
+            'bulk_minimum' => ['nullable', 'integer', 'min:0'],
         ]);
+
+        $validated['free_shipping_from'] = $validated['free_shipping_from'] ?? 0;
+        $validated['bulk_minimum'] = $validated['bulk_minimum'] ?? 0;
 
         Setting::firstOrFail()->update($validated);
         Cache::forget('settings-store');
