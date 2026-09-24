@@ -38,6 +38,15 @@ return [
     'rajaongkir' => [
         'key' => env('RAJAONGKIR_API_KEY'),
         'base_url' => env('RAJAONGKIR_BASE_URL', 'https://rajaongkir.komerce.id/api/v1'),
+        'timeout' => (int) env('RAJAONGKIR_TIMEOUT', 5),
+        'allowed_couriers' => [
+            'jne', 'sicepat', 'ide', 'sap', 'ninja', 'jnt', 'tiki',
+            'wahana', 'pos', 'sentral', 'lion', 'rex', 'spx',
+        ],
+        'checkout_couriers' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', env('RAJAONGKIR_CHECKOUT_COURIERS', 'jne,jnt,sicepat')),
+        ))),
     ],
 
 ];

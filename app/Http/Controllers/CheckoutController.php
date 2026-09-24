@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\RajaOngkirException;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Services\OrderPricing;
-use App\Services\RajaOngkir;
-use Illuminate\Http\Client\ConnectionException;
-use Illuminate\Http\Client\RequestException;
+use App\Services\RajaOngkirService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CheckoutController extends Controller
 {
+    public function __construct(private readonly RajaOngkirService $rajaOngkir) {}
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -113,14 +114,14 @@ class CheckoutController extends Controller
 
         try {
             $weight = OrderPricing::totalWeightGrams($priced['lines']);
-            $options = RajaOngkir::getCosts($origin, $destinationId, $weight);
+            $options = $this->rajaOngkir->getCosts($origin, $destinationId, $weight);
             $match = collect($options)->first(
                 fn (array $o) => $o['courier'] === $courier && $o['service'] === $service,
             );
             abort_if(! $match, 422, 'Opsi pengiriman tidak lagi tersedia, silakan pilih ulang.');
 
             return [$freeShipping ? 0 : $match['cost'], $match['courier'], $match['service'], $match['etd'], $note];
-        } catch (ConnectionException|RequestException) {
+        } catch (RajaOngkirException) {
             $note = trim(($note ? $note."\n" : '').'[Sistem] Ongkir belum terverifikasi otomatis, mohon konfirmasi manual.');
 
             return [0, null, null, null, $note];

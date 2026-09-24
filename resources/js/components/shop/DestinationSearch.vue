@@ -22,8 +22,11 @@ watch(query, (q) => {
   loading.value = true
   searchTimer = setTimeout(async () => {
     try {
-      const res = await fetch(`/shipping/destinations?q=${encodeURIComponent(term)}`)
-      results.value = res.ok ? await res.json() : []
+      const res = await fetch(`/api/shipping/destinations?search=${encodeURIComponent(term)}`, {
+        headers: { Accept: 'application/json' },
+      })
+      const payload = res.ok ? await res.json() : null
+      results.value = payload?.success && Array.isArray(payload.data) ? payload.data : []
     } catch {
       results.value = []
     } finally {

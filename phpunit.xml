@@ -32,5 +32,6 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="RAJAONGKIR_API_KEY" value="testing-key-not-a-secret"/>
     </php>
 </phpunit>
