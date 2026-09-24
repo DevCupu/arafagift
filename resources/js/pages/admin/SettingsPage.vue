@@ -100,12 +100,12 @@ const save = () => {
         <div class="mt-6 grid gap-5 sm:grid-cols-2">
           <div>
             <label class="field-label" for="s-free">Gratis ongkir mulai (Rp)</label>
-            <input id="s-free" v-model="form.free_shipping_from" inputmode="numeric" class="field" />
-            <p class="mt-1.5 text-[0.72rem] text-muted">Total belanja minimum supaya dapat gratis ongkir, di kota mana pun.</p>
+            <input id="s-free" v-model="form.free_shipping_from" type="number" min="0" inputmode="numeric" class="field" placeholder="Kosongkan untuk menonaktifkan" />
+            <p class="mt-1.5 text-[0.72rem] text-muted">Opsional. Total belanja minimum supaya dapat gratis ongkir di kota mana pun. Kosongkan jika tidak ada promo nominal.</p>
           </div>
           <div>
             <label class="field-label" for="s-bulk">Minimum pesanan rombongan (pcs)</label>
-            <input id="s-bulk" v-model="form.bulk_minimum" inputmode="numeric" class="field" />
+            <input id="s-bulk" v-model="form.bulk_minimum" type="number" min="0" inputmode="numeric" class="field" placeholder="Kosongkan jika tidak digunakan" />
           </div>
           <div class="sm:col-span-2">
             <label class="field-label" for="s-cities">Kota gratis ongkir</label>
