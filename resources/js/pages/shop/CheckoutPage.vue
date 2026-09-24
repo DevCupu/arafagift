@@ -31,15 +31,19 @@ const errors = reactive({})
 
 const form = reactive({
   name: '', email: '', phone: '',
-  street: '', rtRw: '', landmark: '', city: '', province: '', postal: '', destinationId: null,
+  street: '', rt: '', rw: '', landmark: '', city: '', province: '', postal: '', destinationId: null,
   giftMessage: '', note: '', hideInvoice: true,
 })
 
-// Digabung jadi satu baris alamat siap-kirim (WhatsApp, ringkasan, payload) dari 3 kolom terpisah —
+// Digabung jadi satu baris alamat siap-kirim (WhatsApp, ringkasan, payload) dari kolom terpisah.
 // dipecah biar user lebih terpandu isi detailnya, tapi sisi server/WA tetap terima satu string alamat.
 const fullAddress = computed(() => {
   const parts = [form.street.trim()]
-  if (form.rtRw.trim()) parts.push(`RT/RW ${form.rtRw.trim()}`)
+  const neighborhood = [
+    form.rt.trim() ? `RT ${form.rt.trim()}` : '',
+    form.rw.trim() ? `RW ${form.rw.trim()}` : '',
+  ].filter(Boolean).join(' / ')
+  if (neighborhood) parts.push(neighborhood)
   const base = parts.filter(Boolean).join(', ')
   return form.landmark.trim() ? `${base} (Patokan: ${form.landmark.trim()})` : base
 })
@@ -51,6 +55,7 @@ const toggleManualCity = () => {
   form.destinationId = null
   form.city = ''
   form.province = ''
+  form.postal = ''
   shippingOptions.value = []
   selectedShipping.value = null
   shippingUnavailable.value = manualCity.value
@@ -92,6 +97,50 @@ const shippingUnavailable = ref(false)
 const selectedShipping = ref(null)
 const shippingWeight = ref(null)
 
+const cargoMarkers = ['cargo', 'trucking', 'jtr', 'gokil']
+const isCargoService = (option) => {
+  const searchable = `${option.service ?? ''} ${option.description ?? ''}`.toLowerCase()
+  return cargoMarkers.some((marker) => searchable.includes(marker))
+}
+
+const eligibleShippingOptions = computed(() => shippingOptions.value
+  .filter((option) => !(shippingWeight.value < 10000 && isCargoService(option)))
+  .slice()
+  .sort((a, b) => Number(a.cost) - Number(b.cost)))
+
+const shippingGroups = computed(() => {
+  const groups = new Map()
+  eligibleShippingOptions.value.forEach((option) => {
+    if (!groups.has(option.courier)) {
+      groups.set(option.courier, {
+        code: option.courier,
+        name: option.courier_name || option.courier.toUpperCase(),
+        options: [],
+      })
+    }
+    groups.get(option.courier).options.push(option)
+  })
+  return [...groups.values()]
+})
+
+const cheapestShippingCost = computed(() => eligibleShippingOptions.value[0]?.cost ?? null)
+const etdInDays = (etd) => {
+  const match = String(etd ?? '').match(/\d+/)
+  return match ? Number(match[0]) : Number.POSITIVE_INFINITY
+}
+const fastestShippingDays = computed(() => {
+  const availableEstimates = eligibleShippingOptions.value
+    .map((option) => etdInDays(option.etd))
+    .filter(Number.isFinite)
+  return availableEstimates.length ? Math.min(...availableEstimates) : null
+})
+const shippingBadges = (option) => {
+  const badges = []
+  if (Number(option.cost) === Number(cheapestShippingCost.value)) badges.push('Termurah')
+  if (fastestShippingDays.value !== null && etdInDays(option.etd) === fastestShippingDays.value) badges.push('Tercepat')
+  return badges
+}
+
 const fetchShipping = async () => {
   if (!form.destinationId) return
   shippingLoading.value = true
@@ -119,7 +168,11 @@ const fetchShipping = async () => {
     }
     shippingOptions.value = data.options
     shippingWeight.value = data.weight
-    selectedShipping.value = [...data.options].sort((a, b) => a.cost - b.cost)[0]
+    if (!eligibleShippingOptions.value.length) {
+      shippingUnavailable.value = true
+      return
+    }
+    selectedShipping.value = eligibleShippingOptions.value[0]
   } catch {
     shippingUnavailable.value = true
   } finally {
@@ -132,6 +185,7 @@ const onDestinationSelect = (destination) => {
     form.destinationId = null
     form.city = ''
     form.province = ''
+    form.postal = ''
     shippingOptions.value = []
     selectedShipping.value = null
     shippingUnavailable.value = false
@@ -139,16 +193,20 @@ const onDestinationSelect = (destination) => {
   }
   form.city = destination.city
   form.province = destination.province
-  if (!form.postal) form.postal = destination.zip
+  form.postal = destination.zip || ''
   shippingOptions.value = []
   selectedShipping.value = null
   shippingUnavailable.value = false
-  // Kota ini sudah pasti gratis ongkir (per kota atau minimum belanja) — tidak perlu tanya RajaOngkir sama sekali.
+  // Kota ini sudah pasti gratis ongkir, jadi tidak perlu meminta tarif ke RajaOngkir.
   if (hasFreeShipping.value) return
   fetchShipping()
 }
 
-const etdText = (etd) => (etd ? `estimasi ${etd}` : 'estimasi belum tersedia dari kurir')
+const etdText = (etd) => {
+  const value = String(etd ?? '').trim()
+  if (!value || value === '-') return 'Estimasi belum tersedia'
+  return `Estimasi ${value.replace(/\bdays?\b/gi, 'hari')}`
+}
 const weightText = (grams) => `${(grams / 1000).toLocaleString('id-ID', { maximumFractionDigits: 2 })} kg`
 
 const shippingCostDisplay = computed(() => {
@@ -160,12 +218,12 @@ const grandTotal = computed(() => cart.subtotal.value + (shippingCostDisplay.val
 const buildWaMessage = (order) => {
   const subtotal = order.items.reduce((sum, i) => sum + i.price * i.qty, 0)
   const shippingLine = order.shipping.courier !== 'Belum ditentukan'
-    ? `Ongkir: ${order.shipping.courier.toUpperCase()} ${order.shipping.method} — ${formatIDR(order.shipping.cost)}${order.shipping.etd ? ` (estimasi ${order.shipping.etd})` : ''}`
+    ? `Ongkir: ${order.shipping.courier.toUpperCase()} ${order.shipping.method}, ${formatIDR(order.shipping.cost)}${order.shipping.etd ? ` (${etdText(order.shipping.etd)})` : ''}`
     : `Ongkir: ${hasFreeShipping.value ? 'Gratis' : 'akan dikonfirmasi ya'}`
   const lines = [
     `Halo ArafahGift, saya mau pesan:`,
     '',
-    ...order.items.map((i) => `• ${i.name} × ${i.qty} — ${formatIDR(i.price * i.qty)}`),
+    ...order.items.map((i) => `• ${i.name} × ${i.qty}: ${formatIDR(i.price * i.qty)}`),
     '',
     `Subtotal: ${formatIDR(subtotal)}`,
     shippingLine,
@@ -247,7 +305,7 @@ const confirmViaWhatsapp = () => {
   <Head title="Checkout">
     <meta name="robots" content="noindex,follow" />
   </Head>
-  <div class="min-h-screen bg-surface">
+  <div class="min-h-[100dvh] bg-surface">
     <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-16 sm:px-10">
       <BrandLogo size="sm" />
       <div class="mt-8 border border-line bg-ivory p-8 text-center">
@@ -339,19 +397,23 @@ const confirmViaWhatsapp = () => {
               <input id="street" v-model="form.street" class="field" placeholder="Contoh: Jl. Merdeka No. 10" :aria-invalid="!!errors.address" />
               <p v-if="errors.address" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.address }}</p>
             </div>
-            <div class="grid gap-5 sm:grid-cols-2">
+            <div class="grid gap-5 sm:grid-cols-4">
               <div>
-                <label class="field-label" for="rtrw">RT/RW (opsional)</label>
-                <input id="rtrw" v-model="form.rtRw" class="field" placeholder="Contoh: 01/02" />
+                <label class="field-label" for="rt">RT (opsional)</label>
+                <input id="rt" v-model="form.rt" inputmode="numeric" maxlength="3" class="field" placeholder="01" />
               </div>
               <div>
+                <label class="field-label" for="rw">RW (opsional)</label>
+                <input id="rw" v-model="form.rw" inputmode="numeric" maxlength="3" class="field" placeholder="02" />
+              </div>
+              <div class="sm:col-span-2">
                 <label class="field-label" for="landmark">Patokan (opsional)</label>
                 <input id="landmark" v-model="form.landmark" class="field" placeholder="Contoh: dekat Masjid Al-Ikhlas" />
               </div>
             </div>
             <div class="grid gap-5 sm:grid-cols-3">
               <div class="sm:col-span-2">
-                <label class="field-label" for="city">Kota / kecamatan tujuan</label>
+                <label class="field-label" for="city">Kelurahan / kecamatan / kota tujuan</label>
                 <template v-if="!manualCity">
                   <DestinationSearch
                     id="city"
@@ -374,6 +436,7 @@ const confirmViaWhatsapp = () => {
               <div>
                 <label class="field-label" for="postal">Kode pos (opsional)</label>
                 <input id="postal" v-model="form.postal" inputmode="numeric" maxlength="5" class="field" placeholder="91114" />
+                <p class="mt-1.5 text-[0.68rem] leading-relaxed text-muted">Terisi otomatis setelah lokasi dipilih.</p>
               </div>
             </div>
 
@@ -381,24 +444,80 @@ const confirmViaWhatsapp = () => {
               <Truck class="h-4 w-4" :stroke-width="1.5" /> Gratis ongkir untuk pesanan ini.
             </p>
             <template v-else-if="!manualCity && form.destinationId">
-              <p v-if="shippingLoading" class="text-[0.8rem] text-muted">Sedang menghitung ongkos kirim…</p>
-              <p v-else-if="shippingUnavailable" class="text-[0.8rem] text-muted">Ongkos kirim belum bisa dihitung otomatis untuk tujuan ini — nanti kami konfirmasi langsung lewat WhatsApp, ya.</p>
-              <div v-else-if="shippingOptions.length" class="space-y-2">
-                <p v-if="shippingWeight" class="text-[0.72rem] text-muted">Dihitung dari total berat {{ weightText(shippingWeight) }}</p>
-                <label
-                  v-for="opt in shippingOptions" :key="`${opt.courier}-${opt.service}`"
-                  class="flex cursor-pointer items-center justify-between gap-3 border px-3 py-2.5 text-[0.82rem] transition"
-                  :class="selectedShipping === opt ? 'border-forest bg-forest/5' : 'border-line hover:border-forest/40'"
-                >
-                  <span class="flex items-center gap-2.5">
-                    <input type="radio" class="accent-[rgb(var(--c-forest))]" :checked="selectedShipping === opt" @change="selectedShipping = opt" />
-                    <span>
-                      <span class="block text-forest">{{ opt.courier.toUpperCase() }} · {{ opt.service }}</span>
-                      <span class="block text-[0.72rem] text-muted">{{ opt.description }} · {{ etdText(opt.etd) }}</span>
-                    </span>
-                  </span>
-                  <span class="flex-none text-forest">{{ formatIDR(opt.cost) }}</span>
-                </label>
+              <div v-if="shippingLoading" class="border border-line bg-ivory/45 p-4" aria-live="polite">
+                <p class="text-[0.8rem] font-medium text-forest">Mencari pilihan pengiriman</p>
+                <div class="mt-3 space-y-2.5">
+                  <span v-for="i in 3" :key="i" class="motion-safe:animate-pulse block h-14 bg-line/40" />
+                </div>
+              </div>
+              <div v-else-if="shippingUnavailable" class="border border-line bg-ivory/45 p-4 text-[0.8rem] leading-relaxed text-muted">
+                <p>Ongkos kirim belum bisa dihitung otomatis untuk tujuan ini. Kami dapat mengonfirmasinya melalui WhatsApp.</p>
+                <button type="button" class="mt-2 font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="fetchShipping">
+                  Coba hitung lagi
+                </button>
+              </div>
+              <div v-else-if="shippingGroups.length" class="space-y-4">
+                <div class="flex flex-wrap items-end justify-between gap-2">
+                  <div>
+                    <h2 class="font-display text-xl text-forest">Pilihan pengiriman</h2>
+                    <p class="mt-1 text-[0.72rem] text-muted">Layanan kargo disembunyikan untuk paket ringan.</p>
+                  </div>
+                  <p v-if="shippingWeight" class="text-[0.72rem] text-muted">Berat {{ weightText(shippingWeight) }}</p>
+                </div>
+
+                <section v-for="group in shippingGroups" :key="group.code" class="overflow-hidden border border-line bg-surface">
+                  <header class="flex items-center justify-between gap-4 bg-ivory/55 px-4 py-3">
+                    <div class="flex min-w-0 items-center gap-3">
+                      <span class="grid h-9 w-9 flex-none place-items-center border border-line bg-surface text-[0.68rem] font-bold tracking-wide text-forest">
+                        {{ group.code.toUpperCase().slice(0, 3) }}
+                      </span>
+                      <div class="min-w-0">
+                        <h3 class="truncate text-[0.82rem] font-semibold text-forest">{{ group.name }}</h3>
+                        <p class="text-[0.68rem] text-muted">{{ group.options.length }} layanan tersedia</p>
+                      </div>
+                    </div>
+                  </header>
+
+                  <div>
+                    <label
+                      v-for="opt in group.options"
+                      :key="`${opt.courier}-${opt.service}-${opt.cost}`"
+                      class="flex cursor-pointer items-start gap-3 border-t border-line px-4 py-3.5 transition active:translate-y-px"
+                      :class="selectedShipping === opt ? 'bg-forest/[0.055]' : 'bg-surface hover:bg-ivory/45'"
+                    >
+                      <input
+                        type="radio"
+                        name="shipping-option"
+                        class="sr-only"
+                        :checked="selectedShipping === opt"
+                        :aria-label="`${group.name} ${opt.service}, ${formatIDR(opt.cost)}`"
+                        @change="selectedShipping = opt"
+                      />
+                      <span
+                        class="mt-0.5 grid h-5 w-5 flex-none place-items-center rounded-full border transition"
+                        :class="selectedShipping === opt ? 'border-forest bg-forest text-ivory' : 'border-line bg-surface'"
+                        aria-hidden="true"
+                      >
+                        <Check v-if="selectedShipping === opt" class="h-3 w-3" :stroke-width="2" />
+                      </span>
+                      <span class="min-w-0 flex-1">
+                        <span class="flex flex-wrap items-center gap-2">
+                          <span class="font-semibold text-forest">{{ opt.service }}</span>
+                          <span
+                            v-for="badge in shippingBadges(opt)"
+                            :key="badge"
+                            class="border border-gold/35 bg-gold/[0.09] px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-forest"
+                          >
+                            {{ badge }}
+                          </span>
+                        </span>
+                        <span class="mt-1 block text-[0.72rem] leading-relaxed text-muted">{{ opt.description || 'Layanan pengiriman' }}</span>
+                        <span class="mt-0.5 block text-[0.7rem] text-muted">{{ etdText(opt.etd) }}</span>
+                      </span>
+                      <span class="flex-none text-right text-[0.84rem] font-semibold text-forest">{{ formatIDR(opt.cost) }}</span>
+                    </label>
+                  </div>
+                </section>
               </div>
             </template>
           </div>
@@ -446,7 +565,12 @@ const confirmViaWhatsapp = () => {
             </div>
             <div v-if="selectedShipping" class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Kurir</dt>
-              <dd class="max-w-xs text-right text-forest">{{ selectedShipping.courier.toUpperCase() }} · {{ selectedShipping.service }}<span class="block text-[0.78rem] text-muted">{{ etdText(selectedShipping.etd) }}<template v-if="shippingWeight"> · {{ weightText(shippingWeight) }}</template></span></dd>
+              <dd class="max-w-xs text-right text-forest">
+                {{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}
+                <span class="block text-[0.78rem] font-medium">{{ selectedShipping.service }}</span>
+                <span class="mt-1 block text-[0.72rem] text-muted">{{ etdText(selectedShipping.etd) }}</span>
+                <span v-if="shippingWeight" class="block text-[0.72rem] text-muted">Berat {{ weightText(shippingWeight) }}</span>
+              </dd>
             </div>
             <div v-if="form.giftMessage" class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Kartu ucapan</dt>
@@ -468,7 +592,7 @@ const confirmViaWhatsapp = () => {
       </div>
 
       <!-- Ringkasan -->
-      <aside class="border-t border-line bg-ivory px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14">
+      <aside class="border-t border-line bg-ivory px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14">
         <h2 class="font-display text-2xl">Ringkasan pesanan</h2>
         <ul class="mt-7 space-y-5">
           <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4">
@@ -498,8 +622,9 @@ const confirmViaWhatsapp = () => {
               <template v-if="hasFreeShipping">Gratis</template>
               <template v-else-if="selectedShipping">
                 {{ formatIDR(selectedShipping.cost) }}
-                <span class="block text-[0.72rem] text-muted">{{ selectedShipping.courier.toUpperCase() }} · {{ selectedShipping.service }}</span>
-                <span class="block text-[0.68rem] text-muted/70">{{ etdText(selectedShipping.etd) }}<template v-if="shippingWeight"> · {{ weightText(shippingWeight) }}</template></span>
+                <span class="block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
+                <span class="block text-[0.68rem] text-muted/70">{{ selectedShipping.service }}. {{ etdText(selectedShipping.etd) }}</span>
+                <span v-if="shippingWeight" class="block text-[0.68rem] text-muted/70">Berat {{ weightText(shippingWeight) }}</span>
               </template>
               <template v-else-if="shippingLoading">Menghitung ongkos kirim…</template>
               <template v-else-if="manualCity || form.destinationId">Dikonfirmasi via WhatsApp</template>

@@ -92,7 +92,7 @@ const onImageChange = async (e) => {
   // Full custom: no fixed aspect ratio, crop box freely movable and resizable —
   // admin decides the final shape entirely, not locked to any product-photo convention.
   cropper = new Cropper(cropImgEl.value, {
-    viewMode: 1,
+    viewMode: 0,
     dragMode: 'move',
     autoCropArea: 1,
     cropBoxMovable: true,
@@ -100,12 +100,6 @@ const onImageChange = async (e) => {
     background: false,
     guides: true,
     zoomOnWheel: true,
-    ready: () => {
-      const container = cropper.getContainerData()
-      const img = cropper.getImageData()
-      const cover = Math.max(container.width / img.naturalWidth, container.height / img.naturalHeight)
-      cropper.zoomTo(cover)
-    },
   })
 }
 
@@ -205,13 +199,13 @@ const save = () => {
 
         <section class="border border-line bg-surface p-6 sm:p-7">
           <h2 class="font-display text-2xl">Foto produk</h2>
-          <p class="mt-2 text-[0.83rem] text-muted">Bentuk dan rasio bebas — atur sendiri di editor. JPG/PNG/WEBP, maks 4 MB.</p>
+          <p class="mt-2 text-[0.83rem] text-muted">Foto ditampilkan proporsional dalam frame kotak tanpa terpotong. JPG/PNG/WEBP, maks 4 MB.</p>
           <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <div class="arch aspect-[4/5] overflow-hidden border border-line bg-ivory">
-              <img v-if="imagePreview" :src="imagePreview" alt="Foto produk" class="h-full w-full object-cover" />
+            <div class="arch aspect-square overflow-hidden border border-line bg-ivory p-2">
+              <img v-if="imagePreview" :src="imagePreview" alt="Foto produk" class="h-full w-full object-contain object-center" />
               <ProductArt v-else :art="existing?.art ?? 'giftset'" :tone="1" />
             </div>
-            <label class="arch flex aspect-[4/5] cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-line bg-ivory/60 text-muted transition hover:border-olive/60 hover:text-forest">
+            <label class="arch flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-line bg-ivory/60 text-muted transition hover:border-olive/60 hover:text-forest">
               <ImagePlus class="h-5 w-5 text-gold" :stroke-width="1.4" />
               <span class="text-[0.75rem]">Unggah</span>
               <input ref="fileInput" type="file" accept="image/*" class="sr-only" @change="onImageChange" />
@@ -223,8 +217,8 @@ const save = () => {
         <div v-if="cropperOpen" class="fixed inset-0 z-50 flex items-center justify-center bg-forest/50 p-4" @click.self="closeCropper">
           <div class="w-full max-w-lg border border-line bg-surface p-5">
             <h3 class="font-display text-xl">Sesuaikan foto</h3>
-            <p class="mt-1 text-[0.75rem] text-muted">Geser, putar, perbesar, atau ubah bentuk kotak crop sesuka Anda — tarik sudut/tepi kotak untuk mengubah bentuknya.</p>
-            <div class="mt-4 h-[420px] w-full overflow-hidden bg-ivory">
+            <p class="mt-1 text-[0.75rem] text-muted">Seluruh foto tampil secara default. Geser atau perbesar hanya jika ingin memotongnya secara manual.</p>
+            <div class="mt-4 aspect-square w-full overflow-hidden bg-ivory">
               <img ref="cropImgEl" :src="cropImgUrl" alt="" class="block max-w-full" />
             </div>
             <div class="mt-3 flex items-center justify-center gap-2">

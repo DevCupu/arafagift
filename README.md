@@ -31,6 +31,53 @@ Build produksi:
 npm run build             # hasil di public/build/
 ```
 
+## RajaOngkir API V2
+
+Integrasi ongkir menggunakan Direct Search Method resmi RajaOngkir. Simpan API key hanya
+di `.env` lokal (file ini sudah diabaikan Git):
+
+```dotenv
+RAJAONGKIR_API_KEY=isi_api_key_anda
+RAJAONGKIR_BASE_URL=https://rajaongkir.komerce.id/api/v1
+RAJAONGKIR_TIMEOUT=5
+RAJAONGKIR_CHECKOUT_COURIERS=jne,jnt,sicepat
+```
+
+Setelah mengubah `.env`, bersihkan cache konfigurasi lalu jalankan aplikasi:
+
+```bash
+php artisan config:clear
+composer run dev
+```
+
+Cari tujuan (nilai `id`/`subdistrict_id` hasilnya dipakai untuk kalkulasi):
+
+```bash
+curl "http://localhost:8000/api/shipping/destinations?search=Makassar" \
+  -H "Accept: application/json"
+```
+
+Hitung ongkir; berat menggunakan gram dan `origin` serta `destination` adalah ID hasil
+pencarian Direct Search:
+
+```bash
+curl -X POST "http://localhost:8000/api/shipping/cost" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d '{"origin":4816,"destination":17473,"weight":1200,"courier":"jne"}'
+```
+
+Respons endpoint selalu berbentuk `success`, `message`, dan `data`. Kalkulasi berhasil
+mengembalikan nama kurir (`courier_name`), kode kurir (`courier`), `service`, `cost`, dan
+`etd`. Kode kurir domestik yang diterima: `jne`, `sicepat`, `ide`, `sap`, `ninja`, `jnt`,
+`tiki`, `wahana`, `pos`, `sentral`, `lion`, `rex`, dan `spx`.
+
+Menjalankan test integrasi tanpa request sungguhan ke RajaOngkir:
+
+```bash
+php artisan test tests/Feature/ShippingApiTest.php
+```
+
 ---
 
 ## Peta halaman

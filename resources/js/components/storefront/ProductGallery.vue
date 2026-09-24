@@ -21,7 +21,7 @@ watch(() => props.product.slug, () => { active.value = 0 })
         :aria-label="`Tampilan ${i + 1}`" :aria-current="active === i"
         @click="active = i"
       >
-        <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-cover" />
+        <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-contain object-center p-1" />
         <ProductArt v-else :art="product.art" :tone="v" />
       </button>
     </div>
@@ -34,7 +34,7 @@ watch(() => props.product.slug, () => { active.value = 0 })
           leave-active-class="transition duration-200" leave-to-class="opacity-0"
         >
           <div :key="active" class="h-full w-full">
-            <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-cover" />
+            <img v-if="product.image" :src="product.image" :alt="product.name" class="h-full w-full object-contain object-center p-4 sm:p-6" />
             <ProductArt v-else :art="product.art" :tone="views[active]" />
           </div>
         </Transition>
