@@ -34,6 +34,8 @@ const form = useForm({
   price: existing?.price ?? '',
   compare_price: existing?.comparePrice ?? '',
   cost: existing?.cost ?? '',
+  rating: existing?.rating ?? 0,
+  reviews_count: existing?.reviews ?? 0,
   stock: existing?.stock ?? 0,
   low_stock_threshold: existing?.lowStock ?? 10,
   storage_location: existing?.storageLocation ?? '',
@@ -260,6 +262,22 @@ const save = () => {
             <div>
               <label class="field-label" for="f-cost">Harga modal</label>
               <input id="f-cost" v-model="form.cost" inputmode="numeric" class="field" placeholder="410000" />
+            </div>
+          </div>
+        </section>
+
+        <section class="border border-line bg-surface p-6 sm:p-7">
+          <h2 class="font-display text-2xl">Rating &amp; ulasan</h2>
+          <div class="mt-6 grid gap-5 sm:grid-cols-2">
+            <div>
+              <label class="field-label" for="f-rating">Rating bintang</label>
+              <input id="f-rating" v-model="form.rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" class="field" placeholder="4.9" />
+              <p v-if="form.errors.rating" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.rating }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="f-reviews-count">Jumlah ulasan</label>
+              <input id="f-reviews-count" v-model="form.reviews_count" type="number" min="0" step="1" inputmode="numeric" class="field" placeholder="302" />
+              <p v-if="form.errors.reviews_count" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.reviews_count }}</p>
             </div>
           </div>
         </section>

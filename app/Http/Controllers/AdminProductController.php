@@ -131,6 +131,8 @@ class AdminProductController extends Controller
             'price' => ['required', 'integer', 'min:0'],
             'compare_price' => ['nullable', 'integer', 'min:0'],
             'cost' => ['nullable', 'integer', 'min:0'],
+            'rating' => ['nullable', 'numeric', 'min:0', 'max:5', 'decimal:0,1'],
+            'reviews_count' => ['nullable', 'integer', 'min:0'],
             'stock' => ['required', 'integer', 'min:0'],
             'low_stock_threshold' => ['required', 'integer', 'min:0'],
             'storage_location' => ['nullable', 'string', 'max:80'],
