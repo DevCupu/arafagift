@@ -2,7 +2,6 @@
 import { Link, useForm } from '@inertiajs/vue3'
 import { LockKeyhole, ShoppingBag } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
-import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 
 defineOptions({ layout: null })
@@ -43,11 +42,6 @@ const submit = () => {
           Untuk pelanggan: pantau pesanan dan wishlist. Untuk admin: kelola pesanan, katalog, dan konten situs.
         </p>
 
-        <div class="mt-12 max-w-sm">
-          <div class="arch arch--deep overflow-hidden border border-ivory/15">
-            <div class="aspect-[5/6] w-full"><ProductArt art="giftset" dark /></div>
-          </div>
-        </div>
       </div>
 
       <p class="relative text-[0.72rem] text-ivory/40">© 2026 ArafahGift.id — Oleh-oleh Umrah &amp; Hajj</p>
