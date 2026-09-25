@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Address;
+use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -74,11 +75,16 @@ class AccountAddressController extends Controller
      */
     private function validated(Request $request): array
     {
+        $request->merge(['phone' => Phone::normalize((string) $request->input('phone', ''))]);
+
         return $request->validate([
             'label' => ['required', 'string', 'max:60'],
             'recipient_name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:30'],
-            'address_text' => ['required', 'string', 'max:400'],
+            'phone' => ['required', 'string', 'regex:/^0[0-9]{8,15}$/'],
+            'address_text' => ['required', 'string', 'min:8', 'max:400'],
+        ], [
+            'phone.regex' => 'Format nomor telepon tidak valid (contoh: 081234567890).',
+            'address_text.min' => 'Tulis alamat lebih lengkap (jalan & nomor rumah).',
         ]);
     }
 }
