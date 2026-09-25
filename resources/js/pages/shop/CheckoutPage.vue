@@ -4,9 +4,9 @@ export default { layout: BareLayout }
 </script>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ArrowLeft, Check, Gift, LockKeyhole, MessageCircle, Truck } from 'lucide-vue-next'
+import { ArrowLeft, Check, ChevronUp, Gift, LockKeyhole, MapPin, MessageCircle, Truck, X } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import DestinationSearch from '@/components/shop/DestinationSearch.vue'
@@ -36,12 +36,36 @@ const redirectToLogin = () => {
 }
 
 const steps = [
-  { id: 1, label: 'Data pemesan' },
-  { id: 2, label: 'Alamat' },
-  { id: 3, label: 'Tinjau' },
+  { id: 1, label: 'Alamat' },
+  { id: 2, label: 'Tinjau' },
 ]
 const step = ref(1)
 const errors = reactive({})
+const addressModalOpen = ref(false)
+const openAddressModal = () => { addressModalOpen.value = true }
+const closeAddressModal = () => { addressModalOpen.value = false }
+
+watch(addressModalOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
+
+const saveAddress = () => {
+  delete errors.address
+  delete errors.destination
+  if (form.street.trim().length < 8) errors.address = 'Tulis nama jalan dan nomor rumah.'
+  if (manualCity.value) {
+    if (!form.city.trim()) errors.destination = 'Isi kota atau kabupaten.'
+  } else if (!form.destinationId) {
+    errors.destination = 'Cari dan pilih kota/kecamatan tujuan.'
+  }
+  if (Object.keys(errors).length) return
+  addressModalOpen.value = false
+}
+
+const summaryOpen = ref(false)
+watch(summaryOpen, (open) => {
+  document.body.style.overflow = open ? 'hidden' : ''
+})
 
 const form = reactive({
   name: '', email: '', phone: '',
@@ -78,10 +102,6 @@ const toggleManualCity = () => {
 const validate = (current) => {
   Object.keys(errors).forEach((k) => delete errors[k])
   if (current === 1) {
-    if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
-    if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
-  }
-  if (current === 2) {
     if (form.street.trim().length < 8) errors.address = 'Tulis nama jalan dan nomor rumah.'
     if (manualCity.value) {
       if (!form.city.trim()) errors.destination = 'Isi kota atau kabupaten.'
@@ -91,10 +111,14 @@ const validate = (current) => {
       errors.destination = 'Tunggu pilihan kurir termuat, atau pilih salah satu.'
     }
   }
+  if (current === 2) {
+    if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
+    if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
+  }
   return Object.keys(errors).length === 0
 }
 
-const next = () => { if (validate(step.value)) step.value = Math.min(3, step.value + 1) }
+const next = () => { if (validate(step.value)) step.value = Math.min(steps.length, step.value + 1) }
 const back = () => { step.value = Math.max(1, step.value - 1) }
 
 const freeShippingByCity = computed(() =>
@@ -396,116 +420,58 @@ onMounted(() => {
               <template v-else>{{ s.id }}</template>
             </span>
             <span class="hidden text-[0.75rem] font-medium tracking-wide sm:block" :class="step >= s.id ? 'text-forest' : 'text-muted'">{{ s.label }}</span>
-            <span v-if="s.id < 3" class="h-px flex-1 bg-line" :class="step > s.id ? '!bg-forest/40' : ''" />
+            <span v-if="s.id < steps.length" class="h-px flex-1 bg-line" :class="step > s.id ? '!bg-forest/40' : ''" />
           </li>
         </ol>
 
-        <!-- 1. Data pemesan -->
+        <!-- 1. Alamat -->
         <section v-if="step === 1" class="mt-10">
-          <p class="eyebrow">Langkah 1 dari 3</p>
-          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Data pemesan</h1>
-          <p v-if="user" class="mt-3 text-[0.85rem] text-muted">
-            Data dipakai dari akun Anda —
-            <Link href="/akun" class="font-medium text-forest underline underline-offset-4">ubah</Link>
-            bila perlu.
-          </p>
-          <p v-else class="mt-3 text-[0.85rem] text-muted">Kami pakai ini untuk konfirmasi pesanan via WhatsApp.</p>
-
-          <!-- Login: ringkasan data dari akun -->
-          <dl v-if="user" class="mt-8 border border-line bg-surface">
-            <div class="flex items-center justify-between gap-6 border-b border-line px-5 py-4">
-              <dt class="flex-none text-[0.78rem] text-muted">Nama lengkap</dt>
-              <dd class="text-right text-[0.9rem] font-medium text-forest">{{ user.name }}</dd>
-            </div>
-            <div class="flex items-center justify-between gap-6 border-b border-line px-5 py-4">
-              <dt class="flex-none text-[0.78rem] text-muted">Nomor WhatsApp</dt>
-              <dd v-if="accountHasPhone" class="text-right text-[0.9rem] font-medium text-forest">{{ user.phone }}</dd>
-              <dd v-else class="w-full max-w-[240px]">
-                <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
-                <p class="mt-1.5 text-[0.72rem] leading-relaxed text-muted">Nomor WhatsApp belum ada di akun. Isi untuk konfirmasi pesanan.</p>
-                <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
-              </dd>
-            </div>
-            <div class="flex items-center justify-between gap-6 px-5 py-4">
-              <dt class="flex-none text-[0.78rem] text-muted">Email</dt>
-              <dd class="text-right text-[0.9rem] font-medium text-forest">{{ user.email }}</dd>
-            </div>
-          </dl>
-
-          <!-- Guest: input lengkap -->
-          <div v-else class="mt-8 space-y-5">
-            <div>
-              <label class="field-label" for="name">Nama lengkap</label>
-              <input id="name" v-model="form.name" class="field" placeholder="Nama Anda" :aria-invalid="!!errors.name" />
-              <p v-if="errors.name" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.name }}</p>
-            </div>
-            <div class="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label class="field-label" for="phone">Nomor WhatsApp</label>
-                <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
-                <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
-              </div>
-              <div>
-                <label class="field-label" for="email">Email (opsional)</label>
-                <input id="email" v-model="form.email" type="email" class="field" placeholder="nama@email.com" />
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- 2. Alamat -->
-        <section v-else-if="step === 2" class="mt-10">
-          <p class="eyebrow">Langkah 2 dari 3</p>
+          <p class="eyebrow">Langkah 1 dari 2</p>
           <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Alamat pengiriman</h1>
           <p class="mt-3 text-[0.85rem] text-muted">Cari kota tujuan untuk melihat pilihan kurir dan ongkirnya.</p>
-          <div class="mt-8 space-y-5">
-            <div>
-              <label class="field-label" for="street">Jalan & nomor rumah</label>
-              <input id="street" v-model="form.street" class="field" placeholder="Contoh: Jl. Merdeka No. 10" :aria-invalid="!!errors.address" />
-              <p v-if="errors.address" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.address }}</p>
+
+          <!-- Nomor WhatsApp belum terisi di akun (diperlukan untuk konfirmasi) -->
+          <div v-if="user && !accountHasPhone" class="mt-8 border border-gold/40 bg-gold/[0.07] p-4 sm:p-5">
+            <label class="field-label" for="phone">Nomor WhatsApp (untuk konfirmasi)</label>
+            <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
+            <p class="mt-1.5 text-[0.72rem] leading-relaxed text-muted">Belum ada di akun Anda. Dipakai untuk konfirmasi pesanan via WhatsApp.</p>
+            <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
+          </div>
+
+          <div class="mt-8">
+            <!-- Belum ada alamat: buka modal input -->
+            <button
+              v-if="!form.street.trim()"
+              type="button"
+              class="flex w-full flex-col items-center gap-1 border border-dashed border-forest/30 bg-surface p-10 text-center transition hover:border-forest/60 hover:bg-ivory sm:p-12"
+              @click="openAddressModal"
+            >
+              <span class="grid h-12 w-12 place-items-center rounded-full border border-gold/40 bg-gold/[0.08]">
+                <MapPin class="h-5 w-5 text-gold" :stroke-width="1.5" />
+              </span>
+              <span class="mt-4 font-display text-xl text-forest">Tambah alamat pengiriman</span>
+              <span class="mt-1 text-[0.8rem] text-muted">Dipakai untuk menghitung ongkir dan mengirim pesanan.</span>
+            </button>
+
+            <div v-else class="border border-line bg-surface p-5 sm:p-6">
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-2.5">
+                  <MapPin class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
+                  <h2 class="font-display text-lg text-forest">Alamat pengiriman</h2>
+                </div>
+                <button type="button" class="flex-none text-[0.78rem] font-semibold text-forest underline underline-offset-4 transition hover:text-olive" @click="openAddressModal">
+                  Ubah
+                </button>
+              </div>
+              <p class="mt-3 text-[0.9rem] leading-relaxed text-forest">{{ fullAddress }}</p>
+              <p class="mt-0.5 text-[0.8rem] text-muted">{{ form.city }}{{ form.postal ? ` ${form.postal}` : '' }}{{ form.province ? `, ${form.province}` : '' }}</p>
+              <p v-if="errors.address || errors.destination" class="mt-3 text-[0.78rem] text-danger">
+                {{ errors.address || errors.destination }}
+              </p>
             </div>
-            <div class="grid gap-5 sm:grid-cols-4">
-              <div>
-                <label class="field-label" for="rt">RT (opsional)</label>
-                <input id="rt" v-model="form.rt" inputmode="numeric" maxlength="3" class="field" placeholder="01" />
-              </div>
-              <div>
-                <label class="field-label" for="rw">RW (opsional)</label>
-                <input id="rw" v-model="form.rw" inputmode="numeric" maxlength="3" class="field" placeholder="02" />
-              </div>
-              <div class="sm:col-span-2">
-                <label class="field-label" for="landmark">Patokan (opsional)</label>
-                <input id="landmark" v-model="form.landmark" class="field" placeholder="Contoh: dekat Masjid Al-Ikhlas" />
-              </div>
-            </div>
-            <div class="grid gap-5 sm:grid-cols-3">
-              <div class="sm:col-span-2">
-                <label class="field-label" for="city">Kelurahan / kecamatan / kota tujuan</label>
-                <template v-if="!manualCity">
-                  <DestinationSearch
-                    id="city"
-                    v-model="form.destinationId"
-                    :initial-label="form.city ? `${form.city}${form.province ? ', ' + form.province : ''}` : ''"
-                    @select="onDestinationSelect"
-                  />
-                  <button type="button" class="mt-1.5 text-[0.72rem] text-muted underline transition hover:text-forest" @click="toggleManualCity">
-                    Kotanya tidak ketemu? Isi manual saja
-                  </button>
-                </template>
-                <template v-else>
-                  <input id="city" v-model="form.city" class="field" placeholder="Contoh: Parepare" />
-                  <button type="button" class="mt-1.5 text-[0.72rem] text-muted underline transition hover:text-forest" @click="toggleManualCity">
-                    Pakai pencarian kota lagi
-                  </button>
-                </template>
-                <p v-if="errors.destination" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.destination }}</p>
-              </div>
-              <div>
-                <label class="field-label" for="postal">Kode pos (opsional)</label>
-                <input id="postal" v-model="form.postal" inputmode="numeric" maxlength="5" class="field" placeholder="91114" />
-                <p class="mt-1.5 text-[0.68rem] leading-relaxed text-muted">Terisi otomatis setelah lokasi dipilih.</p>
-              </div>
-            </div>
+
+            <!-- Gratis ongkir & pilihan kurir (tampil setelah alamat tersimpan) -->
+            <div v-if="form.street.trim()" class="mt-6">
 
             <p v-if="hasFreeShipping" class="flex items-center gap-2 text-[0.8rem] text-olive">
               <Truck class="h-4 w-4" :stroke-width="1.5" /> Gratis ongkir untuk pesanan ini.
@@ -588,6 +554,7 @@ onMounted(() => {
               </div>
             </template>
           </div>
+          </div>
 
           <div class="mt-8 border border-dashed border-gold/40 bg-gold/[0.07] p-5">
             <div class="flex items-center gap-2.5">
@@ -617,9 +584,9 @@ onMounted(() => {
           </div>
         </section>
 
-        <!-- 3. Tinjau -->
+        <!-- 2. Tinjau -->
         <section v-else class="mt-10">
-          <p class="eyebrow">Langkah 3 dari 3</p>
+          <p class="eyebrow">Langkah 2 dari 2</p>
           <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Tinjau pesanan</h1>
           <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi sebelum lanjut ke WhatsApp.</p>
           <dl class="mt-8 divide-y divide-line border-y border-line text-[0.87rem]">
@@ -647,9 +614,87 @@ onMounted(() => {
           </dl>
         </section>
 
+        <!-- Modal input alamat -->
+        <Teleport to="body">
+          <Transition
+            enter-active-class="transition duration-300 ease-calm"
+            enter-from-class="opacity-0"
+            leave-active-class="transition duration-200 ease-calm"
+            leave-to-class="opacity-0"
+          >
+            <div v-if="addressModalOpen" class="fixed inset-0 z-[200] bg-forest-deep/50 p-4 backdrop-blur-sm" @click.self="closeAddressModal">
+              <div class="mx-auto flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden border border-line bg-ivory shadow-soft">
+                <header class="flex items-center justify-between gap-4 border-b border-line px-5 py-4 sm:px-6">
+                  <div>
+                    <h2 class="font-display text-lg text-forest">Alamat pengiriman</h2>
+                    <p class="mt-0.5 text-[0.72rem] text-muted">Ongkir dihitung dari kota tujuan yang dipilih.</p>
+                  </div>
+                  <button type="button" class="grid h-9 w-9 flex-none place-items-center text-muted transition hover:text-forest" aria-label="Tutup" @click="closeAddressModal">
+                    <X class="h-4 w-4" />
+                  </button>
+                </header>
+
+                <div class="flex-1 space-y-5 overflow-y-auto px-5 py-5 sm:px-6">
+                  <div>
+                    <label class="field-label" for="street">Jalan & nomor rumah</label>
+                    <input id="street" v-model="form.street" class="field" placeholder="Contoh: Jl. Merdeka No. 10" :aria-invalid="!!errors.address" />
+                    <p v-if="errors.address" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.address }}</p>
+                  </div>
+                  <div class="grid gap-5 sm:grid-cols-4">
+                    <div>
+                      <label class="field-label" for="rt">RT (opsional)</label>
+                      <input id="rt" v-model="form.rt" inputmode="numeric" maxlength="3" class="field" placeholder="01" />
+                    </div>
+                    <div>
+                      <label class="field-label" for="rw">RW (opsional)</label>
+                      <input id="rw" v-model="form.rw" inputmode="numeric" maxlength="3" class="field" placeholder="02" />
+                    </div>
+                    <div class="sm:col-span-2">
+                      <label class="field-label" for="landmark">Patokan (opsional)</label>
+                      <input id="landmark" v-model="form.landmark" class="field" placeholder="Contoh: dekat Masjid Al-Ikhlas" />
+                    </div>
+                  </div>
+                  <div class="grid gap-5 sm:grid-cols-3">
+                    <div class="sm:col-span-2">
+                      <label class="field-label" for="city">Kelurahan / kecamatan / kota tujuan</label>
+                      <template v-if="!manualCity">
+                        <DestinationSearch
+                          id="city"
+                          v-model="form.destinationId"
+                          :initial-label="form.city ? `${form.city}${form.province ? ', ' + form.province : ''}` : ''"
+                          @select="onDestinationSelect"
+                        />
+                        <button type="button" class="mt-1.5 text-[0.72rem] text-muted underline transition hover:text-forest" @click="toggleManualCity">
+                          Kotanya tidak ketemu? Isi manual saja
+                        </button>
+                      </template>
+                      <template v-else>
+                        <input id="city" v-model="form.city" class="field" placeholder="Contoh: Parepare" />
+                        <button type="button" class="mt-1.5 text-[0.72rem] text-muted underline transition hover:text-forest" @click="toggleManualCity">
+                          Pakai pencarian kota lagi
+                        </button>
+                      </template>
+                      <p v-if="errors.destination" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.destination }}</p>
+                    </div>
+                    <div>
+                      <label class="field-label" for="postal">Kode pos (opsional)</label>
+                      <input id="postal" v-model="form.postal" inputmode="numeric" maxlength="5" class="field" placeholder="91114" />
+                      <p class="mt-1.5 text-[0.68rem] leading-relaxed text-muted">Terisi otomatis setelah lokasi dipilih.</p>
+                    </div>
+                  </div>
+                </div>
+
+                <footer class="flex border-t border-line px-5 py-4 sm:px-6">
+                  <AppButton size="lg" class="w-full" @click="saveAddress">Simpan alamat</AppButton>
+                </footer>
+              </div>
+            </div>
+          </Transition>
+        </Teleport>
+
         <div class="mt-10 flex items-center gap-3">
           <AppButton v-if="step > 1" variant="quiet" size="lg" @click="back">Kembali</AppButton>
-          <AppButton v-if="step < 3" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" :disabled="shippingLoading" @click="next">Lanjut</AppButton>
+          <AppButton v-if="step < steps.length" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" :disabled="shippingLoading" @click="next">Lanjut</AppButton>
           <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" :disabled="shippingLoading" @click="placeOrder">
             Buat Pesanan
           </AppButton>
@@ -657,14 +702,28 @@ onMounted(() => {
         <p class="mt-5 text-[0.72rem] text-muted">
           Metode bayar dikonfirmasi langsung di chat WhatsApp.
         </p>
-        <p v-if="isGuest && step === 3" class="mt-4 flex items-start gap-2 border border-gold/40 bg-gold/[0.07] p-3 text-[0.78rem] leading-relaxed text-forest">
+        <p v-if="isGuest && step === steps.length" class="mt-4 flex items-start gap-2 border border-gold/40 bg-gold/[0.07] p-3 text-[0.78rem] leading-relaxed text-forest">
           <LockKeyhole class="mt-0.5 h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" />
           Anda akan diminta masuk akun dulu saat membuat pesanan. Keranjang dan isian ini tetap tersimpan.
         </p>
+
+        <button
+          type="button"
+          class="mt-6 flex w-full items-center justify-between gap-4 border border-line bg-surface p-4 text-left lg:hidden"
+          @click="summaryOpen = true"
+        >
+          <span>
+            <span class="block text-[0.72rem] uppercase tracking-[0.14em] text-muted">Ringkasan pesanan</span>
+            <span class="mt-0.5 block font-display text-xl text-forest">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
+          </span>
+          <span class="flex flex-none items-center gap-2 text-[0.78rem] text-forest">
+            {{ cart.count.value }} pcs <ChevronUp class="h-4 w-4 text-gold" :stroke-width="1.5" />
+          </span>
+        </button>
       </div>
 
-      <!-- Ringkasan: kartu panel konsisten dengan ringkasan di halaman keranjang -->
-      <aside class="border-t border-line px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14">
+      <!-- Ringkasan: kartu panel konsisten dengan ringkasan di halaman keranjang (muncul di layar besar) -->
+      <aside class="hidden border-t border-line px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14 lg:block">
         <div class="border border-line bg-surface p-7 sm:p-8">
           <p class="eyebrow">Checkout</p>
           <h2 class="mt-4 font-display text-2xl tracking-[-0.02em]">Ringkasan pesanan</h2>
@@ -716,6 +775,86 @@ onMounted(() => {
         </div>
         </div>
       </aside>
+
+      <!-- Ringkasan pesanan: bottom sheet untuk layar kecil -->
+      <Teleport to="body">
+        <Transition enter-active-class="transition duration-300 ease-calm" enter-from-class="opacity-0" leave-active-class="transition duration-[250ms] ease-calm" leave-to-class="opacity-0">
+          <div v-if="summaryOpen" class="fixed inset-0 z-[160] bg-forest-deep/40 backdrop-blur-[2px]" @click="summaryOpen = false" />
+        </Transition>
+        <Transition enter-active-class="transition duration-[420ms] ease-calm" enter-from-class="translate-y-full" leave-active-class="transition duration-300 ease-calm" leave-to-class="translate-y-full">
+          <div
+            v-if="summaryOpen"
+            class="fixed inset-x-0 bottom-0 z-[161] flex max-h-[85dvh] flex-col border-t border-forest-soft/20 bg-ivory sm:mx-auto sm:max-w-md"
+            role="dialog" aria-modal="true" aria-label="Ringkasan pesanan"
+          >
+            <header class="flex items-center justify-between border-b border-line bg-forest-deep px-6 py-5">
+              <h2 class="font-display text-2xl text-ivory">
+                Ringkasan pesanan
+                <span class="ml-1 align-middle text-[0.8rem] text-ivory/50">({{ cart.count.value }} pcs)</span>
+              </h2>
+              <button class="grid h-9 w-9 place-items-center text-ivory/70 transition hover:text-ivory" aria-label="Tutup ringkasan" @click="summaryOpen = false">
+                <X class="h-[18px] w-[18px]" :stroke-width="1.5" />
+              </button>
+            </header>
+
+            <div class="flex-1 overflow-y-auto px-6 py-2">
+              <ul class="divide-y divide-line">
+                <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 py-5">
+                  <div class="relative flex-none">
+                    <span class="arch block h-20 w-16 overflow-hidden border border-line">
+                      <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
+                      <ProductArt v-else :art="item.art" :tone="item.id" />
+                    </span>
+                    <span class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-forest text-[0.68rem] text-ivory">{{ item.qty }}</span>
+                  </div>
+                  <div class="flex-1">
+                    <p class="font-display text-[1.1rem] leading-tight text-forest">{{ item.name }}</p>
+                    <p class="mt-1 text-[0.75rem] text-muted">{{ formatIDR(item.price) }} × {{ item.qty }}</p>
+                  </div>
+                  <p class="text-[0.85rem] text-forest">{{ formatIDR(item.lineTotal) }}</p>
+                </li>
+              </ul>
+
+              <dl class="mt-2 space-y-3 border-t border-line pt-5 text-[0.87rem]">
+                <div class="flex justify-between">
+                  <dt class="text-muted">Subtotal <span class="text-[0.72rem]">({{ cart.count.value }} pcs)</span></dt>
+                  <dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd>
+                </div>
+                <div class="flex justify-between gap-4">
+                  <dt class="text-muted">Ongkos kirim</dt>
+                  <dd class="text-right" :class="shippingCostDisplay === 0 ? 'text-olive' : 'text-forest'">
+                    <template v-if="hasFreeShipping">Gratis</template>
+                    <template v-else-if="selectedShipping">
+                      {{ formatIDR(selectedShipping.cost) }}
+                      <span class="block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
+                      <span class="block text-[0.68rem] text-muted/70">{{ selectedShipping.service }}. {{ etdText(selectedShipping.etd) }}</span>
+                      <span v-if="shippingWeight" class="block text-[0.68rem] text-muted/70">Berat {{ weightText(shippingWeight) }}</span>
+                    </template>
+                    <template v-else-if="shippingLoading">Menghitung ongkos kirim…</template>
+                    <template v-else-if="manualCity || form.destinationId">Dikonfirmasi via WhatsApp</template>
+                    <template v-else>Isi kota tujuan dulu</template>
+                  </dd>
+                </div>
+                <div class="flex justify-between"><dt class="text-muted">Kartu ucapan</dt><dd class="text-olive">Gratis</dd></div>
+              </dl>
+              <div class="mt-5 flex items-baseline justify-between border-t border-line pt-5">
+                <span class="text-[0.85rem] text-muted">
+                  <template v-if="shippingCostDisplay !== null">Total</template>
+                  <template v-else>Estimasi total <span class="block text-[0.72rem]">(belum termasuk ongkir)</span></template>
+                </span>
+                <span class="font-display text-3xl text-forest">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
+              </div>
+            </div>
+
+            <div class="border-t border-line bg-surface px-6 py-4">
+              <button class="w-full text-[0.78rem] text-muted transition hover:text-forest" @click="summaryOpen = false">
+                Tutup ringkasan
+              </button>
+              <div class="h-safe-bottom" />
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
     </div>
 
     <div v-else class="shell py-24">
