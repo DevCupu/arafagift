@@ -26,6 +26,7 @@ const cart = useCart()
 const CHECKOUT_DRAFT_KEY = 'arafahgift.checkout.draft'
 const isGuest = computed(() => !page.props.auth?.user)
 const user = computed(() => page.props.auth?.user)
+const accountHasPhone = computed(() => !!user.value?.phone?.trim())
 
 const redirectToLogin = () => {
   try {
@@ -403,11 +404,36 @@ onMounted(() => {
         <section v-if="step === 1" class="mt-10">
           <p class="eyebrow">Langkah 1 dari 3</p>
           <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Data pemesan</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">
-            <template v-if="user">Data terisi otomatis dari akun Anda — ubah kalau perlu. </template>
-            Kami pakai ini untuk konfirmasi pesanan via WhatsApp.
+          <p v-if="user" class="mt-3 text-[0.85rem] text-muted">
+            Data dipakai dari akun Anda —
+            <Link href="/akun" class="font-medium text-forest underline underline-offset-4">ubah</Link>
+            bila perlu.
           </p>
-          <div class="mt-8 space-y-5">
+          <p v-else class="mt-3 text-[0.85rem] text-muted">Kami pakai ini untuk konfirmasi pesanan via WhatsApp.</p>
+
+          <!-- Login: ringkasan data dari akun -->
+          <dl v-if="user" class="mt-8 border border-line bg-surface">
+            <div class="flex items-center justify-between gap-6 border-b border-line px-5 py-4">
+              <dt class="flex-none text-[0.78rem] text-muted">Nama lengkap</dt>
+              <dd class="text-right text-[0.9rem] font-medium text-forest">{{ user.name }}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-6 border-b border-line px-5 py-4">
+              <dt class="flex-none text-[0.78rem] text-muted">Nomor WhatsApp</dt>
+              <dd v-if="accountHasPhone" class="text-right text-[0.9rem] font-medium text-forest">{{ user.phone }}</dd>
+              <dd v-else class="w-full max-w-[240px]">
+                <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
+                <p class="mt-1.5 text-[0.72rem] leading-relaxed text-muted">Nomor WhatsApp belum ada di akun. Isi untuk konfirmasi pesanan.</p>
+                <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
+              </dd>
+            </div>
+            <div class="flex items-center justify-between gap-6 px-5 py-4">
+              <dt class="flex-none text-[0.78rem] text-muted">Email</dt>
+              <dd class="text-right text-[0.9rem] font-medium text-forest">{{ user.email }}</dd>
+            </div>
+          </dl>
+
+          <!-- Guest: input lengkap -->
+          <div v-else class="mt-8 space-y-5">
             <div>
               <label class="field-label" for="name">Nama lengkap</label>
               <input id="name" v-model="form.name" class="field" placeholder="Nama Anda" :aria-invalid="!!errors.name" />
