@@ -134,6 +134,13 @@ watch([menuOpen, searchOpen], ([m, s]) => {
             <Link href="/akun" class="flex items-center gap-2.5 text-[0.9rem] text-ivory/75 transition hover:text-ivory">
               <User class="h-4 w-4 text-gold" :stroke-width="1.5" /> Akun saya
             </Link>
+            <button
+              class="flex w-full items-center gap-2.5 text-left text-[0.9rem] text-ivory/75 transition hover:text-ivory"
+              @click="menuOpen = false; openDrawer()"
+            >
+              <ShoppingBag class="h-4 w-4 text-gold" :stroke-width="1.5" /> Keranjang
+              <span v-if="count" class="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 text-[0.62rem] font-bold text-forest-deep">{{ count }}</span>
+            </button>
             <Link href="/lacak-pesanan" class="flex items-center gap-2.5 text-[0.9rem] text-ivory/75 transition hover:text-ivory">
               <Search class="h-4 w-4 text-gold" :stroke-width="1.5" /> Lacak pesanan
             </Link>
@@ -200,11 +207,3 @@ watch([menuOpen, searchOpen], ([m, s]) => {
     </Teleport>
   </header>
 </template>
-
-<style>
-@keyframes pop {
-  0% { transform: scale(0.6); }
-  60% { transform: scale(1.15); }
-  100% { transform: scale(1); }
-}
-</style>

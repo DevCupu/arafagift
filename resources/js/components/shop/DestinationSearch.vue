@@ -46,7 +46,7 @@ watch(query, (q) => {
     } finally {
       if (seq === searchSeq) loading.value = false
     }
-  }, 400)
+  }, 700)
 })
 
 const choose = (destination) => {
