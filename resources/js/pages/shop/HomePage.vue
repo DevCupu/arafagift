@@ -219,7 +219,7 @@ const bulkCtaHref = computed(() => {
     <!-- ============ AD SLIDER ============ -->
     <section class="border-y border-line bg-surface py-8 sm:py-12" aria-label="Promo ArafahGift">
       <div class="shell">
-        <div class="relative overflow-hidden border border-forest/20 bg-forest-deep" v-reveal>
+        <div class="relative overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft" v-reveal>
           <div
             ref="adRail"
             class="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
@@ -350,7 +350,7 @@ const bulkCtaHref = computed(() => {
       <div class="shell grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-2 lg:gap-20">
         <div class="relative pb-4 pl-4 sm:pb-6 sm:pl-6" v-reveal>
           <!-- Frame emas offset di belakang gambar -->
-          <div class="absolute bottom-0 left-0 h-[92%] w-[94%] border border-gold/45" aria-hidden="true" />
+          <div class="absolute bottom-0 left-0 h-[92%] w-[94%] rounded-[1rem] border border-gold/45" aria-hidden="true" />
           <div class="arch arch--deep relative overflow-hidden border border-line bg-forest-deep">
             <img
               src="/images/assets/gift-worth-remembering.webp"
@@ -360,7 +360,7 @@ const bulkCtaHref = computed(() => {
               decoding="async"
             />
           </div>
-          <div class="absolute -right-3 bottom-12 border border-gold/40 bg-forest-deep px-5 py-3">
+          <div class="absolute -right-3 bottom-12 rounded-[0.5rem] border border-gold/40 bg-forest-deep px-5 py-3">
             <p class="text-[0.62rem] uppercase tracking-[0.16em] text-gold">Mulai</p>
             <p class="mt-1 font-display text-xl text-ivory">{{ formatIDR(signatureProduct.price) }}</p>
           </div>
@@ -401,7 +401,7 @@ const bulkCtaHref = computed(() => {
 
         <!-- Momen keluarga membuka gift set bersama -->
         <figure class="relative pb-4 pl-4 sm:pb-6 sm:pl-6" v-reveal>
-          <div class="absolute bottom-0 left-0 h-[93%] w-[96%] border border-gold/30" aria-hidden="true" />
+          <div class="absolute bottom-0 left-0 h-[93%] w-[96%] rounded-[1rem] border border-gold/30" aria-hidden="true" />
           <div class="arch relative overflow-hidden border border-ivory/15">
             <img
               src="/images/assets/section-lebih-dari-oleh-oleh.webp"
@@ -425,7 +425,7 @@ const bulkCtaHref = computed(() => {
 
     <!-- ============ ROMBONGAN ============ -->
     <section class="shell pb-16 sm:pb-24">
-      <div class="grid items-stretch gap-px overflow-hidden border border-forest/30 bg-forest-deep lg:grid-cols-[1.2fr_1fr]" v-reveal>
+      <div class="grid items-stretch gap-px overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft lg:grid-cols-[1.2fr_1fr]" v-reveal>
         <div class="bg-forest p-9 sm:p-14">
           <p class="eyebrow text-gold">{{ homeContent.bulk.eyebrow }}</p>
           <h2 class="mt-6 max-w-md text-[2.1rem] leading-[1.08] text-ivory sm:text-[2.7rem]">{{ homeContent.bulk.title }}</h2>
@@ -448,7 +448,7 @@ const bulkCtaHref = computed(() => {
             loading="lazy"
             decoding="async"
           />
-          <div class="absolute inset-x-8 bottom-8 border border-forest-soft/40 bg-forest-deep/90 px-5 py-4 backdrop-blur">
+          <div class="absolute inset-x-8 bottom-8 rounded-[0.5rem] border border-forest-soft/40 bg-forest-deep/90 px-5 py-4 backdrop-blur">
             <p class="font-display text-[1.15rem] leading-snug text-ivory">240 pouch untuk rombongan Solo</p>
             <p class="mt-1.5 text-[0.75rem] text-ivory/55">Dicetak nama jamaah, dikirim tepat sebelum keberangkatan.</p>
           </div>
