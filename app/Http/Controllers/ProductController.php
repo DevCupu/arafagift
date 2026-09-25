@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -26,18 +27,28 @@ class ProductController extends Controller
 
     public function show(Product $product): Response
     {
-        $product->load(['category', 'occasions', 'supplier']);
+        return Inertia::render('shop/ProductPage', self::page($product));
+    }
 
-        $related = Product::with(['category', 'occasions', 'supplier'])
-            ->where('status', 'active')
-            ->where('id', '!=', $product->id)
-            ->orderByRaw('category_id = ? desc', [$product->category_id])
-            ->limit(4)
-            ->get();
+    /**
+     * @return array{product: array<string, mixed>, related: array<int, array<string, mixed>>}
+     */
+    public static function page(Product $product): array
+    {
+        return Cache::remember("product-page:{$product->slug}", now()->addMinutes(10), function () use ($product): array {
+            $product->load(['category', 'occasions', 'supplier']);
 
-        return Inertia::render('shop/ProductPage', [
-            'product' => $product->toCatalog(),
-            'related' => $related->map->toCatalog()->values(),
-        ]);
+            $related = Product::with(['category', 'occasions'])
+                ->where('status', 'active')
+                ->where('id', '!=', $product->id)
+                ->orderByRaw('category_id = ? desc', [$product->category_id])
+                ->limit(4)
+                ->get();
+
+            return [
+                'product' => $product->toCatalog(),
+                'related' => $related->map->toCard()->values()->all(),
+            ];
+        });
     }
 }

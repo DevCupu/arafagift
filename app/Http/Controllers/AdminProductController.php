@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\Supplier;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -53,6 +54,8 @@ class AdminProductController extends Controller
             'image' => $this->storeImage($request),
         ]);
 
+        $this->forgetCatalogCaches();
+
         return redirect()->route('admin.products.edit', $product)->with('success', 'Produk baru dibuat');
     }
 
@@ -69,6 +72,9 @@ class AdminProductController extends Controller
 
         $product->update($validated);
 
+        $this->forgetCatalogCaches();
+        Cache::forget("product-page:{$product->slug}");
+
         return back()->with('success', 'Perubahan produk disimpan');
     }
 
@@ -78,6 +84,9 @@ class AdminProductController extends Controller
             Storage::disk('public')->delete($product->image);
         }
         $product->delete();
+
+        $this->forgetCatalogCaches();
+        Cache::forget("product-page:{$product->slug}");
 
         return back()->with('success', "{$product->name} dihapus");
     }
@@ -98,6 +107,12 @@ class AdminProductController extends Controller
             $product->delete();
         }
 
+        $this->forgetCatalogCaches();
+
+        foreach ($products as $product) {
+            Cache::forget("product-page:{$product->slug}");
+        }
+
         return back()->with('success', $products->count().' produk dihapus');
     }
 
@@ -113,7 +128,20 @@ class AdminProductController extends Controller
         $validated = $request->validate(['stock' => ['required', 'integer', 'min:0']]);
         $product->update($validated);
 
+        $this->forgetCatalogCaches();
+        Cache::forget("product-page:{$product->slug}");
+
         return back()->with('success', "Stok {$product->name} diperbarui jadi {$product->stock}");
+    }
+
+    /**
+     * Invalidate cached frontend catalog data after any product mutation.
+     */
+    private function forgetCatalogCaches(): void
+    {
+        Cache::forget('home-payload');
+        Cache::forget('koleksi-payload');
+        Cache::forget('sitemap-urls');
     }
 
     /**

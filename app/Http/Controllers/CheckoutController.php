@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Exceptions\RajaOngkirException;
 use App\Models\Order;
 use App\Models\Product;
-use App\Models\Setting;
 use App\Services\OrderPricing;
 use App\Services\RajaOngkirService;
+use App\Support\StoreSettingsCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
@@ -34,9 +36,14 @@ class CheckoutController extends Controller
             'note' => ['nullable', 'string', 'max:500'],
             'hideInvoice' => ['boolean'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.id' => ['required', 'integer'],
             'items.*.qty' => ['required', 'integer', 'min:1', 'max:99'],
         ]);
+
+        $ids = array_values(array_unique(array_column($validated['items'], 'id')));
+        if (Product::whereIn('id', $ids)->count() !== count($ids)) {
+            throw ValidationException::withMessages(['items' => 'Salah satu produk tidak tersedia.']);
+        }
 
         // Harga & stok dihitung dari database, bukan dari input klien, supaya tidak bisa dimanipulasi.
         $priced = OrderPricing::priceItems($validated['items']);
@@ -80,6 +87,8 @@ class CheckoutController extends Controller
             ]);
         }
 
+        Cache::forget('pending-orders-count');
+
         return response()->json($order->load('items')->toCatalog());
     }
 
@@ -95,11 +104,11 @@ class CheckoutController extends Controller
      */
     private function resolveShipping(array $validated, array $priced): array
     {
-        $setting = Setting::first();
+        $store = StoreSettingsCache::store();
         $note = $validated['note'] ?? null;
-        $freeShipping = $this->hasFreeShipping($setting, $validated['city'], $priced['subtotal']);
+        $freeShipping = $this->hasFreeShipping($store, $validated['city'], $priced['subtotal']);
 
-        $origin = $setting?->origin_destination_id;
+        $origin = $store['originDestinationId'];
         $destinationId = $validated['destination_id'] ?? null;
         $courier = $validated['courier'] ?? null;
         $service = $validated['service'] ?? null;
@@ -128,14 +137,11 @@ class CheckoutController extends Controller
         }
     }
 
-    private function hasFreeShipping(?Setting $setting, string $city, int|float $subtotal): bool
+    private function hasFreeShipping(array $store, string $city, int|float $subtotal): bool
     {
-        if (! $setting) {
-            return false;
-        }
-
-        $byAmount = $setting->free_shipping_from > 0 && $subtotal >= $setting->free_shipping_from;
-        $byCity = collect($setting->freeShippingCitiesList())
+        $freeFrom = (int) ($store['freeShippingFrom'] ?? 0);
+        $byAmount = $freeFrom > 0 && $subtotal >= $freeFrom;
+        $byCity = collect($store['freeShippingCities'] ?? [])
             ->contains(fn (string $c) => str_contains(strtolower($city), strtolower($c)));
 
         return $byAmount || $byCity;

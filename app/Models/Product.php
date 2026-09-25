@@ -98,6 +98,32 @@ class Product extends Model
         ];
     }
 
+    /**
+     * @return array{id: int, name: string, slug: string, unit: string, category: string, categorySlug: string, price: float|int, comparePrice: float|int|null, rating: float, reviews: int, badge: string|null, art: string|null, image: string|null, stock: int, short: string|null, occasions: array<int, string>, status: string}
+     */
+    public function toCard(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'slug' => $this->slug,
+            'unit' => $this->unit,
+            'category' => $this->category->name,
+            'categorySlug' => $this->category->slug,
+            'price' => $this->price,
+            'comparePrice' => $this->compare_price,
+            'rating' => (float) $this->rating,
+            'reviews' => $this->reviews_count,
+            'badge' => $this->badge,
+            'art' => $this->art,
+            'image' => $this->imageUrl(),
+            'stock' => $this->stock,
+            'short' => $this->short,
+            'occasions' => $this->occasions->pluck('slug')->all(),
+            'status' => $this->status,
+        ];
+    }
+
     public function imageUrl(): ?string
     {
         if (! $this->image) {

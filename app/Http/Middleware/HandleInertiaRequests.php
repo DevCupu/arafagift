@@ -4,7 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Content;
 use App\Models\Order;
-use App\Models\Setting;
+use App\Support\StoreSettingsCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -43,19 +43,7 @@ class HandleInertiaRequests extends Middleware
         // anything smarter at this scale. Caching plain arrays, not the Eloquent models — caching model instances hits
         // PHP unserialize() class-loading-order issues on some cache drivers.
         $homeData = Cache::remember('home-content', now()->addMinutes(10), fn () => Content::where('key', 'home')->first()?->data);
-        $store = Cache::remember('settings-store', now()->addMinutes(10), function () {
-            $settings = Setting::first();
-
-            return [
-                'name' => $settings?->store_name ?? config('app.name'),
-                'address' => $settings?->address,
-                'email' => $settings?->email,
-                'whatsapp' => $settings?->whatsapp,
-                'originCity' => $settings?->origin_city ?? 'Jakarta',
-                'freeShippingFrom' => $settings?->free_shipping_from ?? 0,
-                'freeShippingCities' => $settings?->freeShippingCitiesList() ?? [],
-            ];
-        });
+        $store = StoreSettingsCache::store();
 
         return [
             ...parent::share($request),
@@ -65,7 +53,7 @@ class HandleInertiaRequests extends Middleware
                 'wishlistIds' => $request->user() ? $request->user()->wishlists()->pluck('product_id') : [],
             ],
             'pendingOrdersCount' => $request->user()?->is_admin
-                ? Order::where('status', 'pending')->count()
+                ? Cache::remember('pending-orders-count', now()->addMinutes(5), fn () => Order::where('status', 'pending')->count())
                 : 0,
             'announcement' => is_array($homeData) ? ($homeData['announcement'] ?? '') : '',
             'store' => $store,

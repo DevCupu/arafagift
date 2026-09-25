@@ -5,32 +5,43 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Cache;
 
 class SitemapController extends Controller
 {
     public function index(): Response
     {
-        $urls = [
-            ['loc' => route('home')],
-            ['loc' => route('collection', ['category' => null])],
-            ['loc' => route('about')],
-            ['loc' => route('faq')],
-            ['loc' => route('legal', ['slug' => 'kebijakan-privasi'])],
-            ['loc' => route('legal', ['slug' => 'syarat-ketentuan'])],
-            ['loc' => route('legal', ['slug' => 'pengiriman-pengembalian'])],
-        ];
-
-        foreach (Category::all() as $category) {
-            $urls[] = ['loc' => route('collection', ['category' => $category->slug])];
-        }
-
-        foreach (Product::where('status', 'active')->get() as $product) {
-            $urls[] = ['loc' => route('product', ['product' => $product->slug]), 'lastmod' => $product->updated_at?->toAtomString()];
-        }
-
-        $xml = view('sitemap', ['urls' => $urls])->render();
+        $xml = view('sitemap', ['urls' => self::urls()])->render();
 
         return response($xml, 200)->header('Content-Type', 'text/xml');
+    }
+
+    /**
+     * @return array<int, array{loc: string, lastmod?: string}>
+     */
+    public static function urls(): array
+    {
+        return Cache::remember('sitemap-urls', now()->addHours(24), function (): array {
+            $urls = [
+                ['loc' => route('home')],
+                ['loc' => route('collection', ['category' => null])],
+                ['loc' => route('about')],
+                ['loc' => route('faq')],
+                ['loc' => route('legal', ['slug' => 'kebijakan-privasi'])],
+                ['loc' => route('legal', ['slug' => 'syarat-ketentuan'])],
+                ['loc' => route('legal', ['slug' => 'pengiriman-pengembalian'])],
+            ];
+
+            foreach (Category::all() as $category) {
+                $urls[] = ['loc' => route('collection', ['category' => $category->slug])];
+            }
+
+            foreach (Product::where('status', 'active')->get() as $product) {
+                $urls[] = ['loc' => route('product', ['product' => $product->slug]), 'lastmod' => $product->updated_at?->toAtomString()];
+            }
+
+            return $urls;
+        });
     }
 
     public function robots(): Response
