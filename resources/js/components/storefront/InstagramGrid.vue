@@ -8,10 +8,7 @@ defineProps({ content: { type: Object, required: true } })
 <template>
   <div>
     <div class="flex flex-wrap items-end justify-between gap-4">
-      <div>
-        <p class="eyebrow">Instagram</p>
-        <h2 class="mt-4 text-[1.9rem] sm:text-[2.3rem]">{{ content.title }}</h2>
-      </div>
+      <h2 class="text-[1.9rem] leading-[1.06] tracking-[-0.02em] sm:text-[2.3rem]">{{ content.title }}</h2>
       <a
         :href="content.url" target="_blank" rel="noopener"
         class="link-underline inline-flex items-center gap-2 text-[0.85rem] text-forest"

@@ -190,6 +190,19 @@
     .text-balance {
         text-wrap: balance;
     }
+    /* Fade-in murni opacity untuk konten hero (tanpa menggeser layout).
+       prefers-reduced-motion: durasi dipangkas menjadi ~0 oleh rule global. */
+    .hero-enter {
+        animation: heroEnter 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes heroEnter {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
     .grain {
         background-image: radial-gradient(rgb(var(--c-ink) / 0.045) 0.5px, transparent 0.5px);
         background-size: 4px 4px;

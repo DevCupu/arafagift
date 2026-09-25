@@ -25,6 +25,7 @@ const cart = useCart()
 // Isian disimpan sementara biar tidak hilang saat pindah ke halaman login.
 const CHECKOUT_DRAFT_KEY = 'arafahgift.checkout.draft'
 const isGuest = computed(() => !page.props.auth?.user)
+const user = computed(() => page.props.auth?.user)
 
 const redirectToLogin = () => {
   try {
@@ -316,13 +317,21 @@ const confirmViaWhatsapp = () => {
 
 onMounted(() => {
   const raw = sessionStorage.getItem(CHECKOUT_DRAFT_KEY)
-  if (!raw) return
-  try {
-    const draft = JSON.parse(raw)
-    if (draft?.form) Object.assign(form, draft.form)
-    manualCity.value = !!draft?.manualCity
-  } catch { /* draft korup: abaikan */ }
-  sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
+  if (raw) {
+    try {
+      const draft = JSON.parse(raw)
+      if (draft?.form) Object.assign(form, draft.form)
+      manualCity.value = !!draft?.manualCity
+    } catch { /* draft korup: abaikan */ }
+    sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
+  }
+  // Data pemesan dari akun mengisi field yang masih kosong saja — draft (input user)
+  // tetap menang biar tidak menimpa yang sudah diketik sebelum pindah ke halaman login.
+  if (user.value) {
+    if (!form.name) form.name = user.value.name ?? ''
+    if (!form.phone) form.phone = user.value.phone ?? ''
+    if (!form.email) form.email = user.value.email ?? ''
+  }
   if (!manualCity.value && form.destinationId && !hasFreeShipping.value) fetchShipping()
   else shippingUnavailable.value = manualCity.value
 })
@@ -332,10 +341,10 @@ onMounted(() => {
   <Head title="Checkout">
     <meta name="robots" content="noindex,follow" />
   </Head>
-  <div class="min-h-[100dvh] bg-surface">
+  <div class="min-h-[100dvh] bg-ivory">
     <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-16 sm:px-10">
       <BrandLogo size="sm" />
-      <div class="mt-8 border border-line bg-ivory p-8 text-center">
+      <div class="mt-8 border border-line bg-surface p-8 text-center">
         <span class="grid h-12 w-12 place-items-center rounded-full bg-forest text-ivory mx-auto"><Check class="h-6 w-6" /></span>
         <h1 class="mt-5 text-[1.9rem] leading-none">Pesanan berhasil dibuat</h1>
         <p class="mt-3 text-[0.85rem] text-muted">Nomor pesanan Anda</p>
@@ -369,31 +378,35 @@ onMounted(() => {
       <div class="px-5 py-10 sm:px-10 lg:py-14">
         <div class="flex items-center justify-between">
           <BrandLogo size="sm" />
-          <Link href="/keranjang" class="flex items-center gap-1.5 text-[0.78rem] text-muted transition hover:text-forest">
-            <ArrowLeft class="h-3.5 w-3.5" /> Kembali ke keranjang
+          <Link href="/koleksi" class="flex items-center gap-1.5 text-[0.78rem] text-muted transition hover:text-forest">
+            <ArrowLeft class="h-3.5 w-3.5" /> Kembali berbelanja
           </Link>
         </div>
 
         <!-- Stepper: urutan checkout benar-benar berurutan -->
-        <ol class="mt-10 flex items-center gap-3">
+        <ol class="mt-10 flex items-center gap-3" aria-label="Langkah checkout">
           <li v-for="s in steps" :key="s.id" class="flex flex-1 items-center gap-3">
             <span
-              class="grid h-7 w-7 flex-none place-items-center rounded-full border text-[0.72rem] transition"
+              class="grid h-8 w-8 flex-none place-items-center rounded-full border font-display text-[0.78rem] transition"
               :class="step > s.id ? 'border-forest bg-forest text-ivory'
-                : step === s.id ? 'border-gold bg-gold/15 text-forest' : 'border-line text-muted'"
+                : step === s.id ? 'border-gold bg-gold/15 text-forest ring-1 ring-gold/[0.4]' : 'border-line bg-surface text-muted'"
             >
-              <Check v-if="step > s.id" class="h-3.5 w-3.5" />
+              <Check v-if="step > s.id" class="h-3.5 w-3.5" :stroke-width="2" />
               <template v-else>{{ s.id }}</template>
             </span>
-            <span class="hidden text-[0.75rem] tracking-wide sm:block" :class="step >= s.id ? 'text-forest' : 'text-muted'">{{ s.label }}</span>
-            <span v-if="s.id < 3" class="h-px flex-1 bg-line" />
+            <span class="hidden text-[0.75rem] font-medium tracking-wide sm:block" :class="step >= s.id ? 'text-forest' : 'text-muted'">{{ s.label }}</span>
+            <span v-if="s.id < 3" class="h-px flex-1 bg-line" :class="step > s.id ? '!bg-forest/40' : ''" />
           </li>
         </ol>
 
         <!-- 1. Data pemesan -->
         <section v-if="step === 1" class="mt-10">
-          <h1 class="text-[1.9rem] leading-none">Data pemesan</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Kami pakai ini untuk konfirmasi pesanan via WhatsApp.</p>
+          <p class="eyebrow">Langkah 1 dari 3</p>
+          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Data pemesan</h1>
+          <p class="mt-3 text-[0.85rem] text-muted">
+            <template v-if="user">Data terisi otomatis dari akun Anda — ubah kalau perlu. </template>
+            Kami pakai ini untuk konfirmasi pesanan via WhatsApp.
+          </p>
           <div class="mt-8 space-y-5">
             <div>
               <label class="field-label" for="name">Nama lengkap</label>
@@ -416,7 +429,8 @@ onMounted(() => {
 
         <!-- 2. Alamat -->
         <section v-else-if="step === 2" class="mt-10">
-          <h1 class="text-[1.9rem] leading-none">Alamat pengiriman</h1>
+          <p class="eyebrow">Langkah 2 dari 3</p>
+          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Alamat pengiriman</h1>
           <p class="mt-3 text-[0.85rem] text-muted">Cari kota tujuan untuk melihat pilihan kurir dan ongkirnya.</p>
           <div class="mt-8 space-y-5">
             <div>
@@ -579,7 +593,8 @@ onMounted(() => {
 
         <!-- 3. Tinjau -->
         <section v-else class="mt-10">
-          <h1 class="text-[1.9rem] leading-none">Tinjau pesanan</h1>
+          <p class="eyebrow">Langkah 3 dari 3</p>
+          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Tinjau pesanan</h1>
           <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi sebelum lanjut ke WhatsApp.</p>
           <dl class="mt-8 divide-y divide-line border-y border-line text-[0.87rem]">
             <div class="flex justify-between gap-6 py-4">
@@ -622,10 +637,12 @@ onMounted(() => {
         </p>
       </div>
 
-      <!-- Ringkasan -->
-      <aside class="border-t border-line bg-ivory px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14">
-        <h2 class="font-display text-2xl">Ringkasan pesanan</h2>
-        <ul class="mt-7 space-y-5">
+      <!-- Ringkasan: kartu panel konsisten dengan ringkasan di halaman keranjang -->
+      <aside class="border-t border-line px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14">
+        <div class="border border-line bg-surface p-7 sm:p-8">
+          <p class="eyebrow">Checkout</p>
+          <h2 class="mt-4 font-display text-2xl tracking-[-0.02em]">Ringkasan pesanan</h2>
+          <ul class="mt-7 space-y-5">
           <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4">
             <div class="relative flex-none">
               <span class="arch block h-20 w-16 overflow-hidden border border-line">
@@ -670,6 +687,7 @@ onMounted(() => {
             <template v-else>Estimasi total <span class="block text-[0.72rem]">(belum termasuk ongkir)</span></template>
           </span>
           <span class="font-display text-3xl text-forest">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
+        </div>
         </div>
       </aside>
     </div>

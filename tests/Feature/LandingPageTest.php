@@ -71,7 +71,7 @@ it('sends a noindex header so ad pages never get indexed without JS', function (
         ->assertHeader('X-Robots-Tag', 'noindex, nofollow');
 
     // Halaman toko biasa tidak boleh ikut kena.
-    expect($this->get('/keranjang')->headers->get('X-Robots-Tag'))->toBeNull();
+    expect($this->get('/tentang')->headers->get('X-Robots-Tag'))->toBeNull();
 });
 
 it('returns 404 for an unknown slug', function () {
@@ -197,7 +197,7 @@ it('rejects slugs that would hijack an existing route', function (string $slug) 
         ->assertSessionHasErrors('slug');
 
     expect(Page::where('slug', $slug)->exists())->toBeFalse();
-})->with(['admin', 'tentang', 'faq', 'keranjang', 'login', 'produk', 'koleksi']);
+})->with(['admin', 'tentang', 'faq', 'login', 'produk', 'koleksi']);
 
 it('rejects unknown block types and malformed block content', function () {
     $this->actingAs($this->admin)->post('/admin/landing', landingPayload(['blocks' => [
@@ -347,7 +347,6 @@ it('does not let the landing catch-all shadow existing routes', function (string
     ['/', 'home'],
     ['/tentang', 'about'],
     ['/faq', 'faq'],
-    ['/keranjang', 'cart'],
     ['/koleksi', 'collection'],
     ['/login', 'login'],
     ['/produk/kurma-ajwa', 'product'],
@@ -357,3 +356,17 @@ it('does not let the landing catch-all shadow existing routes', function (string
     ['/arafagifttravel', 'landing'],
     ['/arafagiftexclusive1', 'landing'],
 ]);
+
+// ── Halaman 404 storefront ──
+
+it('serves the storefront 404 page for unknown product slugs', function () {
+    $this->get('/produk/kurma-tidak-ada')
+        ->assertNotFound()
+        ->assertInertia(fn ($page) => $page->component('shop/NotFoundPage'));
+});
+
+it('serves the storefront 404 page for missing landing slugs and the raw fallback', function (string $uri) {
+    $this->get($uri)
+        ->assertNotFound()
+        ->assertInertia(fn ($page) => $page->component('shop/NotFoundPage'));
+})->with(['/slug-landing-entah-apa', '/keranjang', '/dua/segmen-path']);

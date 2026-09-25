@@ -31,12 +31,14 @@ defineProps({
     </div>
     <div class="flex items-start justify-between gap-3 pt-3 sm:pt-4">
       <div>
-        <h3 class="font-display text-[1.05rem] sm:text-[1.3rem] leading-none">{{ category.name }}</h3>
-        <p class="mt-1 sm:mt-1.5 text-[0.72rem] sm:text-[0.78rem] text-muted">{{ category.tagline }}</p>
+        <h3 class="font-display text-[1.1rem] leading-tight sm:text-[1.35rem]">{{ category.name }}</h3>
+        <p v-if="category.tagline" class="mt-1 line-clamp-1 text-[0.72rem] text-muted sm:text-[0.78rem]">{{ category.tagline }}</p>
       </div>
-      <ArrowUpRight
-        class="mt-1 h-4 w-4 flex-none text-gold transition-transform duration-300 ease-calm group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-      />
+      <span
+        class="mt-1 grid h-7 w-7 flex-none place-items-center rounded-full border border-line bg-surface transition duration-300 ease-calm group-hover:border-gold group-hover:bg-gold group-hover:text-forest-deep"
+      >
+        <ArrowUpRight class="h-3.5 w-3.5" :stroke-width="1.7" />
+      </span>
     </div>
   </Link>
 </template>
