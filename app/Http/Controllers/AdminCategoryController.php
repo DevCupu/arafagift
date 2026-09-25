@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -26,6 +27,8 @@ class AdminCategoryController extends Controller
             'image' => $this->storeImage($request),
         ]);
 
+        $this->forgetCatalogCaches();
+
         return back()->with('success', 'Kategori baru dibuat');
     }
 
@@ -42,6 +45,8 @@ class AdminCategoryController extends Controller
 
         $category->update($validated);
 
+        $this->forgetCatalogCaches();
+
         return back()->with('success', 'Kategori diperbarui');
     }
 
@@ -56,6 +61,8 @@ class AdminCategoryController extends Controller
         }
 
         $category->delete();
+
+        $this->forgetCatalogCaches();
 
         return back()->with('success', "{$category->name} dihapus");
     }
@@ -77,6 +84,8 @@ class AdminCategoryController extends Controller
             }
             $category->delete();
         }
+
+        $this->forgetCatalogCaches();
 
         if ($blocked->isNotEmpty()) {
             $prefix = $deletable->isNotEmpty() ? "{$deletable->count()} kategori dihapus. " : '';
@@ -116,5 +125,15 @@ class AdminCategoryController extends Controller
         $path = $request->file('image')->store('categories', 'public');
 
         return $path === false ? null : $path;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function forgetCatalogCaches(): void
+    {
+        Cache::forget('home-payload');
+        Cache::forget('koleksi-payload');
+        Cache::forget('sitemap-urls');
     }
 }

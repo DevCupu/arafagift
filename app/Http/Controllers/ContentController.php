@@ -137,6 +137,7 @@ class ContentController extends Controller
 
         $content->update(['data' => $data]);
         Cache::forget('home-content');
+        Cache::forget('home-payload');
 
         return back();
     }
@@ -153,6 +154,8 @@ class ContentController extends Controller
 
         Testimonial::create($validated);
 
+        Cache::forget('home-payload');
+
         return back();
     }
 
@@ -168,12 +171,16 @@ class ContentController extends Controller
 
         $testimonial->update($validated);
 
+        Cache::forget('home-payload');
+
         return back();
     }
 
     public function destroyTestimonial(Testimonial $testimonial): RedirectResponse
     {
         $testimonial->delete();
+
+        Cache::forget('home-payload');
 
         return back();
     }
@@ -186,6 +193,8 @@ class ContentController extends Controller
         ]);
 
         Testimonial::whereIn('id', $validated['ids'])->delete();
+
+        Cache::forget('home-payload');
 
         return back();
     }
@@ -201,6 +210,8 @@ class ContentController extends Controller
 
         Faq::create($validated);
 
+        Cache::forget('home-payload');
+
         return back();
     }
 
@@ -213,12 +224,16 @@ class ContentController extends Controller
 
         $faq->update($validated);
 
+        Cache::forget('home-payload');
+
         return back();
     }
 
     public function destroyFaq(Faq $faq): RedirectResponse
     {
         $faq->delete();
+
+        Cache::forget('home-payload');
 
         return back();
     }
@@ -231,6 +246,8 @@ class ContentController extends Controller
         ]);
 
         Faq::whereIn('id', $validated['ids'])->delete();
+
+        Cache::forget('home-payload');
 
         return back();
     }
@@ -246,6 +263,8 @@ class ContentController extends Controller
             Faq::whereKey($id)->update(['sort_order' => $position]);
         }
 
+        Cache::forget('home-payload');
+
         return back();
     }
 
@@ -254,12 +273,18 @@ class ContentController extends Controller
         $next = Product::where('featured', true)->max('featured_order') ?? 0;
         $product->update(['featured' => true, 'featured_order' => $next + 1]);
 
+        Cache::forget('home-payload');
+        Cache::forget('koleksi-payload');
+
         return back();
     }
 
     public function removeFeatured(Product $product): RedirectResponse
     {
         $product->update(['featured' => false]);
+
+        Cache::forget('home-payload');
+        Cache::forget('koleksi-payload');
 
         return back();
     }
@@ -274,6 +299,8 @@ class ContentController extends Controller
         foreach (array_values($validated['order']) as $position => $id) {
             Product::whereKey($id)->update(['featured' => true, 'featured_order' => $position + 1]);
         }
+
+        Cache::forget('home-payload');
 
         return back();
     }

@@ -9,6 +9,7 @@ use App\Services\Inventory;
 use App\Services\OrderPricing;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -95,6 +96,8 @@ class AdminOrderController extends Controller
             return $order;
         });
 
+        Cache::forget('pending-orders-count');
+
         return redirect()->route('admin.order', $order)->with('success', "Pesanan {$order->order_number} dibuat");
     }
 
@@ -111,6 +114,8 @@ class AdminOrderController extends Controller
             $this->restoreDeductedStock($order, $request->user()->id);
             $order->delete();
         });
+
+        Cache::forget('pending-orders-count');
 
         return redirect()->route('admin.orders')->with('success', "Pesanan {$order->order_number} dihapus. Bisa dipulihkan dari daftar pesanan terhapus.");
     }
@@ -131,6 +136,8 @@ class AdminOrderController extends Controller
             }
         });
 
+        Cache::forget('pending-orders-count');
+
         return redirect()->route('admin.orders')->with('success', $orders->count().' pesanan dihapus. Bisa dipulihkan dari daftar pesanan terhapus.');
     }
 
@@ -138,6 +145,8 @@ class AdminOrderController extends Controller
     {
         $order = Order::onlyTrashed()->where('order_number', $order_number)->firstOrFail();
         $order->restore();
+
+        Cache::forget('pending-orders-count');
 
         // ponytail: stok yang sudah dikembalikan saat dihapus TIDAK dipotong ulang di sini — kolom
         // stock_movements punya unique constraint per (produk, nomor pesanan, jenis), jadi "sale" kedua
@@ -208,6 +217,8 @@ class AdminOrderController extends Controller
             $order->update($update);
             $this->syncStock($order, $previous, $validated['status'], $request->user()->id);
         });
+
+        Cache::forget('pending-orders-count');
 
         return back()->with('success', "Status {$order->order_number} diperbarui");
     }

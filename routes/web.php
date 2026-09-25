@@ -39,7 +39,6 @@ Route::get('/pencarian', [ProductController::class, 'search'])->middleware('thro
 Route::get('/produk/{product:slug}', [ProductController::class, 'show'])->name('product');
 // Tamu boleh lihat halaman checkout + hitung ongkir dulu (keranjang/kalkulasi); login baru diminta saat pesanan dibuat (POST tetap rahasia).
 Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
-Route::get('/shipping/destinations', [ShippingController::class, 'destinations'])->middleware('throttle:30,1,shipping')->name('shipping.destinations');
 Route::post('/shipping/cost', [ShippingController::class, 'cost'])->middleware('throttle:30,1,shipping')->name('shipping.cost');
 Route::middleware('auth')->group(function () {
     Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');

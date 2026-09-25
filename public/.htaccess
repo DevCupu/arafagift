@@ -23,3 +23,34 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+<IfModule mod_headers.c>
+    # Build assets ber-isi hash nama file — cache immutable selamanya.
+    SetEnvIf Request_URI "^/build/assets/.*" ARAFA_IMMUTABLE=1
+    Header set Cache-Control "public, max-age=31536000, immutable" env=ARAFA_IMMUTABLE
+
+    # Gambar non-hash (public/images + public/storage) — cache sebulan.
+    SetEnvIf Request_URI "^/images/.*" ARAFA_IMAGE=1
+    SetEnvIf Request_URI "^/storage/.*" ARAFA_IMAGE=1
+    Header set Cache-Control "public, max-age=2592000" env=ARAFA_IMAGE
+</IfModule>
+
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css "access plus 1 year"
+    ExpiresByType application/javascript "access plus 1 year"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType text/html "access plus 0 seconds"
+</IfModule>
+
+# Kompresi output dinamis — aman bila modul tidak tersedia.
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/css text/xml application/javascript application/json image/svg+xml
+</IfModule>
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/html text/plain text/css text/xml application/javascript application/json image/svg+xml
+</IfModule>

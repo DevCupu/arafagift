@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Setting;
+use App\Support\StoreSettingsCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -37,7 +37,7 @@ class AdminSettingsController extends Controller
         $validated['bulk_minimum'] = $validated['bulk_minimum'] ?? 0;
 
         Setting::firstOrFail()->update($validated);
-        Cache::forget('settings-store');
+        StoreSettingsCache::forget();
 
         return back()->with('success', 'Pengaturan toko disimpan');
     }

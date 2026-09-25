@@ -45,7 +45,7 @@ class AdminDashboardController extends Controller
             'salesSeries' => $this->salesSeries(),
             'topProducts' => $this->topProducts(),
             'recentOrders' => Order::with(['items', 'shippingMethod', 'paymentMethod'])->latest()->limit(5)->get()->map->toCatalog()->values(),
-            'lowStockProducts' => Product::with('category')->whereColumn('stock', '<=', 'low_stock_threshold')->orderBy('stock')->limit(5)->get()->map->toCatalog()->values(),
+            'lowStockProducts' => Product::with(['category', 'supplier', 'occasions'])->whereColumn('stock', '<=', 'low_stock_threshold')->orderBy('stock')->limit(5)->get()->map->toCatalog()->values(),
         ]);
     }
 }

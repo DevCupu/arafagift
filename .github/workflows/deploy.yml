@@ -88,6 +88,7 @@ jobs:
 
             php artisan migrate --force
             php artisan optimize
+            php artisan app:cache-warm
 
             php artisan up
             trap - EXIT
