@@ -13,7 +13,7 @@ defineProps({
     <p v-if="eyebrow" :class="['eyebrow', align === 'center' ? 'eyebrow--center justify-center' : '', dark ? 'text-gold' : '']">
       {{ eyebrow }}
     </p>
-    <h2 :class="['mt-5 text-[2rem] leading-[1.06] sm:text-[2.6rem]', dark ? 'text-ivory' : '']">
+    <h2 :class="['mt-5 text-[2.05rem] leading-[1.04] tracking-[-0.02em] sm:text-[2.7rem]', dark ? 'text-ivory' : '']">
       <slot name="title">{{ title }}</slot>
     </h2>
     <p v-if="sub || $slots.sub" :class="['mt-4 text-[0.95rem] leading-relaxed', dark ? 'text-ivory/60' : 'text-muted']">

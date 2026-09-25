@@ -37,7 +37,6 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/koleksi/{category?}', [CollectionController::class, 'index'])->name('collection');
 Route::get('/pencarian', [ProductController::class, 'search'])->middleware('throttle:30,1,pencarian')->name('product.search');
 Route::get('/produk/{product:slug}', [ProductController::class, 'show'])->name('product');
-Route::get('/keranjang', fn () => Inertia::render('shop/CartPage'))->name('cart');
 // Tamu boleh lihat halaman checkout + hitung ongkir dulu (keranjang/kalkulasi); login baru diminta saat pesanan dibuat (POST tetap rahasia).
 Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage'))->name('checkout');
 Route::get('/shipping/destinations', [ShippingController::class, 'destinations'])->middleware('throttle:30,1,shipping')->name('shipping.destinations');

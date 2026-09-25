@@ -40,7 +40,6 @@ class SitemapController extends Controller
             'Disallow: /admin',
             'Disallow: /akun',
             'Disallow: /checkout',
-            'Disallow: /keranjang',
             'Disallow: /lacak-pesanan',
             '',
             'Sitemap: '.route('sitemap'),
