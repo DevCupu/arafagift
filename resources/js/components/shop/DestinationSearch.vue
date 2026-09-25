@@ -110,11 +110,12 @@ const reset = () => {
         </li>
         <li v-if="failed" class="px-3 py-2">
           <p class="text-[0.78rem] leading-relaxed text-muted">{{ failureMessage }}</p>
+          <p class="mt-1.5 text-[0.72rem] leading-relaxed text-muted">Masih belum ketemu? Anda juga bisa memasukkan kota secara manual pada langkah berikutnya.</p>
           <button type="button" class="mt-1.5 text-[0.74rem] font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="retry">
             Coba lagi
           </button>
         </li>
-        <li v-if="!loading && !failed && query.trim().length >= 3 && !results.length" class="px-3 py-2 text-[0.78rem] text-muted">Tidak ada kota yang cocok, coba kata kunci lain.</li>
+        <li v-if="!loading && !failed && query.trim().length >= 3 && !results.length" class="px-3 py-2 text-[0.78rem] leading-relaxed text-muted">Tidak ada kota yang cocok, coba kata kunci lain. Anda juga bisa memasukkan kota secara manual pada langkah berikutnya.</li>
       </ul>
     </template>
   </div>

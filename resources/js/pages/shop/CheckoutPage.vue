@@ -14,12 +14,14 @@ import ProductArt from '@/components/art/ProductArt.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
+import { useStore } from '@/composables/useStore'
 import { statusMeta } from '@/data/admin'
 
 const page = usePage()
 const store = computed(() => page.props.store)
 
 const cart = useCart()
+const { whatsappHref } = useStore()
 
 // Tamu boleh melihat & mengisi halaman checkout dulu; login baru diminta saat "Buat Pesanan".
 // Isian disimpan sementara biar tidak hilang saat pindah ke halaman login.
@@ -551,10 +553,17 @@ onMounted(() => {
                 </div>
               </div>
               <div v-else-if="shippingUnavailable" class="border border-line bg-ivory/45 p-4 text-[0.8rem] leading-relaxed text-muted">
-                <p>Ongkos kirim belum bisa dihitung otomatis untuk tujuan ini. Kami dapat mengonfirmasinya melalui WhatsApp.</p>
-                <button type="button" class="mt-2 font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="fetchShipping">
-                  Coba hitung lagi
-                </button>
+                <p>Ongkos kirim belum bisa dihitung otomatis untuk tujuan ini — layanan kurir sedang terganggu atau tujuan belum tercakup. Kami dapat mengonfirmasikannya melalui WhatsApp.</p>
+                <div class="mt-3 flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <button type="button" class="font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="fetchShipping">
+                    Coba hitung lagi
+                  </button>
+                  <a
+                    :href="whatsappHref(`Halo ArafahGift, tolong bantu hitung ongkir ke ${form.city.trim() || 'kota tujuan saya'}. Alamat: ${fullAddress}.`)"
+                    target="_blank" rel="noopener"
+                    class="font-semibold text-forest underline underline-offset-4 transition hover:text-olive"
+                  >Minta bantuan hitung ongkir</a>
+                </div>
               </div>
               <div v-else-if="shippingError" class="border border-danger/35 bg-danger/[0.06] p-4 text-[0.8rem] leading-relaxed text-ink">
                 <p>{{ shippingError }}</p>

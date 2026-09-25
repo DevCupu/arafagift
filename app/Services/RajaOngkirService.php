@@ -44,8 +44,34 @@ class RajaOngkirService
             }
         }
 
-        $cacheKey = 'rajaongkir:destinations:'.hash('sha256', $normalizedSearch);
-        $destinations = Cache::remember($cacheKey, now()->addWeek(), fn (): array => $this->fetchDestinations($normalizedSearch));
+        $searchHash = hash('sha256', $normalizedSearch);
+        $cacheKey = 'rajaongkir:destinations:'.$searchHash;
+        $fallbackKey = 'rajaongkir:fallback:'.$searchHash;
+
+        $cached = Cache::get($cacheKey);
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        try {
+            $destinations = $this->fetchDestinations($normalizedSearch);
+        } catch (RajaOngkirException $exception) {
+            // Upstream sedang bermasalah: tampilkan hasil yang pernah berhasil dimuat
+            // (last-known) agar pencarian kota tetap berfungsi dan checkout tidak macet.
+            $lastKnown = Cache::get($fallbackKey);
+            if (is_array($lastKnown)) {
+                if (mb_strlen($normalizedSearch) > 4) {
+                    $this->saveToPrefixCache($normalizedSearch, $lastKnown);
+                }
+
+                return $lastKnown;
+            }
+
+            throw $exception;
+        }
+
+        Cache::put($cacheKey, $destinations, now()->addWeek());
+        Cache::put($fallbackKey, $destinations, now()->addDays(30));
 
         if (mb_strlen($normalizedSearch) > 4) {
             $this->saveToPrefixCache($normalizedSearch, $destinations);
@@ -357,6 +383,24 @@ class RajaOngkirService
      * @param  array<string, scalar>  $context
      */
     private function send(string $operation, callable $callback, array $context = []): Response
+    {
+        $response = $this->requestUpstream($operation, $callback, $context);
+
+        // Upstream komerce rawan 5xx sekilas yang langsung sukses saat dicoba ulang.
+        if ($response->serverError()) {
+            Log::warning('RajaOngkir request returned 5xx; retrying once.', [
+                'operation' => $operation,
+                'upstream_status' => $response->status(),
+            ]);
+            usleep(150_000);
+
+            $response = $this->requestUpstream($operation, $callback, $context);
+        }
+
+        return $response;
+    }
+
+    private function requestUpstream(string $operation, callable $callback, array $context = []): Response
     {
         try {
             return $callback($this->request());
