@@ -13,9 +13,45 @@ const results = ref([])
 const loading = ref(false)
 const open = ref(false)
 const selectedLabel = ref(props.initialLabel)
+const failed = ref(false)
+const failureMessage = ref('')
 let searchTimer = null
 let searchController = null
 let searchSeq = 0
+
+const search = async (term, seq) => {
+  loading.value = true
+  failed.value = false
+  const controller = new AbortController()
+  searchController = controller
+  try {
+    const res = await fetch(`/api/shipping/destinations?search=${encodeURIComponent(term)}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    })
+    const payload = res.ok ? await res.json() : null
+    if (seq !== searchSeq) return
+    if (!res.ok || !payload?.success || !Array.isArray(payload.data)) {
+      results.value = []
+      failed.value = true
+      failureMessage.value = payload?.message || 'Gagal memuat daftar kota. Coba lagi.'
+      return
+    }
+    results.value = payload.data
+  } catch (error) {
+    if (seq !== searchSeq || error?.name === 'AbortError') return
+    results.value = []
+    failed.value = true
+    failureMessage.value = 'Gagal memuat daftar kota. Coba lagi.'
+  } finally {
+    if (seq === searchSeq) loading.value = false
+  }
+}
+
+const retry = () => {
+  searchSeq++
+  search(query.value.trim(), searchSeq)
+}
 
 watch(query, (q) => {
   clearTimeout(searchTimer)
@@ -23,30 +59,14 @@ watch(query, (q) => {
   searchSeq++
   const seq = searchSeq
   searchController?.abort()
+  results.value = []
+  failed.value = false
   if (term.length < 3) {
-    results.value = []
     loading.value = false
     return
   }
   loading.value = true
-  searchTimer = setTimeout(async () => {
-    const controller = new AbortController()
-    searchController = controller
-    try {
-      const res = await fetch(`/api/shipping/destinations?search=${encodeURIComponent(term)}`, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-      })
-      const payload = res.ok ? await res.json() : null
-      if (seq !== searchSeq) return
-      results.value = payload?.success && Array.isArray(payload.data) ? payload.data : []
-    } catch (error) {
-      if (seq !== searchSeq || error?.name === 'AbortError') return
-      results.value = []
-    } finally {
-      if (seq === searchSeq) loading.value = false
-    }
-  }, 700)
+  searchTimer = setTimeout(() => search(term, seq), 700)
 })
 
 const choose = (destination) => {
@@ -88,7 +108,13 @@ const reset = () => {
             {{ d.label }}
           </button>
         </li>
-        <li v-if="!loading && query.trim().length >= 3 && !results.length" class="px-3 py-2 text-[0.78rem] text-muted">Tidak ada kota yang cocok, coba kata kunci lain.</li>
+        <li v-if="failed" class="px-3 py-2">
+          <p class="text-[0.78rem] leading-relaxed text-muted">{{ failureMessage }}</p>
+          <button type="button" class="mt-1.5 text-[0.74rem] font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="retry">
+            Coba lagi
+          </button>
+        </li>
+        <li v-if="!loading && !failed && query.trim().length >= 3 && !results.length" class="px-3 py-2 text-[0.78rem] text-muted">Tidak ada kota yang cocok, coba kata kunci lain.</li>
       </ul>
     </template>
   </div>
