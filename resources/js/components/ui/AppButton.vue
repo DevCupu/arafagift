@@ -15,7 +15,7 @@ const props = defineProps({
 })
 
 const base =
-  'relative inline-flex select-none items-center justify-center gap-2 rounded border text-center font-medium tracking-wide transition duration-300 ease-calm disabled:cursor-not-allowed disabled:opacity-45'
+  'relative inline-flex select-none items-center justify-center gap-2 rounded-lg border text-center font-medium tracking-wide transition duration-300 ease-calm disabled:cursor-not-allowed disabled:opacity-45'
 
 const variants = {
   primary:

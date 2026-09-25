@@ -35,11 +35,11 @@ onBeforeUnmount(() => {
     >
       <div
         v-if="open"
-        class="fixed inset-x-0 bottom-0 z-[61] max-h-[92vh] overflow-y-auto border-t border-line bg-surface sm:inset-0 sm:m-auto sm:h-fit sm:max-w-3xl sm:border"
+        class="fixed inset-x-0 bottom-0 z-[61] max-h-[92vh] overflow-y-auto rounded-t-[1rem] border-t border-line bg-surface shadow-lift sm:inset-0 sm:m-auto sm:h-fit sm:max-w-3xl sm:rounded-[1rem] sm:border"
         role="dialog" :aria-label="label" aria-modal="true"
       >
         <button
-          class="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center border border-line bg-surface text-forest transition hover:bg-ivory"
+          class="absolute right-4 top-4 z-10 grid h-9 w-9 place-items-center rounded-lg border border-line bg-surface text-forest transition hover:bg-ivory"
           aria-label="Tutup" @click="emit('close')"
         >
           <X class="h-4 w-4" />

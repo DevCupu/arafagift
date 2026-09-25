@@ -17,8 +17,8 @@ defineProps({ content: { type: Object, required: true } })
       </a>
     </div>
 
-    <ul class="mt-10 grid grid-cols-2 gap-px overflow-hidden border border-line bg-line sm:grid-cols-3 lg:grid-cols-6">
-      <li v-for="(post, i) in content.posts" :key="i" class="group relative aspect-square bg-surface">
+    <ul class="mt-10 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+      <li v-for="(post, i) in content.posts" :key="i" class="group relative aspect-square overflow-hidden rounded-[0.5rem] border border-line bg-surface shadow-soft">
         <img v-if="post.image" :src="post.image" :alt="post.caption" class="h-full w-full object-cover" />
         <ProductArt v-else :art="post.art" :tone="i + 1" />
         <div

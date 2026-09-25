@@ -239,7 +239,7 @@ const bulkCtaHref = computed(() => {
                   <p class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-gold">{{ slide.badge }}</p>
                   <h2 class="mt-4 max-w-lg text-[2rem] leading-[1.05] text-ivory sm:text-[3.1rem]">{{ slide.title }}</h2>
                   <p class="mt-4 max-w-md text-[0.9rem] leading-relaxed text-ivory/70 sm:text-base">{{ slide.body }}</p>
-                  <span class="mt-6 inline-flex min-h-11 items-center gap-2 bg-gold px-5 py-2.5 text-[0.78rem] font-semibold text-forest-deep">{{ slide.cta }} <ArrowRight class="h-4 w-4" /></span>
+                  <span class="mt-6 inline-flex min-h-11 items-center gap-2 rounded-[0.5rem] bg-gold px-5 py-2.5 text-[0.78rem] font-semibold text-forest-deep">{{ slide.cta }} <ArrowRight class="h-4 w-4" /></span>
                 </div>
               </div>
             </a>
@@ -371,8 +371,8 @@ const bulkCtaHref = computed(() => {
           <h2 class="mt-6 max-w-lg text-[2.4rem] leading-[1.05] sm:text-[3.1rem]">{{ homeContent.signature.title }}</h2>
           <p class="mt-6 max-w-md text-[0.95rem] leading-relaxed text-muted">{{ homeContent.signature.body }}</p>
 
-          <ul class="mt-9 max-w-sm divide-y divide-line border-y border-line">
-            <li v-for="item in signatureProduct.includes" :key="item" class="flex items-center gap-3 py-3.5 text-[0.88rem] text-ink">
+          <ul class="mt-9 max-w-sm divide-y divide-line overflow-hidden rounded-[0.75rem] border border-line bg-surface shadow-soft">
+            <li v-for="item in signatureProduct.includes" :key="item" class="flex items-center gap-3 px-5 py-3.5 text-[0.88rem] text-ink">
               <span class="h-1 w-1 rotate-45 bg-gold" />{{ item }}
             </li>
           </ul>
