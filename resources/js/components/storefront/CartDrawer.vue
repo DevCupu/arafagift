@@ -37,7 +37,7 @@ onBeforeUnmount(() => {
     >
       <aside
         v-if="cart.drawerOpen.value"
-        class="fixed inset-y-0 right-0 z-[125] flex w-full flex-col border-l border-forest-soft/20 bg-ivory sm:max-w-md"
+        class="fixed inset-y-0 right-0 z-[125] flex w-full flex-col overflow-hidden rounded-l-[1rem] border-l border-forest-soft/20 bg-ivory shadow-lift sm:max-w-md"
         role="dialog" aria-modal="true" aria-label="Keranjang belanja"
       >
         <header class="flex items-center justify-between border-b border-line bg-forest-deep px-6 py-5">
@@ -50,9 +50,9 @@ onBeforeUnmount(() => {
           </button>
         </header>
 
-        <div v-if="cart.items.value.length" class="flex-1 overflow-y-auto px-6">
-          <ul class="divide-y divide-line">
-            <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 py-5">
+        <div v-if="cart.items.value.length" class="flex-1 overflow-y-auto px-5 py-5">
+          <ul class="space-y-3">
+            <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 rounded-[0.75rem] border border-line bg-surface p-3.5">
               <Link :href="`/produk/${item.slug}`" class="arch h-24 w-[72px] flex-none overflow-hidden border border-line" @click="cart.closeDrawer()">
                 <img v-if="item.image" :src="item.image" :alt="item.name" loading="lazy" class="h-full w-full object-cover" />
                 <ProductArt v-else :art="item.art" :tone="item.id" />
@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
             </li>
           </ul>
 
-          <div class="mb-6 mt-2 flex items-start gap-3 border border-dashed border-gold/40 bg-gold/[0.07] px-4 py-3.5">
+          <div class="mt-4 flex items-start gap-3 rounded-[0.6rem] border border-dashed border-gold/40 bg-gold/[0.07] px-4 py-3.5">
             <Gift class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
             <p class="text-[0.78rem] leading-relaxed text-forest">
               <span class="font-semibold">Gratis kartu ucapan.</span>

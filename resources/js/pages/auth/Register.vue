@@ -98,6 +98,7 @@ const confirmationError = computed(() => (isConfirmMismatch.value ? form.errors.
           <div>
             <label class="field-label" for="phone">Nomor WhatsApp (opsional)</label>
             <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" autocomplete="tel" />
+            <p v-if="form.errors.phone" class="mt-2 text-[0.78rem] text-danger">{{ form.errors.phone }}</p>
           </div>
 
           <div>

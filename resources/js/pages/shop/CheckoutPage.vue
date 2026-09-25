@@ -6,7 +6,7 @@ export default { layout: BareLayout }
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ArrowLeft, Check, ChevronUp, Gift, LockKeyhole, MapPin, MessageCircle, Truck, X } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, Check, ChevronUp, Gift, LockKeyhole, MapPin, MessageCircle, Truck, X } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import DestinationSearch from '@/components/shop/DestinationSearch.vue'
@@ -41,6 +41,14 @@ const steps = [
 ]
 const step = ref(1)
 const errors = reactive({})
+// Error dari server (abort 422 / field tanpa input langsung di halaman) ditampilkan sebagai banner,
+// bukan alert() — pesan asli seperti "Opsi pengiriman tidak lagi tersedia" tidak boleh hilang.
+const serverMessage = ref(null)
+const serverBanner = ref([])
+const clearServerFeedback = () => {
+  serverMessage.value = null
+  serverBanner.value = []
+}
 const addressModalOpen = ref(false)
 const openAddressModal = () => { addressModalOpen.value = true }
 const closeAddressModal = () => { addressModalOpen.value = false }
@@ -97,9 +105,11 @@ const toggleManualCity = () => {
   shippingOptions.value = []
   selectedShipping.value = null
   shippingUnavailable.value = manualCity.value
+  shippingError.value = null
 }
 
 const validate = (current) => {
+  clearServerFeedback()
   Object.keys(errors).forEach((k) => delete errors[k])
   if (current === 1) {
     if (form.street.trim().length < 8) errors.address = 'Tulis nama jalan dan nomor rumah.'
@@ -132,6 +142,7 @@ const hasFreeShipping = computed(() => freeShippingByCity.value || freeShippingB
 const shippingOptions = ref([])
 const shippingLoading = ref(false)
 const shippingUnavailable = ref(false)
+const shippingError = ref(null)
 const selectedShipping = ref(null)
 const shippingWeight = ref(null)
 
@@ -183,6 +194,7 @@ const fetchShipping = async () => {
   if (!form.destinationId) return
   shippingLoading.value = true
   shippingUnavailable.value = false
+  shippingError.value = null
   selectedShipping.value = null
   shippingOptions.value = []
   shippingWeight.value = null
@@ -199,7 +211,16 @@ const fetchShipping = async () => {
         items: cart.items.value.map((i) => ({ id: i.id, qty: i.qty })),
       }),
     })
-    const data = res.ok ? await res.json() : { available: false }
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      if (res.status >= 400 && res.status < 500 && data?.errors) {
+        shippingError.value = 'Produk atau jumlah di keranjang tidak valid untuk dihitung ongkirnya. Periksa kembali keranjang Anda.'
+      } else {
+        shippingUnavailable.value = true
+      }
+      return
+    }
+    const data = await res.json()
     if (!data.available || !data.options?.length) {
       shippingUnavailable.value = true
       return
@@ -227,6 +248,7 @@ const onDestinationSelect = (destination) => {
     shippingOptions.value = []
     selectedShipping.value = null
     shippingUnavailable.value = false
+    shippingError.value = null
     return
   }
   form.city = destination.city
@@ -235,6 +257,7 @@ const onDestinationSelect = (destination) => {
   shippingOptions.value = []
   selectedShipping.value = null
   shippingUnavailable.value = false
+  shippingError.value = null
   // Kota ini sudah pasti gratis ongkir, jadi tidak perlu meminta tarif ke RajaOngkir.
   if (hasFreeShipping.value) return
   fetchShipping()
@@ -282,6 +305,7 @@ const placedOrder = ref(null)
 
 const placeOrder = async () => {
   if (isGuest.value) return redirectToLogin()
+  clearServerFeedback()
   if (!validate(1) || !validate(2)) return
   if (submitting.value) return
   submitting.value = true
@@ -315,20 +339,39 @@ const placeOrder = async () => {
 
     if (!res.ok) {
       const data = await res.json().catch(() => null)
+      serverMessage.value = null
       if (data?.errors) {
-        const first = Object.values(data.errors)[0]
-        alert(Array.isArray(first) ? first[0] : 'Terjadi kesalahan. Coba lagi.')
+        let needsAddressStep = false
+        Object.entries(data.errors).forEach(([key, msgs]) => {
+          const message = Array.isArray(msgs) ? msgs[0] : msgs
+          if (!message) return
+          if (key === 'address') {
+            errors.address = message
+            needsAddressStep = true
+          } else if (key === 'city' || key === 'destination_id' || key === 'postal' || key === 'province') {
+            errors.destination = message
+            needsAddressStep = true
+          } else if (key === 'name' || key === 'phone') {
+            errors[key] = message
+          } else {
+            serverBanner.value.push(message)
+          }
+        })
+        if (needsAddressStep && step.value !== 1) step.value = 1
+      } else if (data?.message) {
+        serverMessage.value = data.message
       } else {
-        alert('Gagal menyimpan pesanan. Coba lagi.')
+        serverMessage.value = 'Gagal menyimpan pesanan. Coba lagi.'
       }
       return
     }
 
     placedOrder.value = await res.json()
     cart.clear()
+    clearServerFeedback()
     try { sessionStorage.removeItem(CHECKOUT_DRAFT_KEY) } catch { /* abaikan */ }
   } catch {
-    alert('Terjadi kesalahan jaringan. Coba lagi.')
+    serverMessage.value = 'Terjadi kesalahan jaringan. Coba lagi.'
   } finally {
     submitting.value = false
   }
@@ -406,6 +449,17 @@ onMounted(() => {
           <Link href="/koleksi" class="flex items-center gap-1.5 text-[0.78rem] text-muted transition hover:text-forest">
             <ArrowLeft class="h-3.5 w-3.5" /> Kembali berbelanja
           </Link>
+        </div>
+
+        <div v-if="serverMessage || serverBanner.length" role="alert" class="mt-6 flex items-start gap-3 border border-danger/40 bg-danger/[0.07] px-4 py-3.5 text-[0.82rem] leading-relaxed text-ink">
+          <AlertCircle class="mt-0.5 h-4 w-4 flex-none text-danger" :stroke-width="1.5" />
+          <p>
+            <span v-if="serverMessage">{{ serverMessage }}</span>
+            <template v-for="(msg, i) in serverBanner" :key="i">
+              <span v-if="i > 0" class="mt-1 block">{{ msg }}</span>
+              <span v-else>{{ msg }}</span>
+            </template>
+          </p>
         </div>
 
         <!-- Stepper: urutan checkout benar-benar berurutan -->
@@ -488,6 +542,10 @@ onMounted(() => {
                 <button type="button" class="mt-2 font-semibold text-forest underline underline-offset-4 transition hover:text-olive active:translate-y-px" @click="fetchShipping">
                   Coba hitung lagi
                 </button>
+              </div>
+              <div v-else-if="shippingError" class="border border-danger/35 bg-danger/[0.06] p-4 text-[0.8rem] leading-relaxed text-ink">
+                <p>{{ shippingError }}</p>
+                <Link href="/koleksi" class="mt-2 inline-block font-semibold text-forest underline underline-offset-4 transition hover:text-olive">Periksa keranjang Anda</Link>
               </div>
               <div v-else-if="shippingGroups.length" class="space-y-4">
                 <div class="flex flex-wrap items-end justify-between gap-2">
@@ -592,7 +650,9 @@ onMounted(() => {
           <dl class="mt-8 divide-y divide-line border-y border-line text-[0.87rem]">
             <div class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Pemesan</dt>
-              <dd class="text-right text-forest">{{ form.name }}<span class="block text-[0.78rem] text-muted">{{ form.phone }}<template v-if="form.email"> · {{ form.email }}</template></span></dd>
+              <dd class="text-right text-forest">{{ form.name }}<span class="block text-[0.78rem] text-muted">{{ form.phone }}<template v-if="form.email"> · {{ form.email }}</template></span>
+                <span v-if="errors.name || errors.phone" class="mt-1 block text-[0.75rem] text-danger">{{ errors.name || errors.phone }}</span>
+              </dd>
             </div>
             <div class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Kirim ke</dt>
@@ -722,57 +782,81 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Ringkasan: kartu panel konsisten dengan ringkasan di halaman keranjang (muncul di layar besar) -->
+      <!-- Ringkasan: kartu panel elevated, konsisten dengan drawer keranjang (layar besar) -->
       <aside class="hidden border-t border-line px-5 py-10 sm:px-10 lg:sticky lg:top-0 lg:h-[100dvh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:py-14 lg:block">
-        <div class="border border-line bg-surface p-7 sm:p-8">
-          <p class="eyebrow">Checkout</p>
-          <h2 class="mt-4 font-display text-2xl tracking-[-0.02em]">Ringkasan pesanan</h2>
-          <ul class="mt-7 space-y-5">
-          <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4">
-            <div class="relative flex-none">
-              <span class="arch block h-20 w-16 overflow-hidden border border-line">
-                <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
-                <ProductArt v-else :art="item.art" :tone="item.id" />
-              </span>
-              <span class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-forest text-[0.68rem] text-ivory">{{ item.qty }}</span>
+        <div class="rounded-[0.75rem] border border-line bg-surface p-6 shadow-soft sm:p-7">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="eyebrow">Checkout</p>
+              <h2 class="mt-3 font-display text-2xl tracking-[-0.02em]">Ringkasan pesanan</h2>
             </div>
-            <div class="flex-1">
-              <p class="font-display text-[1.1rem] leading-tight text-forest">{{ item.name }}</p>
-              <p class="mt-1 text-[0.75rem] text-muted">{{ formatIDR(item.price) }} × {{ item.qty }}</p>
-            </div>
-            <p class="text-[0.85rem] text-forest">{{ formatIDR(item.lineTotal) }}</p>
-          </li>
-        </ul>
+            <span class="flex-none rounded-full border border-line bg-ivory px-3 py-1 text-[0.72rem] font-semibold text-forest">{{ cart.count.value }} pcs</span>
+          </div>
 
-        <dl class="mt-8 space-y-3 border-t border-line pt-6 text-[0.87rem]">
-          <div class="flex justify-between">
-            <dt class="text-muted">Subtotal <span class="text-[0.72rem]">({{ cart.count.value }} pcs)</span></dt>
-            <dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd>
+          <ul class="mt-7 space-y-4">
+            <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4">
+              <div class="relative flex-none">
+                <span class="arch block h-20 w-16 overflow-hidden border border-line">
+                  <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
+                  <ProductArt v-else :art="item.art" :tone="item.id" />
+                </span>
+                <span class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-forest text-[0.68rem] text-ivory">{{ item.qty }}</span>
+              </div>
+              <div class="min-w-0 flex-1">
+                <p class="truncate font-display text-[1.02rem] leading-tight text-forest">{{ item.name }}</p>
+                <p class="mt-1 text-[0.75rem] text-muted">{{ formatIDR(item.price) }} × {{ item.qty }}</p>
+              </div>
+              <p class="flex-none text-[0.88rem] font-semibold text-forest">{{ formatIDR(item.lineTotal) }}</p>
+            </li>
+          </ul>
+
+          <dl class="mt-8 space-y-3.5 border-t border-line pt-6 text-[0.88rem]">
+            <div class="flex items-start justify-between gap-4">
+              <dt class="text-muted">Subtotal <span class="text-[0.72rem]">({{ cart.count.value }} pcs)</span></dt>
+              <dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd>
+            </div>
+            <div class="flex items-start justify-between gap-4">
+              <dt class="text-muted">Ongkos kirim</dt>
+              <dd class="text-right">
+                <template v-if="hasFreeShipping">
+                  <span class="inline-block rounded-full border border-olive/40 bg-olive/10 px-2.5 py-0.5 text-[0.72rem] font-semibold text-olive">Gratis</span>
+                </template>
+                <template v-else-if="selectedShipping">
+                  <span class="font-semibold text-forest">{{ formatIDR(selectedShipping.cost) }}</span>
+                  <span class="mt-1 block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
+                  <span class="block text-[0.68rem] text-muted/70">{{ selectedShipping.service }}. {{ etdText(selectedShipping.etd) }}</span>
+                  <span v-if="shippingWeight" class="block text-[0.68rem] text-muted/70">Berat {{ weightText(shippingWeight) }}</span>
+                </template>
+                <template v-else-if="shippingLoading">
+                  <span class="mt-0.5 block h-4 w-24 rounded bg-line motion-safe:animate-pulse" />
+                </template>
+                <template v-else-if="manualCity || form.destinationId">
+                  <span class="inline-block rounded-full border border-gold/40 bg-gold/[0.09] px-2.5 py-0.5 text-[0.72rem] font-medium text-forest">Dikonfirmasi via WhatsApp</span>
+                </template>
+                <template v-else><span class="text-muted">Isi kota tujuan dulu</span></template>
+              </dd>
+            </div>
+            <div v-if="cart.savings.value" class="flex items-center justify-between gap-4">
+              <dt class="text-muted">Anda hemat</dt>
+              <dd class="font-semibold text-olive">{{ formatIDR(cart.savings.value) }}</dd>
+            </div>
+            <div class="flex items-center justify-between gap-4">
+              <dt class="flex items-center gap-1.5 text-muted">
+                <Gift class="h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" /> Kartu ucapan
+              </dt>
+              <dd class="text-olive">Gratis</dd>
+            </div>
+          </dl>
+
+          <div class="mt-6 rounded-[0.6rem] bg-forest-deep px-5 py-4 text-ivory">
+            <div class="flex items-end justify-between gap-4">
+              <span class="text-[0.82rem] text-ivory/70">
+                <template v-if="shippingCostDisplay !== null">Total</template>
+                <template v-else>Estimasi total <span class="block text-[0.68rem]">(belum termasuk ongkir)</span></template>
+              </span>
+              <span class="font-display text-[1.9rem] leading-none tracking-[-0.02em]">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
+            </div>
           </div>
-          <div class="flex justify-between gap-4">
-            <dt class="text-muted">Ongkos kirim</dt>
-            <dd class="text-right" :class="shippingCostDisplay === 0 ? 'text-olive' : 'text-forest'">
-              <template v-if="hasFreeShipping">Gratis</template>
-              <template v-else-if="selectedShipping">
-                {{ formatIDR(selectedShipping.cost) }}
-                <span class="block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
-                <span class="block text-[0.68rem] text-muted/70">{{ selectedShipping.service }}. {{ etdText(selectedShipping.etd) }}</span>
-                <span v-if="shippingWeight" class="block text-[0.68rem] text-muted/70">Berat {{ weightText(shippingWeight) }}</span>
-              </template>
-              <template v-else-if="shippingLoading">Menghitung ongkos kirim…</template>
-              <template v-else-if="manualCity || form.destinationId">Dikonfirmasi via WhatsApp</template>
-              <template v-else>Isi kota tujuan dulu</template>
-            </dd>
-          </div>
-          <div class="flex justify-between"><dt class="text-muted">Kartu ucapan</dt><dd class="text-olive">Gratis</dd></div>
-        </dl>
-        <div class="mt-6 flex items-baseline justify-between border-t border-line pt-5">
-          <span class="text-[0.85rem] text-muted">
-            <template v-if="shippingCostDisplay !== null">Total</template>
-            <template v-else>Estimasi total <span class="block text-[0.72rem]">(belum termasuk ongkir)</span></template>
-          </span>
-          <span class="font-display text-3xl text-forest">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
-        </div>
         </div>
       </aside>
 
@@ -784,10 +868,10 @@ onMounted(() => {
         <Transition enter-active-class="transition duration-[420ms] ease-calm" enter-from-class="translate-y-full" leave-active-class="transition duration-300 ease-calm" leave-to-class="translate-y-full">
           <div
             v-if="summaryOpen"
-            class="fixed inset-x-0 bottom-0 z-[161] flex max-h-[85dvh] flex-col border-t border-forest-soft/20 bg-ivory sm:mx-auto sm:max-w-md"
+            class="fixed inset-x-0 bottom-0 z-[161] flex max-h-[85dvh] flex-col overflow-hidden rounded-t-[1rem] border-t border-forest-soft/20 bg-ivory shadow-lift sm:mx-auto sm:max-w-md"
             role="dialog" aria-modal="true" aria-label="Ringkasan pesanan"
           >
-            <header class="flex items-center justify-between border-b border-line bg-forest-deep px-6 py-5">
+            <header class="flex items-center justify-between border-b border-forest-soft/20 bg-forest-deep px-6 py-5">
               <h2 class="font-display text-2xl text-ivory">
                 Ringkasan pesanan
                 <span class="ml-1 align-middle text-[0.8rem] text-ivory/50">({{ cart.count.value }} pcs)</span>
@@ -797,9 +881,9 @@ onMounted(() => {
               </button>
             </header>
 
-            <div class="flex-1 overflow-y-auto px-6 py-2">
-              <ul class="divide-y divide-line">
-                <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 py-5">
+            <div class="flex-1 overflow-y-auto px-5 py-5">
+              <ul class="space-y-3">
+                <li v-for="item in cart.items.value" :key="item.id" class="flex gap-4 rounded-[0.75rem] border border-line bg-surface p-4">
                   <div class="relative flex-none">
                     <span class="arch block h-20 w-16 overflow-hidden border border-line">
                       <img v-if="item.image" :src="item.image" :alt="item.name" class="h-full w-full object-cover" />
@@ -807,42 +891,58 @@ onMounted(() => {
                     </span>
                     <span class="absolute -right-2 -top-2 grid h-6 w-6 place-items-center rounded-full bg-forest text-[0.68rem] text-ivory">{{ item.qty }}</span>
                   </div>
-                  <div class="flex-1">
-                    <p class="font-display text-[1.1rem] leading-tight text-forest">{{ item.name }}</p>
+                  <div class="min-w-0 flex-1">
+                    <p class="truncate font-display text-[1.02rem] leading-tight text-forest">{{ item.name }}</p>
                     <p class="mt-1 text-[0.75rem] text-muted">{{ formatIDR(item.price) }} × {{ item.qty }}</p>
                   </div>
-                  <p class="text-[0.85rem] text-forest">{{ formatIDR(item.lineTotal) }}</p>
+                  <p class="flex-none text-[0.88rem] font-semibold text-forest">{{ formatIDR(item.lineTotal) }}</p>
                 </li>
               </ul>
 
-              <dl class="mt-2 space-y-3 border-t border-line pt-5 text-[0.87rem]">
-                <div class="flex justify-between">
+              <dl class="mt-6 space-y-3.5 border-t border-line pt-5 text-[0.88rem]">
+                <div class="flex items-start justify-between gap-4">
                   <dt class="text-muted">Subtotal <span class="text-[0.72rem]">({{ cart.count.value }} pcs)</span></dt>
                   <dd class="text-forest">{{ formatIDR(cart.subtotal.value) }}</dd>
                 </div>
-                <div class="flex justify-between gap-4">
+                <div class="flex items-start justify-between gap-4">
                   <dt class="text-muted">Ongkos kirim</dt>
-                  <dd class="text-right" :class="shippingCostDisplay === 0 ? 'text-olive' : 'text-forest'">
-                    <template v-if="hasFreeShipping">Gratis</template>
+                  <dd class="text-right">
+                    <template v-if="hasFreeShipping">
+                      <span class="inline-block rounded-full border border-olive/40 bg-olive/10 px-2.5 py-0.5 text-[0.72rem] font-semibold text-olive">Gratis</span>
+                    </template>
                     <template v-else-if="selectedShipping">
-                      {{ formatIDR(selectedShipping.cost) }}
-                      <span class="block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
+                      <span class="font-semibold text-forest">{{ formatIDR(selectedShipping.cost) }}</span>
+                      <span class="mt-1 block text-[0.72rem] text-muted">{{ selectedShipping.courier_name || selectedShipping.courier.toUpperCase() }}</span>
                       <span class="block text-[0.68rem] text-muted/70">{{ selectedShipping.service }}. {{ etdText(selectedShipping.etd) }}</span>
                       <span v-if="shippingWeight" class="block text-[0.68rem] text-muted/70">Berat {{ weightText(shippingWeight) }}</span>
                     </template>
-                    <template v-else-if="shippingLoading">Menghitung ongkos kirim…</template>
-                    <template v-else-if="manualCity || form.destinationId">Dikonfirmasi via WhatsApp</template>
-                    <template v-else>Isi kota tujuan dulu</template>
+                    <template v-else-if="shippingLoading">
+                      <span class="mt-0.5 block h-4 w-24 rounded bg-line motion-safe:animate-pulse" />
+                    </template>
+                    <template v-else-if="manualCity || form.destinationId">
+                      <span class="inline-block rounded-full border border-gold/40 bg-gold/[0.09] px-2.5 py-0.5 text-[0.72rem] font-medium text-forest">Dikonfirmasi via WhatsApp</span>
+                    </template>
+                    <template v-else><span class="text-muted">Isi kota tujuan dulu</span></template>
                   </dd>
                 </div>
-                <div class="flex justify-between"><dt class="text-muted">Kartu ucapan</dt><dd class="text-olive">Gratis</dd></div>
+                <div v-if="cart.savings.value" class="flex items-center justify-between gap-4">
+                  <dt class="text-muted">Anda hemat</dt>
+                  <dd class="font-semibold text-olive">{{ formatIDR(cart.savings.value) }}</dd>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                  <dt class="flex items-center gap-1.5 text-muted">
+                    <Gift class="h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" /> Kartu ucapan
+                  </dt>
+                  <dd class="text-olive">Gratis</dd>
+                </div>
               </dl>
-              <div class="mt-5 flex items-baseline justify-between border-t border-line pt-5">
-                <span class="text-[0.85rem] text-muted">
+
+              <div class="mt-5 flex items-end justify-between gap-4 rounded-[0.6rem] bg-forest-deep px-5 py-4 text-ivory">
+                <span class="text-[0.82rem] text-ivory/70">
                   <template v-if="shippingCostDisplay !== null">Total</template>
-                  <template v-else>Estimasi total <span class="block text-[0.72rem]">(belum termasuk ongkir)</span></template>
+                  <template v-else>Estimasi total <span class="block text-[0.68rem]">(belum termasuk ongkir)</span></template>
                 </span>
-                <span class="font-display text-3xl text-forest">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
+                <span class="font-display text-[1.9rem] leading-none tracking-[-0.02em]">{{ formatIDR(shippingCostDisplay !== null ? grandTotal : cart.subtotal.value) }}</span>
               </div>
             </div>
 
