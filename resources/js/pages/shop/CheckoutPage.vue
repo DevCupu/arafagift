@@ -128,7 +128,15 @@ const validate = (current) => {
   return Object.keys(errors).length === 0
 }
 
-const next = () => { if (validate(step.value)) step.value = Math.min(steps.length, step.value + 1) }
+const next = () => {
+  const ok = validate(step.value)
+  if (ok) {
+    step.value = Math.min(steps.length, step.value + 1)
+    return
+  }
+  // Alamat belum diisi: buka modal isi alamat langsung supaya validasinya terlihat.
+  if (step.value === 1 && !form.street.trim()) openAddressModal()
+}
 const back = () => { step.value = Math.max(1, step.value - 1) }
 
 const freeShippingByCity = computed(() =>
@@ -497,7 +505,8 @@ onMounted(() => {
             <button
               v-if="!form.street.trim()"
               type="button"
-              class="flex w-full flex-col items-center gap-1 border border-dashed border-forest/30 bg-surface p-10 text-center transition hover:border-forest/60 hover:bg-ivory sm:p-12"
+              class="flex w-full flex-col items-center gap-1 border border-dashed bg-surface p-10 text-center transition hover:bg-ivory sm:p-12"
+              :class="errors.address || errors.destination ? 'border-danger/60' : 'border-forest/30 hover:border-forest/60'"
               @click="openAddressModal"
             >
               <span class="grid h-12 w-12 place-items-center rounded-full border border-gold/40 bg-gold/[0.08]">
@@ -506,6 +515,10 @@ onMounted(() => {
               <span class="mt-4 font-display text-xl text-forest">Tambah alamat pengiriman</span>
               <span class="mt-1 text-[0.8rem] text-muted">Dipakai untuk menghitung ongkir dan mengirim pesanan.</span>
             </button>
+            <p v-if="!form.street.trim() && (errors.address || errors.destination)" class="mt-3 flex items-start gap-2 text-[0.78rem] font-medium text-danger" role="alert">
+              <AlertCircle class="mt-0.5 h-3.5 w-3.5 flex-none" :stroke-width="1.5" />
+              {{ errors.address || errors.destination }}
+            </p>
 
             <div v-else class="border border-line bg-surface p-5 sm:p-6">
               <div class="flex items-start justify-between gap-4">
