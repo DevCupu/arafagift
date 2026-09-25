@@ -8,7 +8,7 @@ defineProps({ occasion: { type: Object, required: true } })
 <template>
   <Link
     :href="`/koleksi?untuk=${occasion.slug}`"
-    class="group flex items-center justify-between gap-4 border border-line bg-surface px-5 py-5 transition duration-300 ease-calm hover:border-olive/50 hover:bg-ivory"
+    class="group flex items-center justify-between gap-4 rounded-[0.75rem] border border-line bg-surface px-5 py-5 transition duration-300 ease-calm hover:border-olive/50 hover:bg-ivory hover:shadow-soft"
   >
     <div class="min-w-0">
       <h3 class="font-display text-[1.22rem] leading-none">{{ occasion.title }}</h3>

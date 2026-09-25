@@ -8,7 +8,7 @@ defineProps({ items: { type: Array, default: () => [] } })
     <figure
       v-for="(t, i) in items"
       :key="t.name"
-      class="flex flex-col border border-line bg-surface p-7"
+      class="flex flex-col rounded-[0.75rem] border border-line bg-surface p-7 shadow-soft"
       :class="i === 0 ? 'md:bg-forest md:text-ivory' : ''"
     >
       <AppRating :value="t.rating" />
