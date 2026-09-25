@@ -1,6 +1,5 @@
 import { createInertiaApp } from '@inertiajs/vue3'
 import { createApp, h } from 'vue'
-import { MotionPlugin } from 'motion-v'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { reveal } from './composables/useReveal'
 import StorefrontLayout from './layouts/StorefrontLayout.vue'
@@ -15,7 +14,6 @@ createInertiaApp({
   setup({ el, App, props, plugin }) {
     createApp({ render: () => h(App, props) })
       .use(plugin)
-      .use(MotionPlugin)
       .directive('reveal', reveal)
       .mount(el)
   },

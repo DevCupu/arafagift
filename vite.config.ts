@@ -27,4 +27,14 @@ export default defineConfig({
             '@': fileURLToPath(new URL('./resources/js', import.meta.url)),
         },
     },
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules/vue/') || id.includes('node_modules/@vue/')) return 'vue'
+                    if (id.includes('node_modules/@inertiajs/vue3')) return 'inertia'
+                },
+            },
+        },
+    },
 });

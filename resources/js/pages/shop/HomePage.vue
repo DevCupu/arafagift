@@ -1,7 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { ArrowRight, Check, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
+import { ArrowRight, Check, ChevronLeft, ChevronRight, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import ProductCard from '@/components/storefront/ProductCard.vue'
@@ -41,6 +41,54 @@ const hero = homeContent.hero
 const heroImg = hero.image || heroImgFallback
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
+const adRail = ref(null)
+const activeAd = ref(0)
+let adTimer = null
+
+const adSlides = computed(() => [
+  {
+    image: heroImg,
+    badge: 'Koleksi Pilihan',
+    title: 'Hadiah yang sampai bersama doa.',
+    body: 'Pilihan oleh-oleh elegan untuk keluarga dan orang-orang terkasih.',
+    cta: 'Jelajahi koleksi',
+    href: '/koleksi',
+  },
+  {
+    image: '/images/assets/gift-worth-remembering.webp',
+    badge: 'Signature Gift Set',
+    title: 'Satu box untuk momen yang diingat.',
+    body: 'Isi lengkap, kemasan rapi, siap diberikan tanpa perlu dibungkus ulang.',
+    cta: 'Lihat gift set',
+    href: '/koleksi/gift-set',
+  },
+  {
+    image: '/images/assets/souvenir-satu-rombongan.webp',
+    badge: 'Untuk Rombongan',
+    title: 'Souvenir seragam, rapi, dan berkesan.',
+    body: 'Pesan mulai 50 pcs dengan kartu nama jamaah dan pengiriman terkoordinasi.',
+    cta: 'Konsultasi sekarang',
+    href: '/faq',
+  },
+])
+
+const scrollAds = (index) => {
+  const nextIndex = (index + adSlides.value.length) % adSlides.value.length
+  activeAd.value = nextIndex
+  adRail.value?.children[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+}
+
+const pauseAds = () => window.clearInterval(adTimer)
+const resumeAds = () => {
+  window.clearInterval(adTimer)
+  adTimer = window.setInterval(() => scrollAds(activeAd.value + 1), 5500)
+}
+
+onMounted(() => {
+  resumeAds()
+})
+
+onUnmounted(() => window.clearInterval(adTimer))
 
 const bulkCtaHref = computed(() => {
   const href = homeContent.bulk.cta.href
@@ -168,6 +216,88 @@ const bulkCtaHref = computed(() => {
       </div>
     </section>
 
+    <!-- ============ AD SLIDER ============ -->
+    <section class="border-y border-line bg-surface py-8 sm:py-12" aria-label="Promo ArafahGift">
+      <div class="shell">
+        <div class="relative overflow-hidden border border-forest/20 bg-forest-deep" v-reveal>
+          <div
+            ref="adRail"
+            class="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
+            @mouseenter="pauseAds"
+            @mouseleave="resumeAds"
+          >
+            <a
+              v-for="slide in adSlides"
+              :key="slide.title"
+              :href="slide.href"
+              class="relative min-w-full snap-start overflow-hidden"
+            >
+              <img :src="slide.image" :alt="slide.title" class="absolute inset-0 h-full w-full object-cover opacity-55" loading="lazy" />
+              <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/80 to-forest-deep/25" />
+              <div class="relative z-10 flex min-h-[300px] items-end p-6 sm:min-h-[340px] sm:p-10 lg:min-h-[380px] lg:p-14">
+                <div class="max-w-xl">
+                  <p class="text-[0.68rem] font-semibold uppercase tracking-[0.22em] text-gold">{{ slide.badge }}</p>
+                  <h2 class="mt-4 max-w-lg text-[2rem] leading-[1.05] text-ivory sm:text-[3.1rem]">{{ slide.title }}</h2>
+                  <p class="mt-4 max-w-md text-[0.9rem] leading-relaxed text-ivory/70 sm:text-base">{{ slide.body }}</p>
+                  <span class="mt-6 inline-flex min-h-11 items-center gap-2 bg-gold px-5 py-2.5 text-[0.78rem] font-semibold text-forest-deep">{{ slide.cta }} <ArrowRight class="h-4 w-4" /></span>
+                </div>
+              </div>
+            </a>
+          </div>
+          <div class="absolute bottom-6 right-6 z-20 flex items-center gap-2 sm:bottom-8 sm:right-10">
+            <button
+              type="button"
+              class="grid h-9 w-9 place-items-center border border-ivory/30 bg-forest-deep/50 text-ivory backdrop-blur transition hover:border-gold hover:text-gold active:scale-95"
+              aria-label="Iklan sebelumnya"
+              title="Iklan sebelumnya"
+              @click.prevent="scrollAds(activeAd - 1)"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              class="grid h-9 w-9 place-items-center border border-ivory/30 bg-forest-deep/50 text-ivory backdrop-blur transition hover:border-gold hover:text-gold active:scale-95"
+              aria-label="Iklan berikutnya"
+              title="Iklan berikutnya"
+              @click.prevent="scrollAds(activeAd + 1)"
+            >
+              <ChevronRight class="h-4 w-4" />
+            </button>
+          </div>
+          <div class="absolute bottom-9 left-6 z-20 flex gap-1.5 sm:bottom-11 sm:left-10">
+            <button
+              v-for="(_, i) in adSlides"
+              :key="i"
+              type="button"
+              class="h-1.5 transition-all"
+              :class="i === activeAd ? 'w-8 bg-gold' : 'w-3 bg-ivory/45 hover:bg-ivory/75'"
+              :aria-label="`Tampilkan iklan ${i + 1}`"
+              @click="scrollAds(i)"
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ OCCASION ============ -->
+    <section class="shell py-16 sm:py-24">
+      <SectionHeader
+        title="Untuk siapa hadiah ini?"
+        sub="Kadang lebih mudah memulai dari orangnya, bukan dari produknya."
+        v-reveal
+      />
+      <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" v-reveal>
+        <div
+          v-for="(o, i) in occasions"
+          :key="o.slug"
+          class="reveal-child"
+          :style="{ '--reveal-delay': `${i * 60}ms` }"
+        >
+          <OccasionCard :occasion="o" />
+        </div>
+      </div>
+    </section>
+
     <!-- ============ KATEGORI ============ -->
     <section class="shell py-16 sm:py-24">
       <div class="flex flex-wrap items-end justify-between gap-6" v-reveal>
@@ -226,6 +356,8 @@ const bulkCtaHref = computed(() => {
               src="/images/assets/gift-worth-remembering.webp"
               alt="Gift set ArafahGift diserahkan sebagai hadiah"
               class="aspect-[5/6] w-full object-contain"
+              loading="lazy"
+              decoding="async"
             />
           </div>
           <div class="absolute -right-3 bottom-12 border border-gold/40 bg-forest-deep px-5 py-3">
@@ -276,6 +408,7 @@ const bulkCtaHref = computed(() => {
               alt="Keluarga membuka gift set ArafahGift bersama"
               class="aspect-[16/9] w-full object-cover"
               loading="lazy"
+              decoding="async"
             />
             <div class="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-forest-deep/75 to-transparent" />
             <figcaption class="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2.5 sm:inset-x-10 sm:bottom-6 sm:gap-4">
@@ -287,23 +420,6 @@ const bulkCtaHref = computed(() => {
             </figcaption>
           </div>
         </figure>
-      </div>
-    </section>
-
-    <!-- ============ OCCASION ============ -->
-    <section class="shell py-16 sm:py-24">
-      <SectionHeader
-        title="Untuk siapa hadiah ini?"
-        sub="Kadang lebih mudah memulai dari orangnya, bukan dari produknya." v-reveal
-      />
-      <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" v-reveal>
-        <div
-          v-for="(o, i) in occasions" :key="o.slug"
-          class="reveal-child"
-          :style="{ '--reveal-delay': `${i * 60}ms` }"
-        >
-          <OccasionCard :occasion="o" />
-        </div>
       </div>
     </section>
 
@@ -329,6 +445,8 @@ const bulkCtaHref = computed(() => {
             src="/images/assets/souvenir-satu-rombongan.webp"
             alt="Souvenir seragam untuk pesanan rombongan"
             class="absolute inset-0 h-full w-full object-cover"
+            loading="lazy"
+            decoding="async"
           />
           <div class="absolute inset-x-8 bottom-8 border border-forest-soft/40 bg-forest-deep/90 px-5 py-4 backdrop-blur">
             <p class="font-display text-[1.15rem] leading-snug text-ivory">240 pouch untuk rombongan Solo</p>
@@ -343,13 +461,15 @@ const bulkCtaHref = computed(() => {
       <div class="shell grid gap-12 py-16 lg:grid-cols-[1fr_1.1fr] lg:gap-20 lg:py-24">
         <div class="flex gap-4" v-reveal>
           <div class="arch mt-10 h-56 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
-            <img src="/images/assets/img-4.webp" alt="Persiapan oleh-oleh sebelum pulang" class="h-full w-full object-cover" />
+            <img src="/images/assets/img-4.webp" alt="Persiapan oleh-oleh sebelum pulang" class="h-full w-full object-cover" loading="lazy" decoding="async" />
           </div>
           <div class="arch h-64 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
             <img
               src="/images/assets/perjalanan-pulang-membawa-cerita.webp"
               alt="Perlengkapan perjalanan dan gift set ArafahGift"
               class="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
         </div>
