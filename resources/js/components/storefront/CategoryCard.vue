@@ -11,7 +11,7 @@ defineProps({
 
 <template>
   <Link :href="`/koleksi/${category.slug}`" class="group block">
-    <div class="arch aspect-[3/4] overflow-hidden border border-line bg-surface relative">
+    <div class="arch aspect-[3/4] overflow-hidden border border-line bg-surface relative transition duration-300 ease-calm group-hover:shadow-lift">
       <div class="h-full w-full transition-transform duration-[900ms] ease-calm group-hover:scale-[1.05]">
         <!-- Foto nyata jika tersedia, fallback ke SVG ilustrasi -->
         <img
