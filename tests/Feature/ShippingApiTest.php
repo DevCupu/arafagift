@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 beforeEach(function () {
@@ -87,6 +88,51 @@ it('returns a consistent response when RajaOngkir fails', function () {
             'message' => 'RajaOngkir gagal memproses permintaan.',
             'data' => null,
         ]);
+});
+
+it('retries once and recovers when the upstream returns a 5xx then succeeds', function () {
+    $success = '{"meta":{"code":200,"status":"success"},"data":[{'.
+        '"id":17473,"label":"Bontoala, Makassar, Sulawesi Selatan, 90156",'.
+        '"province_name":"Sulawesi Selatan","city_name":"Makassar",'.
+        '"district_name":"Bontoala","subdistrict_name":"Bontoala","zip_code":"90156"}]}';
+
+    Http::fake([
+        'rajaongkir.komerce.id/*' => Http::sequence()
+            ->push('{"meta":{"code":500,"status":"error","message":"Server Error"},"data":null}', 500)
+            ->push($success, 200),
+    ]);
+
+    $this->getJson('/api/shipping/destinations?search=Makassar')
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.0.subdistrict_id', '17473');
+
+    Http::assertSentCount(2);
+});
+
+it('serves last-known cached destinations when the upstream keeps failing', function () {
+    Cache::put('rajaongkir:fallback:'.hash('sha256', 'makassar'), [[
+        'id' => '17473',
+        'subdistrict_id' => '17473',
+        'label' => 'Bontoala, Makassar (hasil sebelumnya)',
+        'city' => 'Makassar',
+        'province' => 'Sulawesi Selatan',
+        'district' => 'Bontoala',
+        'subdistrict' => 'Bontoala',
+        'zip' => '90156',
+    ]], now()->addDay());
+
+    Http::fake([
+        'rajaongkir.komerce.id/*' => Http::response(['meta' => ['code' => 500, 'status' => 'error'], 'data' => null], 500),
+    ]);
+
+    $this->getJson('/api/shipping/destinations?search=Makassar')
+        ->assertOk()
+        ->assertJsonPath('success', true)
+        ->assertJsonPath('data.0.subdistrict_id', '17473')
+        ->assertJsonPath('data.0.label', 'Bontoala, Makassar (hasil sebelumnya)');
+
+    Http::assertSentCount(2);
 });
 
 it('rejects invalid shipping cost input', function () {
