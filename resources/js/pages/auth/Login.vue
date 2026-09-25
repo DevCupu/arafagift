@@ -8,6 +8,10 @@ defineOptions({ layout: null })
 
 defineProps({ checkoutRedirect: { type: Boolean, default: false } })
 
+// Teruskan url balik (?redirect=) saat pindah ke halaman daftar biar flow checkout tidak putus.
+const redirectTo = new URLSearchParams(window.location.search).get('redirect')
+const withRedirect = (path) => (redirectTo ? `${path}?redirect=${encodeURIComponent(redirectTo)}` : path)
+
 const form = useForm({
   email: '',
   password: '',
@@ -111,7 +115,7 @@ const submit = () => {
         </form>
 
         <p class="mt-10 text-center text-[0.72rem] text-muted">
-          Belum punya akun? <Link href="/register" class="text-forest underline underline-offset-4">Daftar</Link>
+          Belum punya akun? <Link :href="withRedirect('/register')" class="text-forest underline underline-offset-4">Daftar</Link>
           · <Link href="/" class="text-forest underline underline-offset-4">Kembali ke storefront</Link>
         </p>
       </div>

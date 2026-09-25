@@ -45,3 +45,35 @@ it('blocks guests from the account area and sends them to login', function () {
     $this->get(route('account.wishlist'))->assertRedirect(route('login'));
     $this->get(route('account.address'))->assertRedirect(route('login'));
 });
+
+it('returns a customer to checkout after logging in mid-checkout', function () {
+    $customer = User::factory()->create(['is_admin' => false]);
+
+    $this->get('/login?redirect=/checkout')->assertOk();
+
+    $this->post(route('login'), [
+        'email' => $customer->email,
+        'password' => 'password',
+    ])->assertRedirect('/checkout');
+});
+
+it('returns a new customer to checkout after registering mid-checkout', function () {
+    $this->get('/register?redirect=/checkout')->assertOk();
+
+    $this->post(route('register'), [
+        'name' => 'Budi Santoso',
+        'email' => 'budi@example.com',
+        'phone' => '081234567890',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+    ])->assertRedirect('/checkout');
+});
+
+it('ignores external redirect targets passed via the login page', function () {
+    $customer = User::factory()->create(['is_admin' => false]);
+
+    $this->post('/login?redirect=https://evil.example', [
+        'email' => $customer->email,
+        'password' => 'password',
+    ])->assertRedirect(route('account'));
+});

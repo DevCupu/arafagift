@@ -14,8 +14,14 @@ use Inertia\Response;
 
 class RegisteredUserController extends Controller
 {
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        // Terima url balik lewat ?redirect= soalnya /checkout kini boleh dibuka tamu (lihat CheckoutPage).
+        $intended = $request->query('redirect');
+        if (is_string($intended) && str_starts_with($intended, '/') && ! str_starts_with($intended, '//')) {
+            redirect()->setIntendedUrl($intended);
+        }
+
         return Inertia::render('auth/Register', [
             'checkoutRedirect' => str_contains((string) redirect()->getIntendedUrl(), '/checkout'),
         ]);

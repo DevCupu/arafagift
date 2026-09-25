@@ -4,9 +4,9 @@ export default { layout: BareLayout }
 </script>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { ArrowLeft, Check, Gift, MessageCircle, Truck } from 'lucide-vue-next'
+import { ArrowLeft, Check, Gift, LockKeyhole, MessageCircle, Truck } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import DestinationSearch from '@/components/shop/DestinationSearch.vue'
@@ -20,6 +20,18 @@ const page = usePage()
 const store = computed(() => page.props.store)
 
 const cart = useCart()
+
+// Tamu boleh melihat & mengisi halaman checkout dulu; login baru diminta saat "Buat Pesanan".
+// Isian disimpan sementara biar tidak hilang saat pindah ke halaman login.
+const CHECKOUT_DRAFT_KEY = 'arafahgift.checkout.draft'
+const isGuest = computed(() => !page.props.auth?.user)
+
+const redirectToLogin = () => {
+  try {
+    sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({ form: { ...form }, manualCity: manualCity.value }))
+  } catch { /* mode privat: abaikan */ }
+  window.location.assign(`/login?redirect=${encodeURIComponent('/checkout')}`)
+}
 
 const steps = [
   { id: 1, label: 'Data pemesan' },
@@ -243,6 +255,7 @@ const submitting = ref(false)
 const placedOrder = ref(null)
 
 const placeOrder = async () => {
+  if (isGuest.value) return redirectToLogin()
   if (!validate(1) || !validate(2)) return
   if (submitting.value) return
   submitting.value = true
@@ -287,6 +300,7 @@ const placeOrder = async () => {
 
     placedOrder.value = await res.json()
     cart.clear()
+    try { sessionStorage.removeItem(CHECKOUT_DRAFT_KEY) } catch { /* abaikan */ }
   } catch {
     alert('Terjadi kesalahan jaringan. Coba lagi.')
   } finally {
@@ -299,6 +313,19 @@ const confirmViaWhatsapp = () => {
   const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWaMessage(placedOrder.value))}`
   window.open(url, '_blank', 'noopener')
 }
+
+onMounted(() => {
+  const raw = sessionStorage.getItem(CHECKOUT_DRAFT_KEY)
+  if (!raw) return
+  try {
+    const draft = JSON.parse(raw)
+    if (draft?.form) Object.assign(form, draft.form)
+    manualCity.value = !!draft?.manualCity
+  } catch { /* draft korup: abaikan */ }
+  sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
+  if (!manualCity.value && form.destinationId && !hasFreeShipping.value) fetchShipping()
+  else shippingUnavailable.value = manualCity.value
+})
 </script>
 
 <template>
@@ -581,13 +608,17 @@ const confirmViaWhatsapp = () => {
 
         <div class="mt-10 flex items-center gap-3">
           <AppButton v-if="step > 1" variant="quiet" size="lg" @click="back">Kembali</AppButton>
-          <AppButton v-if="step < 3" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" @click="next">Lanjut</AppButton>
-          <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" @click="placeOrder">
+          <AppButton v-if="step < 3" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" :disabled="shippingLoading" @click="next">Lanjut</AppButton>
+          <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" :disabled="shippingLoading" @click="placeOrder">
             Buat Pesanan
           </AppButton>
         </div>
         <p class="mt-5 text-[0.72rem] text-muted">
           Metode bayar dikonfirmasi langsung di chat WhatsApp.
+        </p>
+        <p v-if="isGuest && step === 3" class="mt-4 flex items-start gap-2 border border-gold/40 bg-gold/[0.07] p-3 text-[0.78rem] leading-relaxed text-forest">
+          <LockKeyhole class="mt-0.5 h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" />
+          Anda akan diminta masuk akun dulu saat membuat pesanan. Keranjang dan isian ini tetap tersimpan.
         </p>
       </div>
 

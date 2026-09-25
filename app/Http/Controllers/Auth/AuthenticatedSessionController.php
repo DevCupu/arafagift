@@ -15,8 +15,14 @@ class AuthenticatedSessionController extends Controller
     /**
      * Display the login view.
      */
-    public function create(): Response
+    public function create(Request $request): Response
     {
+        // Halaman checkout kini terbuka untuk tamu; url balik dikirim lewat ?redirect= saat "Buat Pesanan".
+        $intended = $request->query('redirect');
+        if (is_string($intended) && str_starts_with($intended, '/') && ! str_starts_with($intended, '//')) {
+            redirect()->setIntendedUrl($intended);
+        }
+
         return Inertia::render('auth/Login', [
             'checkoutRedirect' => str_contains((string) redirect()->getIntendedUrl(), '/checkout'),
         ]);
