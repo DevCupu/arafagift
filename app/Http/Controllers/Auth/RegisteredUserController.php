@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Phone;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,11 +30,15 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        $request->merge(['phone' => $request->filled('phone') ? Phone::normalize((string) $request->input('phone')) : null]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'regex:/^0[0-9]{8,15}$/'],
             'password' => ['required', 'confirmed', Password::defaults()],
+        ], [
+            'phone.regex' => 'Format nomor WhatsApp tidak valid (contoh: 081234567890).',
         ]);
 
         $user = User::create([

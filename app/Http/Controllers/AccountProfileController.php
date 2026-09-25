@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\Phone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -20,11 +21,15 @@ class AccountProfileController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
+        $request->merge(['phone' => Phone::normalize((string) $request->input('phone', ''))]);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($request->user())],
-            'phone' => ['nullable', 'string', 'max:30'],
+            'phone' => ['nullable', 'string', 'regex:/^0[0-9]{8,15}$/'],
             'birth_date' => ['nullable', 'date'],
+        ], [
+            'phone.regex' => 'Format nomor WhatsApp tidak valid (contoh: 081234567890).',
         ]);
 
         $request->user()->update($validated);

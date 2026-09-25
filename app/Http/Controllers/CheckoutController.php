@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Services\OrderPricing;
 use App\Services\RajaOngkirService;
+use App\Support\Phone;
 use App\Support\StoreSettingsCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,14 +20,16 @@ class CheckoutController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $request->merge(['phone' => Phone::normalize((string) $request->input('phone', ''))]);
+
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:100'],
-            'phone' => ['required', 'string', 'max:30'],
+            'name' => ['required', 'string', 'min:3', 'max:100'],
+            'phone' => ['required', 'string', 'regex:/^0[0-9]{8,15}$/'],
             'email' => ['nullable', 'string', 'email', 'max:255'],
-            'address' => ['required', 'string', 'max:500'],
-            'city' => ['required', 'string', 'max:100'],
+            'address' => ['required', 'string', 'min:8', 'max:500'],
+            'city' => ['required', 'string', 'min:2', 'max:100'],
             'province' => ['nullable', 'string', 'max:100'],
-            'postal' => ['nullable', 'string', 'max:10'],
+            'postal' => ['nullable', 'string', 'regex:/^[0-9]{5}$/'],
             // Nullable: kalau pencarian tujuan/ongkir RajaOngkir gagal total di sisi pelanggan, checkout tetap
             // boleh lanjut manual (lihat resolveShipping) daripada memblokir pemesanan.
             'destination_id' => ['nullable', 'string', 'max:50'],
@@ -38,6 +41,12 @@ class CheckoutController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.id' => ['required', 'integer'],
             'items.*.qty' => ['required', 'integer', 'min:1', 'max:99'],
+        ], [
+            'name.min' => 'Nama lengkap terlalu pendek.',
+            'phone.regex' => 'Format nomor WhatsApp tidak valid (contoh: 081234567890).',
+            'address.min' => 'Tulis alamat lebih lengkap (jalan & nomor rumah).',
+            'city.min' => 'Isi kota atau kabupaten tujuan.',
+            'postal.regex' => 'Kode pos harus 5 angka.',
         ]);
 
         $ids = array_values(array_unique(array_column($validated['items'], 'id')));
