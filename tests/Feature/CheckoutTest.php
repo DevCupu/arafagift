@@ -43,8 +43,8 @@ it('rejects checkout when the requested quantity exceeds available stock', funct
     expect(Order::count())->toBe(0);
 });
 
-it('blocks checkout for guests, sending them to login', function () {
-    $this->get('/checkout')->assertRedirect('/login');
+it('lets guests view checkout but requires login to place the order', function () {
+    $this->get('/checkout')->assertStatus(200);
 
     $product = Product::factory()->create(['stock' => 5]);
     $this->postJson('/checkout', checkoutPayload([

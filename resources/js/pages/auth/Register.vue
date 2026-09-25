@@ -10,6 +10,10 @@ defineOptions({ layout: null })
 
 defineProps({ checkoutRedirect: { type: Boolean, default: false } })
 
+// Teruskan url balik (?redirect=) saat pindah ke halaman masuk biar flow checkout tidak putus.
+const redirectTo = new URLSearchParams(window.location.search).get('redirect')
+const withRedirect = (path) => (redirectTo ? `${path}?redirect=${encodeURIComponent(redirectTo)}` : path)
+
 const form = useForm({
   name: '',
   email: '',
@@ -115,7 +119,7 @@ const confirmationError = computed(() => (isConfirmMismatch.value ? form.errors.
         </form>
 
         <p class="mt-10 text-center text-[0.72rem] text-muted">
-          Sudah punya akun? <Link href="/login" class="text-forest underline underline-offset-4">Masuk</Link>
+          Sudah punya akun? <Link :href="withRedirect('/login')" class="text-forest underline underline-offset-4">Masuk</Link>
         </p>
       </div>
     </main>
