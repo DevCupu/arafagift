@@ -211,6 +211,7 @@ class ContentController extends Controller
         Faq::create($validated);
 
         Cache::forget('home-payload');
+        Cache::forget('faq-list');
 
         return back();
     }
@@ -225,6 +226,7 @@ class ContentController extends Controller
         $faq->update($validated);
 
         Cache::forget('home-payload');
+        Cache::forget('faq-list');
 
         return back();
     }
@@ -234,6 +236,7 @@ class ContentController extends Controller
         $faq->delete();
 
         Cache::forget('home-payload');
+        Cache::forget('faq-list');
 
         return back();
     }
@@ -248,6 +251,7 @@ class ContentController extends Controller
         Faq::whereIn('id', $validated['ids'])->delete();
 
         Cache::forget('home-payload');
+        Cache::forget('faq-list');
 
         return back();
     }
@@ -264,6 +268,7 @@ class ContentController extends Controller
         }
 
         Cache::forget('home-payload');
+        Cache::forget('faq-list');
 
         return back();
     }

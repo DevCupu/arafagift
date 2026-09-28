@@ -44,6 +44,7 @@ const discount = computed(() =>
             :src="product.image"
             :alt="product.name"
             loading="lazy"
+            decoding="async"
             class="h-full w-full object-contain object-center"
           />
         </div>

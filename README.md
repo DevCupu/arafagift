@@ -31,6 +31,34 @@ Build produksi:
 npm run build             # hasil di public/build/
 ```
 
+### Deploy untuk trafik ramai
+
+Jangan jalankan production dengan `php artisan serve`. Gunakan Nginx/Apache +
+PHP-FPM, lalu jalankan cache deployment Laravel setiap rilis:
+
+```bash
+npm ci
+npm run build
+php artisan migrate --force
+php artisan optimize
+php artisan app:cache-warm
+```
+
+Untuk lebih dari satu instance aplikasi, gunakan Redis agar cache, session, dan
+queue konsisten serta tidak membebani database utama:
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+CACHE_STORE=redis
+SESSION_DRIVER=redis
+QUEUE_CONNECTION=redis
+```
+
+Jalankan worker queue dengan process manager (misalnya Supervisor/systemd), dan
+pastikan `public/.htaccess` atau konfigurasi Nginx setara tetap mengaktifkan
+Brotli/Gzip serta cache immutable untuk `/build/assets/`.
+
 ## RajaOngkir API V2
 
 Integrasi ongkir menggunakan Direct Search Method resmi RajaOngkir. Simpan API key hanya

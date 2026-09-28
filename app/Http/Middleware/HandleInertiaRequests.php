@@ -42,21 +42,32 @@ class HandleInertiaRequests extends Middleware
         // ponytail: 10-min TTL, invalidated explicitly on save (ContentController/AdminSettingsController) — no need for
         // anything smarter at this scale. Caching plain arrays, not the Eloquent models — caching model instances hits
         // PHP unserialize() class-loading-order issues on some cache drivers.
-        $homeData = Cache::remember('home-content', now()->addMinutes(10), fn () => Content::where('key', 'home')->first()?->data);
-        $store = StoreSettingsCache::store();
-
         return [
             ...parent::share($request),
             'name' => config('app.name'),
-            'auth' => [
-                'user' => $request->user(),
-                'wishlistIds' => $request->user() ? $request->user()->wishlists()->pluck('product_id') : [],
-            ],
-            'pendingOrdersCount' => $request->user()?->is_admin
-                ? Cache::remember('pending-orders-count', now()->addMinutes(5), fn () => Order::where('status', 'pending')->count())
+            // Closure mencegah cache/database disentuh pada partial reload
+            // Inertia yang tidak meminta prop bersama ini.
+            'auth' => function () use ($request): array {
+                $user = $request->user();
+
+                return [
+                    'user' => $user,
+                    'wishlistIds' => $user ? $user->wishlists()->pluck('product_id') : [],
+                ];
+            },
+            'pendingOrdersCount' => fn (): int => $request->user()?->is_admin
+                ? Cache::flexible('pending-orders-count', [300, 900], fn (): int => Order::where('status', 'pending')->count())
                 : 0,
-            'announcement' => is_array($homeData) ? ($homeData['announcement'] ?? '') : '',
-            'store' => $store,
+            'announcement' => function (): string {
+                $homeData = Cache::flexible(
+                    'home-content',
+                    [600, 3600],
+                    fn () => Content::where('key', 'home')->first()?->data,
+                );
+
+                return is_array($homeData) ? ($homeData['announcement'] ?? '') : '';
+            },
+            'store' => fn (): array => StoreSettingsCache::store(),
         ];
     }
 }

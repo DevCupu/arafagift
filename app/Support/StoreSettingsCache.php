@@ -9,7 +9,7 @@ class StoreSettingsCache
 {
     public static function store(): array
     {
-        return Cache::remember('settings-store', now()->addMinutes(10), function (): array {
+        return Cache::flexible('settings-store', [600, 3600], function (): array {
             $settings = Setting::first();
 
             return [

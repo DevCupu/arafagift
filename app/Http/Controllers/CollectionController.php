@@ -26,7 +26,7 @@ class CollectionController extends Controller
      */
     public static function payload(): array
     {
-        return Cache::remember('koleksi-payload', now()->addMinutes(10), fn (): array => [
+        return Cache::flexible('koleksi-payload', [600, 3600], fn (): array => [
             'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values()->all(),
             'occasions' => Occasion::orderBy('id')->get()->map->toCatalog()->values()->all(),
             'products' => Product::with(['category', 'occasions'])->where('status', 'active')->get()->map->toCard()->values()->all(),

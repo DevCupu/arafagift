@@ -42,8 +42,11 @@ const heroImg = hero.image || heroImgFallback
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
 const adRail = ref(null)
+const adSlideRoot = ref(null)
 const activeAd = ref(0)
+const adInView = ref(true)
 let adTimer = null
+let adObserver = null
 
 const adSlides = computed(() => [
   {
@@ -72,23 +75,38 @@ const adSlides = computed(() => [
   },
 ])
 
+const slideLeft = (rail, cell) => cell.getBoundingClientRect().left - rail.getBoundingClientRect().left + rail.scrollLeft
+
 const scrollAds = (index) => {
   const nextIndex = (index + adSlides.value.length) % adSlides.value.length
   activeAd.value = nextIndex
-  adRail.value?.children[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  const rail = adRail.value
+  const cell = rail?.children[nextIndex]
+  if (!rail || !cell) return
+  rail.scrollTo({ left: slideLeft(rail, cell), behavior: 'smooth' })
 }
 
 const pauseAds = () => window.clearInterval(adTimer)
 const resumeAds = () => {
   window.clearInterval(adTimer)
+  if (!adInView.value) return
   adTimer = window.setInterval(() => scrollAds(activeAd.value + 1), 5500)
 }
 
 onMounted(() => {
+  adObserver = new IntersectionObserver(([entry]) => {
+    adInView.value = entry.isIntersecting
+    if (entry.isIntersecting) resumeAds()
+    else pauseAds()
+  }, { threshold: 0.15 })
+  if (adSlideRoot.value) adObserver.observe(adSlideRoot.value)
   resumeAds()
 })
 
-onUnmounted(() => window.clearInterval(adTimer))
+onUnmounted(() => {
+  window.clearInterval(adTimer)
+  adObserver?.disconnect()
+})
 
 const bulkCtaHref = computed(() => {
   const href = homeContent.bulk.cta.href
@@ -219,7 +237,7 @@ const bulkCtaHref = computed(() => {
     <!-- ============ AD SLIDER ============ -->
     <section class="border-y border-line bg-surface py-8 sm:py-12" aria-label="Promo ArafahGift">
       <div class="shell">
-        <div class="relative overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft" v-reveal>
+        <div ref="adSlideRoot" class="relative overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft" v-reveal>
           <div
             ref="adRail"
             class="no-scrollbar flex snap-x snap-mandatory overflow-x-auto"
@@ -280,7 +298,7 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ OCCASION ============ -->
-    <section class="shell py-16 sm:py-24">
+    <section class="render-later shell py-16 sm:py-24">
       <SectionHeader
         title="Untuk siapa hadiah ini?"
         sub="Kadang lebih mudah memulai dari orangnya, bukan dari produknya."
@@ -299,7 +317,7 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ KATEGORI ============ -->
-    <section class="shell py-16 sm:py-24">
+    <section class="render-later shell py-16 sm:py-24">
       <div class="flex flex-wrap items-end justify-between gap-6" v-reveal>
         <SectionHeader title="Mulai dari yang paling dicari" />
         <Link href="/koleksi" class="link-underline hidden text-[0.85rem] text-forest sm:block">
@@ -321,7 +339,7 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ FEATURED ============ -->
-    <section class="shell py-16 sm:py-24">
+    <section class="render-later shell py-16 sm:py-24">
       <div class="flex flex-wrap items-end justify-between gap-6" v-reveal>
         <SectionHeader title="Favorit dari ArafahGift" sub="Yang paling sering dibawa pulang — dan paling sering dipesan ulang." />
         <Link href="/koleksi" class="link-underline hidden text-[0.85rem] text-forest sm:block">Lihat semua produk</Link>
@@ -346,7 +364,7 @@ const bulkCtaHref = computed(() => {
     <!-- ============ SIGNATURE GIFT SET ============ -->
     <!-- Band hijau tua berikutnya (Value Props) dipisahkan dengan section ini
          yang dijadikan light editorial agar tidak ada dua band gelap berurutan -->
-    <section v-if="signatureProduct" class="border-y border-line bg-surface">
+    <section v-if="signatureProduct" class="render-later border-y border-line bg-surface">
       <div class="shell grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-2 lg:gap-20">
         <div class="relative pb-4 pl-4 sm:pb-6 sm:pl-6" v-reveal>
           <!-- Frame emas offset di belakang gambar -->
@@ -388,8 +406,8 @@ const bulkCtaHref = computed(() => {
     <!-- ============ VALUE PROPS ============ -->
     <!-- Nilai inti + momen keluarga, frame emas offset + caption melayang
          biar terasa editorial premium tanpa menambah band gelap -->
-    <section class="bg-forest">
-      <div class="shell py-20 sm:py-28">
+    <section class="render-later bg-forest">
+      <div class="shell py-16 sm:py-24">
         <SectionHeader
           eyebrow="Kenapa ArafahGift"
           title="Lebih dari sekadar oleh-oleh."
@@ -397,11 +415,10 @@ const bulkCtaHref = computed(() => {
           :dark="true"
           v-reveal
         />
-        <div class="mt-14" v-reveal><ValueProps :items="values" :dark="true" numbered /></div>
+        <div class="mt-12" v-reveal><ValueProps :items="values" :dark="true" numbered /></div>
 
         <!-- Momen keluarga membuka gift set bersama -->
-        <figure class="relative pb-4 pl-4 sm:pb-6 sm:pl-6" v-reveal>
-          <div class="absolute bottom-0 left-0 h-[93%] w-[96%] rounded-[1rem] border border-gold/30" aria-hidden="true" />
+        <figure class="mx-auto mt-16 max-w-[64rem]" v-reveal>
           <div class="arch relative overflow-hidden border border-ivory/15">
             <img
               src="/images/assets/section-lebih-dari-oleh-oleh.webp"
@@ -424,9 +441,9 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ ROMBONGAN ============ -->
-    <section class="shell pb-16 sm:pb-24">
+    <section class="render-later shell pb-16 sm:pb-24">
       <div class="grid items-stretch gap-px overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft lg:grid-cols-[1.2fr_1fr]" v-reveal>
-        <div class="bg-forest p-9 sm:p-14">
+        <div class="bg-forest p-8 sm:p-12">
           <p class="eyebrow text-gold">{{ homeContent.bulk.eyebrow }}</p>
           <h2 class="mt-6 max-w-md text-[2.1rem] leading-[1.08] text-ivory sm:text-[2.7rem]">{{ homeContent.bulk.title }}</h2>
           <p class="mt-5 max-w-md text-[0.95rem] leading-relaxed text-ivory/65">{{ homeContent.bulk.sub }}</p>
@@ -457,7 +474,7 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ BRAND STORY ============ -->
-    <section class="border-y border-forest/20 bg-forest-deep/[0.04]">
+    <section class="render-later border-y border-forest/20 bg-forest-deep/[0.04]">
       <div class="shell grid gap-12 py-16 lg:grid-cols-[1fr_1.1fr] lg:gap-20 lg:py-24">
         <div class="flex gap-4" v-reveal>
           <div class="arch mt-10 h-56 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
@@ -488,18 +505,18 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ TESTIMONI ============ -->
-    <section class="shell py-16 sm:py-24">
+    <section class="render-later shell py-16 sm:py-24">
       <SectionHeader title="Yang mereka ceritakan" align="center" v-reveal />
       <div class="mt-14" v-reveal><TestimonialGrid :items="testimonials" /></div>
     </section>
 
     <!-- ============ INSTAGRAM ============ -->
-    <section class="shell py-16 sm:py-24" v-reveal>
+    <section class="render-later shell py-16 sm:py-24" v-reveal>
       <InstagramGrid :content="homeContent.instagram" />
     </section>
 
     <!-- ============ FAQ ============ -->
-    <section class="shell py-16 sm:py-24">
+    <section class="render-later shell py-16 sm:py-24">
       <div class="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20" v-reveal>
         <div>
           <SectionHeader title="Pertanyaan yang sering masuk" />
