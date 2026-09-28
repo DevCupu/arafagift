@@ -29,6 +29,9 @@ class OptimizeImages extends Command
             public_path('images/assets/gift-worth-remembering.webp') => 800,
             public_path('images/assets/section-lebih-dari-oleh-oleh.webp') => 1024,
             public_path('images/assets/souvenir-satu-rombongan.webp') => 768,
+            public_path('images/assets/img-1.webp') => 768,
+            public_path('images/assets/img-2.webp') => 768,
+            public_path('images/assets/img-3.webp') => 768,
             public_path('images/assets/img-4.webp') => 768,
             public_path('images/assets/perjalanan-pulang-membawa-cerita.webp') => 768,
         ];

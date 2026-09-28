@@ -41,6 +41,7 @@ return [
 
         'database' => [
             'driver' => 'database',
+            'events' => false,
             'connection' => env('DB_CACHE_CONNECTION'),
             'table' => env('DB_CACHE_TABLE', 'cache'),
             'lock_connection' => env('DB_CACHE_LOCK_CONNECTION'),
@@ -49,6 +50,7 @@ return [
 
         'file' => [
             'driver' => 'file',
+            'events' => false,
             'path' => storage_path('framework/cache/data'),
             'lock_path' => storage_path('framework/cache/data'),
         ],
@@ -61,6 +63,7 @@ return [
 
         'memcached' => [
             'driver' => 'memcached',
+            'events' => false,
             'persistent_id' => env('MEMCACHED_PERSISTENT_ID'),
             'sasl' => [
                 env('MEMCACHED_USERNAME'),
@@ -80,12 +83,14 @@ return [
 
         'redis' => [
             'driver' => 'redis',
+            'events' => false,
             'connection' => env('REDIS_CACHE_CONNECTION', 'cache'),
             'lock_connection' => env('REDIS_CACHE_LOCK_CONNECTION', 'default'),
         ],
 
         'dynamodb' => [
             'driver' => 'dynamodb',
+            'events' => false,
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
             'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),

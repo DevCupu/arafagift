@@ -32,6 +32,7 @@
     # Gambar non-hash (public/images + public/storage) — cache sebulan.
     SetEnvIf Request_URI "^/images/.*" ARAFA_IMAGE=1
     SetEnvIf Request_URI "^/storage/.*" ARAFA_IMAGE=1
+    SetEnvIf Request_URI "^/(favicon\.(ico|png|svg)|apple-touch-icon\.png)$" ARAFA_IMAGE=1
     Header set Cache-Control "public, max-age=2592000" env=ARAFA_IMAGE
 </IfModule>
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Content;
 use App\Models\Faq;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -13,15 +14,27 @@ class PageController extends Controller
 {
     public function about(): Response
     {
+        $content = Cache::flexible(
+            'home-content',
+            [600, 3600],
+            fn () => Content::where('key', 'home')->firstOrFail()->data,
+        );
+
         return Inertia::render('shop/AboutPage', [
-            'content' => Content::where('key', 'home')->firstOrFail()->data,
+            'content' => $content,
         ]);
     }
 
     public function faq(): Response
     {
+        $faqs = Cache::flexible('faq-list', [600, 3600], fn (): array => Faq::orderBy('sort_order')
+            ->get()
+            ->map(fn (Faq $faq): array => ['q' => $faq->question, 'a' => $faq->answer])
+            ->values()
+            ->all());
+
         return Inertia::render('shop/FaqPage', [
-            'faqs' => Faq::orderBy('sort_order')->get()->map(fn (Faq $faq) => ['q' => $faq->question, 'a' => $faq->answer])->values(),
+            'faqs' => $faqs,
         ]);
     }
 

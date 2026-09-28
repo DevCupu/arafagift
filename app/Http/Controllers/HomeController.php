@@ -24,7 +24,7 @@ class HomeController extends Controller
      */
     public static function payload(): array
     {
-        return Cache::remember('home-payload', now()->addMinutes(10), function (): array {
+        return Cache::flexible('home-payload', [600, 3600], function (): array {
             $content = Content::where('key', 'home')->firstOrFail()->data;
 
             $signatureProduct = Product::with(['category', 'occasions', 'supplier'])

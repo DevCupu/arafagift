@@ -27,19 +27,30 @@ const scrolled = ref(false)
 
 const results = ref([])
 let searchTimer = null
+let searchController = null
 watch(query, (q) => {
   clearTimeout(searchTimer)
+  searchController?.abort()
   const term = q.trim()
   if (term.length < 2) { results.value = []; return }
   searchTimer = setTimeout(async () => {
-    const res = await fetch(`/pencarian?q=${encodeURIComponent(term)}`)
-    results.value = res.ok ? await res.json() : []
+    searchController = new AbortController()
+    try {
+      const res = await fetch(`/pencarian?q=${encodeURIComponent(term)}`, { signal: searchController.signal })
+      results.value = res.ok ? await res.json() : []
+    } catch (error) {
+      if (error.name !== 'AbortError') results.value = []
+    }
   }, 250)
 })
 
 const onScroll = () => { scrolled.value = window.scrollY > 8 }
 onMounted(() => { onScroll(); window.addEventListener('scroll', onScroll, { passive: true }) })
-onUnmounted(() => window.removeEventListener('scroll', onScroll))
+onUnmounted(() => {
+  clearTimeout(searchTimer)
+  searchController?.abort()
+  window.removeEventListener('scroll', onScroll)
+})
 
 watch(() => page.url, () => { menuOpen.value = false; searchOpen.value = false })
 watch([menuOpen, searchOpen], ([m, s]) => {

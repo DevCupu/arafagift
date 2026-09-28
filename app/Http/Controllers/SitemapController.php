@@ -21,7 +21,7 @@ class SitemapController extends Controller
      */
     public static function urls(): array
     {
-        return Cache::remember('sitemap-urls', now()->addHours(24), function (): array {
+        return Cache::flexible('sitemap-urls', [86400, 172800], function (): array {
             $urls = [
                 ['loc' => route('home')],
                 ['loc' => route('collection', ['category' => null])],

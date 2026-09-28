@@ -215,6 +215,12 @@
         scrollbar-width: none;
     }
 
+    /* Lewati layout/paint section homepage yang masih jauh di bawah viewport. */
+    .render-later {
+        content-visibility: auto;
+        contain-intrinsic-size: auto 800px;
+    }
+
     /* Safe area untuk notched phones (iPhone X+, Android dengan kamera punch-hole) */
     .pb-safe {
         padding-bottom: env(safe-area-inset-bottom, 0px);

@@ -6,6 +6,7 @@ use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\SitemapController;
 use App\Models\Content;
+use App\Models\Faq;
 use App\Models\Order;
 use App\Support\StoreSettingsCache;
 use Illuminate\Console\Command;
@@ -32,6 +33,14 @@ class CacheWarm extends Command
         Cache::forget('home-payload');
         HomeController::payload();
         $this->line('home-payload warmed.');
+
+        Cache::forget('faq-list');
+        Cache::flexible('faq-list', [600, 3600], fn (): array => Faq::orderBy('sort_order')
+            ->get()
+            ->map(fn (Faq $faq): array => ['q' => $faq->question, 'a' => $faq->answer])
+            ->values()
+            ->all());
+        $this->line('faq-list warmed.');
 
         Cache::forget('koleksi-payload');
         CollectionController::payload();
