@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SitemapController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Setting;
@@ -79,17 +80,60 @@ it('tidak 500 saat katalog masih kosong', function () {
     $this->get('/sitemap.xml')->assertOk();
 });
 
-it('tidak 500 saat cache holds URL dari versi lama', function () {
-    // Cache produksi bertahan 24-48 jam dan tidak diinvalidasi saat deploy, jadi
-    // sitemap harus tetap bisa dirender dari entri basi, termasuk yang slug-nya
-    // sudah tidak ada atau berubah ejaan.
-    Cache::put('sitemap-urls', [
-        ['loc' => route('home')],
-        ['loc' => route('collection', ['category' => 'Cemilan'])],
-        ['loc' => route('product', ['product' => 'produk-lama-dihapus'])],
-    ], now()->addHours(36));
+it('merender view dari entri berformat lama tanpa error dan tanpa tag kosong', function () {
+    // Ini lapisan yang benar-benar rusak di produksi. Entri cache versi lama
+    // hanya punya kunci loc, sedangkan view versi baru juga membaca
+    // changefreq dan priority. Akses kunci yang hilang menjadi
+    // ErrorException karena Laravel mengubah warning PHP jadi exception,
+    // dan itu membuat /sitemap.xml membalas 500.
+    //
+    // View dirender langsung, bukan lewat Cache::put. Cache::put tidak bisa
+    // mensimulasikan hit Cache::flexible: flexible akan menjalankan closure
+    // dan menimpa nilai yang baru dislocation, jadi test lewat cache selalu
+    // hijau tanpa menguji apa pun.
+    $xml = view('sitemap', ['urls' => [
+        ['loc' => 'https://arafagift.id/'],
+        ['loc' => 'https://arafagift.id/koleksi/kurma'],
+    ]])->render();
 
-    $this->get('/sitemap.xml')->assertOk();
+    expect($xml)->toContain('<loc>https://arafagift.id/</loc>')
+        ->and($xml)->toContain('<loc>https://arafagift.id/koleksi/kurma</loc>')
+        // Tag kosong akan ditandai Google sebagai error di Search Console.
+        ->and($xml)->not->toContain('<changefreq></changefreq>')
+        ->and($xml)->not->toContain('<priority></priority>')
+        ->and($xml)->not->toContain('<loc></loc>')
+        ->and($xml)->not->toContain('<lastmod></lastmod>');
+});
+
+it('menyertakan changefreq dan priority pada entri yang lengkap', function () {
+    $xml = $this->get('/sitemap.xml')->assertOk()->getContent();
+
+    expect($xml)->toContain('<changefreq>daily</changefreq>')
+        ->and($xml)->toContain('<priority>1.0</priority>');
+});
+
+it('menyimpan sitemap di key berversi agar entri basi tidak terpakai', function () {
+    // Saat bentuk entri berubah, nama key harus ikut berubah. Kalau tidak,
+    // cache lama masih terbaca selama 24-48 jam setelah deploy dan sitemap
+    // dirender dari data yang tidak cocok dengan view sekarang.
+    SitemapController::urls();
+
+    $key = (new ReflectionClass(SitemapController::class))->getConstant('CACHE_KEY');
+
+    expect($key)->toBe('sitemap-urls-v2')
+        ->and(Cache::get($key))->toBeArray();
+});
+
+it('membuang cache sitemap lewat flush()', function () {
+    // Kalau nama key ditulis ulang di beberapa pemanggil dan satu lupa
+    // diperbarui, produk yang sudah dihapus tetap muncul di sitemap.
+    SitemapController::urls();
+
+    SitemapController::flush();
+
+    $key = (new ReflectionClass(SitemapController::class))->getConstant('CACHE_KEY');
+
+    expect(Cache::get($key))->toBeNull();
 });
 
 it('tidak 500 dan jatuh ke URL statis saja saat katalog tidak bisa dibaca', function () {

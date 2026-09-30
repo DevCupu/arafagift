@@ -46,9 +46,9 @@ class CacheWarm extends Command
         CollectionController::payload();
         $this->line('koleksi-payload warmed.');
 
-        Cache::forget('sitemap-urls');
+        SitemapController::flush();
         SitemapController::urls();
-        $this->line('sitemap-urls warmed.');
+        $this->line('sitemap warmed.');
 
         Cache::put('pending-orders-count', Order::where('status', 'pending')->count(), now()->addMinutes(5));
         $this->line('pending-orders-count warmed.');
