@@ -92,3 +92,59 @@ jobs:
 
             php artisan up
             trap - EXIT
+
+      # 8. Smoke test SEO dari jalur publik
+      #
+      # Jalankan dari luar server, lewat HTTPS publik, karena itu yang sebenarnya
+      # dibaca Google. Sitemap pernah 500 selama berminggu-minggu tanpa ada yang
+      # tahu: deploy tetap hijau, tidak ada alarm, tapi seluruh URL toko
+      # berhenti terdiscover. Langkah ini yang menangkapnya.
+      - name: Smoke test SEO endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base="https://arafagift.id"
+
+          check() {
+            local path="$1" expect="$2"
+            local code
+            code=$(curl -s -o /tmp/body -w '%{http_code}' "$base$path")
+
+            if [ "$code" != "$expect" ]; then
+              echo "::error::$path balas $code, diharapkan $expect"
+              head -c 500 /tmp/body
+              exit 1
+            fi
+
+            echo "ok  $path -> $code"
+          }
+
+          check "/" "200"
+          check "/robots.txt" "200"
+          check "/sitemap.xml" "200"
+
+          # Sitemap harus benar-benar XML, bukan halaman error 200-butih.
+          curl -fsS "$base/sitemap.xml" -o /tmp/sitemap.xml
+          if ! grep -q "<urlset" /tmp/sitemap.xml; then
+            echo "::error::/sitemap.xml tidak berisi <urlset>"
+            head -c 500 /tmp/sitemap.xml
+            exit 1
+          fi
+
+          # Head harus sudah terisi di HTML pertama, tanpa menjalankan JS.
+          curl -fsS "$base/" -o /tmp/home.html
+          for tag in "<title>" 'name="description"' 'rel="canonical"'; do
+            if ! grep -q "$tag" /tmp/home.html; then
+              echo "::error::homepage tidak mengirim $tag di respons pertama"
+              exit 1
+            fi
+          done
+
+          # Brand harus konsisten tanpa huruf h.
+          if grep -q "ArafahGift" /tmp/home.html; then
+            echo "::error::homepage masih mengirim brand lama 'ArafahGift'"
+            exit 1
+          fi
+
+          echo "Semua endpoint SEO sehat."

@@ -1,13 +1,19 @@
 <script setup>
+import { Head } from '@inertiajs/vue3'
+
 defineProps({
   title: { type: String, required: true },
   updated: { type: String, required: true },
   sections: { type: Array, required: true },
+  seoHead: { type: Object, required: true },
 })
 </script>
 
 <template>
   <div class="shell max-w-3xl py-14 lg:py-20">
+    <!-- Hanya judul supaya berubah saat navigasi SPA; meta, canonical, dan OG
+         sudah dikirim PageController::legal(). -->
+    <Head :title="seoHead.title" />
     <p class="eyebrow">Informasi</p>
     <h1 class="mt-6 text-[2.4rem] leading-[1.05] sm:text-[3rem]">{{ title }}</h1>
     <p class="mt-4 text-[0.8rem] text-muted">Terakhir diperbarui {{ updated }}</p>

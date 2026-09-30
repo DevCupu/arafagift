@@ -18,6 +18,7 @@ import { useStore } from '@/composables/useStore'
 const props = defineProps({
   product: { type: Object, default: null },
   related: { type: Array, default: () => [] },
+  seoHead: { type: Object, required: true },
 })
 const cart = useCart()
 const wishlist = useWishlist()
@@ -42,44 +43,15 @@ const buyNow = () => {
   router.visit('/checkout')
 }
 
-const metaDescription = computed(() => props.product?.short || props.product?.description?.slice(0, 160) || '')
-const productJsonLd = computed(() => {
-  if (!props.product) return null
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Product',
-    name: props.product.name,
-    image: props.product.image ? [props.product.image] : undefined,
-    description: metaDescription.value,
-    sku: props.product.sku,
-    category: props.product.category,
-    offers: {
-      '@type': 'Offer',
-      priceCurrency: 'IDR',
-      price: props.product.price,
-      availability: props.product.stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-      url: `/produk/${props.product.slug}`,
-    },
-    aggregateRating: props.product.reviews > 0 ? {
-      '@type': 'AggregateRating',
-      ratingValue: props.product.rating,
-      reviewCount: props.product.reviews,
-    } : undefined,
-  }
-})
 </script>
 
 <template>
   <div v-if="product">
-    <Head :title="product.name">
-      <meta name="description" :content="metaDescription" />
-      <link rel="canonical" :href="`/produk/${product.slug}`" />
-      <meta property="og:type" content="product" />
-      <meta property="og:title" :content="product.name" />
-      <meta property="og:description" :content="metaDescription" />
-      <meta v-if="product.image" property="og:image" :content="product.image" />
-      <component :is="'script'" type="application/ld+json">{{ JSON.stringify(productJsonLd) }}</component>
-    </Head>
+    <!-- Hanya judul. Meta, canonical, OG, dan JSON-LD Produk sudah dirender
+         server oleh ProductController::seoHead(). aggregateRating sengaja
+         tidak ada: kolom rating masih placeholder, dan Google menghitung
+         markup rating yang tidak didukung sebagai spam structured data. -->
+    <Head :title="seoHead.title" />
     <div class="shell pt-8">
       <nav class="flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.14em] text-muted" aria-label="Breadcrumb">
         <Link href="/" class="transition hover:text-forest">Home</Link>

@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
             ['id' => 4, 'name' => 'Fajar Nugroho', 'email' => 'fajar.n@mail.com', 'phone' => '0857-1212-3434', 'city' => 'Jakarta', 'tag' => 'Baru', 'is_admin' => false],
             ['id' => 5, 'name' => 'Siti Maryam', 'email' => 'siti.maryam@mail.com', 'phone' => '0821-5566-7788', 'city' => 'Bandung', 'tag' => 'Baru', 'is_admin' => false],
             ['id' => 6, 'name' => 'Abdul Rahman', 'email' => 'a.rahman@mail.com', 'phone' => '0878-4433-2211', 'city' => 'Parepare', 'tag' => 'Pelanggan tetap', 'is_admin' => false],
-            ['id' => 7, 'name' => 'Admin Arafah', 'email' => 'admin@arafahgift.id', 'phone' => null, 'city' => null, 'tag' => null, 'is_admin' => true],
+            ['id' => 7, 'name' => 'Admin Arafagift', 'email' => 'admin@arafagift.id', 'phone' => null, 'city' => null, 'tag' => null, 'is_admin' => true],
         ];
 
         foreach ($users as $user) {

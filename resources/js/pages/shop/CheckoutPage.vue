@@ -416,9 +416,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <Head title="Checkout">
-    <meta name="robots" content="noindex,follow" />
-  </Head>
+  <Head :title="page.props.seoHead.title" />
   <div class="min-h-[100dvh] bg-ivory">
     <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-16 sm:px-10">
       <BrandLogo size="sm" />

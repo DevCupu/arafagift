@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Content;
 use App\Models\Order;
+use App\Support\Seo\PageSeo;
 use App\Support\StoreSettingsCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -68,6 +69,11 @@ class HandleInertiaRequests extends Middleware
                 return is_array($homeData) ? ($homeData['announcement'] ?? '') : '';
             },
             'store' => fn (): array => StoreSettingsCache::store(),
+            // Fail-closed: setiap halaman yang tidak memasang head-nya sendiri
+            // (akun, admin, checkout, 404) mewarisi noindex di sini, bukan
+            // title homepage. Controller halaman publik menimpanya dengan
+            // PageSeo indexable lewat prop biasa, yang menang atas shared prop.
+            'seoHead' => fn (): array => PageSeo::noindex()->toArray(),
         ];
     }
 }

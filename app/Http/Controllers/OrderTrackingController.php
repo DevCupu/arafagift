@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Support\Seo\PageSeo;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -17,7 +18,9 @@ class OrderTrackingController extends Controller
         ]);
 
         if (empty($validated['order_number']) || empty($validated['phone'])) {
-            return Inertia::render('shop/TrackOrderPage');
+            return Inertia::render('shop/TrackOrderPage', [
+                'seoHead' => PageSeo::noindex('Lacak Pesanan', follow: true)->toArray(),
+            ]);
         }
 
         $order = Order::where('order_number', trim($validated['order_number']))->first();
@@ -28,6 +31,7 @@ class OrderTrackingController extends Controller
         return Inertia::render('shop/TrackOrderPage', [
             'order' => $found ? $order->load('items')->toCatalog() : null,
             'searched' => true,
+            'seoHead' => PageSeo::noindex('Lacak Pesanan', follow: true)->toArray(),
         ]);
     }
 }

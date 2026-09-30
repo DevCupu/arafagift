@@ -6,7 +6,10 @@ import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import { useStore } from '@/composables/useStore'
 
-const props = defineProps({ content: { type: Object, required: true } })
+const props = defineProps({
+  content: { type: Object, required: true },
+  seoHead: { type: Object, required: true },
+})
 const homeContent = props.content
 const { whatsappHref } = useStore()
 
@@ -27,12 +30,8 @@ const milestones = [
 
 <template>
   <div>
-    <Head title="Tentang Kami">
-      <meta name="description" content="ArafahGift.id — cerita di balik toko oleh-oleh haji &amp; umrah yang mengemas kurma, sajadah, tasbih, dan gift set dengan hati untuk keluarga dan rombongan Anda." />
-      <link rel="canonical" href="/tentang" />
-      <meta property="og:title" content="Tentang Kami — ArafahGift.id" />
-      <meta property="og:description" content="Cerita di balik toko oleh-oleh haji &amp; umrah ArafahGift.id." />
-    </Head>
+    <!-- Hanya judul; meta, canonical, dan OG dikirim PageController::about(). -->
+    <Head :title="seoHead.title" />
     <section class="shell grid items-center gap-12 py-14 lg:grid-cols-2 lg:gap-20 lg:py-20">
       <div>
         <p class="eyebrow">Tentang kami</p>

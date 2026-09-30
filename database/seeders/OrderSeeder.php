@@ -40,7 +40,7 @@ class OrderSeeder extends Seeder
                 'address' => 'Jl. Dharmahusada Indah 12, Surabaya, Jawa Timur 60285',
                 'shipping' => ['method' => 'Reguler', 'cost' => 22000],
                 'items' => [
-                    ['name' => 'Arafah Premium Box', 'sku' => 'AGF-BOX-01', 'qty' => 1, 'price' => 649000, 'art' => 'giftset'],
+                    ['name' => 'Arafagift Premium Box', 'sku' => 'AGF-BOX-01', 'qty' => 1, 'price' => 649000, 'art' => 'giftset'],
                     ['name' => 'Kurma Ajwa Premium 500 g', 'sku' => 'AGF-KUR-01', 'qty' => 2, 'price' => 285000, 'art' => 'kurma'],
                 ],
             ],

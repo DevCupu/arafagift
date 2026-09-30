@@ -8,6 +8,7 @@ use App\Models\Faq;
 use App\Models\Occasion;
 use App\Models\Product;
 use App\Models\Testimonial;
+use App\Support\Seo\PageSeo;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,35 @@ class HomeController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('shop/HomePage', self::payload());
+        return Inertia::render('shop/HomePage', [
+            ...self::payload(),
+            'seoHead' => self::seoHead(),
+        ]);
+    }
+
+    /**
+     * Brand ditulis di depan, bukan di belakang. Untuk query "arafagift" Google
+     * lebih respek terhadap microfluid ketika brand muncul sedekat mungkin ke
+     * awal judul, dan kata kunci inti ("oleh-oleh haji", "kurma", "gift set")
+     * tetap muat dalam 60 karakter.
+     */
+    public static function seoHead(): array
+    {
+        return PageSeo::make(
+            'Arafagift — Toko Oleh-oleh Haji & Umrah, Kurma & Gift Set',
+            'Toko oleh-oleh haji & umrah di Makassar: kurma Ajwa premium, sajadah, tasbih, dan gift set hadiah dengan packaging elegan. Kartu ucapan gratis tiap pesanan.',
+        )
+            ->withoutBrandSuffix()
+            ->canonical(route('home'))
+            ->image('/images/assets/hero-arafahgift-v2.png')
+            ->jsonLd([
+                '@context' => 'https://schema.org',
+                '@type' => 'WebSite',
+                'name' => PageSeo::BRAND,
+                'url' => route('home'),
+                'inLanguage' => 'id-ID',
+            ])
+            ->toArray();
     }
 
     /**
@@ -32,7 +61,11 @@ class HomeController extends Controller
                 ->first();
 
             return [
-                'categories' => Category::orderBy('id')->get()->map->toCatalog()->values()->all(),
+                // Scope wajib dipanggil di sini. Tanpa itu products_active_count
+                // null, lalu toCatalog() jatuh ke kolom product_count lama yang
+                // di-seed dan tidak pernah ikut berubah — homepage lalu
+                // menampilkan "0 produk" untuk kategori yang jelas berisi barang.
+                'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values()->all(),
                 'occasions' => Occasion::orderBy('id')->get()->map->toCatalog()->values()->all(),
                 'featuredProducts' => Product::with(['category', 'occasions'])->where('featured', true)->orderBy('featured_order')->orderBy('id')->get()->map->toCard()->values()->all(),
                 'signatureProduct' => $signatureProduct?->toCatalog(),

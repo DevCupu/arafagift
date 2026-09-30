@@ -14,12 +14,12 @@ class ContentSeeder extends Seeder
             'data' => [
                 'announcement' => 'Gratis kartu ucapan tulis tangan untuk setiap pesanan hadiah',
                 'hero' => [
-                    'eyebrow' => 'Oleh-oleh Umrah & Hajj',
+                    'eyebrow' => 'Oleh-oleh Haji & Umrah',
                     'headline' => "Hadiah dari Tanah Suci,\nuntuk hati yang dekat.",
                     'sub' => 'Koleksi yang dipilih dengan hati — untuk keluarga, sahabat, dan orang-orang terkasih yang menunggu di rumah.',
                     'cta' => ['label' => 'Jelajahi Koleksi', 'to' => '/koleksi'],
                     'ctaSecondary' => ['label' => 'Lihat Gift Set', 'to' => '/koleksi/gift-set'],
-                    'note' => 'Dikirim dari Jakarta • Kartu ucapan gratis',
+                    'note' => 'Dikirim dari Makassar • Kartu ucapan gratis',
                 ],
                 'signature' => [
                     'eyebrow' => 'Signature',
@@ -32,10 +32,10 @@ class ContentSeeder extends Seeder
                     'eyebrow' => 'Cerita kami',
                     'title' => 'Setiap perjalanan pulang membawa cerita.',
                     'body' => [
-                        'ArafahGift dimulai dari satu koper yang selalu kurang muat. Pulang dari tanah suci, yang paling sulit bukan perjalanannya — tapi memilih apa yang pantas dibawa untuk orang di rumah.',
+                        'Arafagift dimulai dari satu koper yang selalu kurang muat. Pulang dari tanah suci, yang paling sulit bukan perjalanannya — tapi memilih apa yang pantas dibawa untuk orang di rumah.',
                         'Kami mengurus bagian itu: mencari yang benar-benar bagus, mengemasnya dengan rapi, dan menuliskan kartunya. Sisanya, biar doa dan cerita Anda yang bicara.',
                     ],
-                    'signature' => 'Tim ArafahGift, Jakarta',
+                    'signature' => 'Tim Arafagift, Makassar',
                 ],
                 'bulk' => [
                     'eyebrow' => 'Rombongan',
@@ -46,7 +46,7 @@ class ContentSeeder extends Seeder
                         'Custom kartu, logo travel, dan pita',
                         'Produksi 3–5 hari kerja, kirim ke satu atau banyak alamat',
                     ],
-                    'cta' => ['label' => 'Konsultasi via WhatsApp', 'href' => 'https://wa.me/6281234567890'],
+                    'cta' => ['label' => 'Konsultasi via WhatsApp', 'href' => 'https://wa.me/628192242444'],
                 ],
                 'values' => [
                     ['icon' => 'Sparkles', 'title' => 'Curated with Care', 'body' => 'Kami mencicipi, memegang, dan memakai sendiri semua yang dijual sebelum masuk katalog.'],

@@ -13,7 +13,7 @@ class TestimonialSeeder extends Seeder
             [
                 'rating' => 5,
                 'quote' => 'Niatnya cuma cari oleh-oleh untuk keluarga, akhirnya semua orang di rumah minta dibawakan lagi.',
-                'name' => 'Ratna Halim', 'city' => 'Surabaya', 'context' => 'Arafah Premium Box',
+                'name' => 'Ratna Halim', 'city' => 'Surabaya', 'context' => 'Arafagift Premium Box',
             ],
             [
                 'rating' => 5,

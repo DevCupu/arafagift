@@ -6,6 +6,8 @@
         @isset($url['lastmod'])
         <lastmod>{{ $url['lastmod'] }}</lastmod>
         @endisset
+        <changefreq>{{ $url['changefreq'] }}</changefreq>
+        <priority>{{ $url['priority'] }}</priority>
     </url>
 @endforeach
 </urlset>
