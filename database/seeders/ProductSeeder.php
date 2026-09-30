@@ -28,13 +28,17 @@ class ProductSeeder extends Seeder
 
         $products = [
             [
-                'name' => 'Arafah Premium Box', 'slug' => 'arafah-premium-box', 'sku' => 'AGF-BOX-01',
+                // Nama produk diubah ke "Arafagift" (tanpa h) agar cocok dengan brand,
+                // tapi slug sengaja dibiarkan: mengganti slug produk yang sudah
+                // pernah tayang berarti membangun 404 untuk URL lama. Kalau slug
+                // juga mau dirapikan, itu perlu 301 eksplisit.
+                'name' => 'Arafagift Premium Box', 'slug' => 'arafah-premium-box', 'sku' => 'AGF-BOX-01',
                 'category_slug' => 'gift-set', 'price' => 649000, 'compare_price' => 749000, 'cost' => 410000,
                 'rating' => 4.9, 'reviews_count' => 214, 'badge' => 'Paling dicari', 'art' => 'giftset',
                 'stock' => 34, 'low_stock_threshold' => 10, 'weight' => 1800, 'status' => 'active', 'featured' => true,
                 'occasions' => ['keluarga', 'orang-tua', 'guru'],
                 'short' => 'Satu box hardcover berisi empat hadiah pilihan — cukup untuk mewakili satu perjalanan.',
-                'description' => 'Arafah Premium Box lahir dari pertanyaan yang paling sering kami dengar: "bawa apa untuk di rumah?". Isinya kami susun supaya satu box terasa lengkap tanpa berlebihan — ada yang dimakan bersama, ada yang dipakai setiap hari, dan ada satu kartu yang membuat pemberian ini punya nama.',
+                'description' => 'Arafagift Premium Box lahir dari pertanyaan yang paling sering kami dengar: "bawa apa untuk di rumah?". Isinya kami susun supaya satu box terasa lengkap tanpa berlebihan — ada yang dimakan bersama, ada yang dipakai setiap hari, dan ada satu kartu yang membuat pemberian ini punya nama.',
                 'includes' => ['Kurma Ajwa premium 250 g', 'Tasbih kayu zaitun 33 butir', 'Sajadah travel lipat', 'Kartu ucapan tulis tangan'],
                 'details' => [['Dimensi box', '30 × 22 × 9 cm'], ['Material', 'Hardcover linen, foil emas'], ['Berat kirim', '1,8 kg'], ['Custom nama', 'Tersedia, bebas biaya']],
             ],

@@ -23,6 +23,7 @@ const props = defineProps({
   content: { type: Object, required: true },
   testimonials: { type: Array, required: true },
   faqs: { type: Array, required: true },
+  seoHead: { type: Object, required: true },
 })
 
 const { whatsappHref } = useStore()
@@ -117,12 +118,9 @@ const bulkCtaHref = computed(() => {
 </script>
 
 <template>
-  <Head title="Oleh-Oleh Haji &amp; Umrah Elegan">
-    <meta name="description" content="ArafahGift.id — toko oleh-oleh haji &amp; umrah: kurma premium, sajadah, tasbih, kalung, sarung, dan gift set elegan untuk keluarga, sahabat, dan rombongan." />
-    <link rel="canonical" href="/" />
-    <meta property="og:title" content="ArafahGift.id — Oleh-Oleh Haji &amp; Umrah Elegan" />
-    <meta property="og:description" content="Kurma premium, sajadah, tasbih, kalung, sarung, dan gift set hadiah haji umrah dengan packaging elegan." />
-  </Head>
+  <!-- Judul diambil dari seoHead, bukan headline hero, supaya judul di tab
+       browser sama persis dengan judul yang sudah dirender server. -->
+  <Head :title="seoHead.title" />
   <div>
     <!-- ============ HERO ============ -->
     <!--

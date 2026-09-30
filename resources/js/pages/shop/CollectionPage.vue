@@ -14,6 +14,7 @@ const props = defineProps({
   products: { type: Array, required: true },
   category: { type: String, default: 'semua' },
   untuk: { type: String, default: null },
+  seoHead: { type: Object, required: true },
 })
 
 const quickview = ref(null)
@@ -68,20 +69,14 @@ watch([activeCategory, activeOccasion, priceBand, sort], () => {
   setTimeout(() => (loading.value = false), 380)
 })
 watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
-
-const seoTitle = computed(() => activeCategory.value === 'semua' ? 'Koleksi Oleh-Oleh Haji & Umrah' : `${categoryMeta.value?.name ?? activeCategory.value} — Oleh-Oleh Haji & Umrah`)
-const seoDescription = computed(() => categoryMeta.value?.tagline || 'Jelajahi koleksi oleh-oleh dan hadiah haji & umrah ArafahGift.id: kurma, sajadah, tasbih, kalung, sarung, dan gift set siap kirim.')
-const canonicalPath = computed(() => activeCategory.value === 'semua' ? '/koleksi' : `/koleksi/${activeCategory.value}`)
 </script>
 
 <template>
   <div>
-    <Head :title="seoTitle">
-      <meta name="description" :content="seoDescription" />
-      <link rel="canonical" :href="canonicalPath" />
-      <meta property="og:title" :content="seoTitle" />
-      <meta property="og:description" :content="seoDescription" />
-    </Head>
+    <!-- Hanya judul: meta, canonical, dan OG sudah dikirim CollectionController
+         lewat prop seoHead. Judul pun diambil dari sana supaya tidak berbeda
+         dari respons pertama. -->
+    <Head :title="seoHead.title" />
     <!-- Header koleksi -->
     <header class="border-b border-forest-soft/30 bg-forest-deep">
       <div class="shell py-14 sm:py-20">

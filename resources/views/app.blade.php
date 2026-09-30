@@ -5,7 +5,8 @@
         <link rel="icon" type="image/png" href="/favicon.png" />
         <!-- viewport-fit=cover wajib untuk env(safe-area-inset-*) pada iPhone X+ -->
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-        <meta property="og:site_name" content="ArafahGift.id" />
+        <meta property="og:site_name" content="Arafagift" />
+        <meta property="og:locale" content="id_ID" />
         <meta name="theme-color" content="#082016" />
         <meta name="csrf-token" content="{{ csrf_token() }}" />
         <!-- Mobile web app tags -->
@@ -20,20 +21,29 @@
         />
 
         @vite(['resources/css/app.css', 'resources/js/app.js', "resources/js/pages/{$page['component']}.vue"])
-        <x-inertia::head>
-            <title>ArafahGift.id — Oleh-oleh Umrah &amp; Hajj yang dipilih dengan hati</title>
-            <meta
-                name="description"
-                content="ArafahGift.id — toko oleh-oleh haji &amp; umrah: kurma premium, sajadah, tasbih, kalung, sarung, dan gift set hadiah haji umrah dengan packaging elegan. Siap untuk keluarga, sahabat, dan rombongan."
-            />
-            <link rel="canonical" href="{{ url()->current() }}" />
-            <meta property="og:type" content="website" />
-            <meta property="og:title" content="ArafahGift.id — Oleh-oleh Umrah &amp; Hajj yang dipilih dengan hati" />
-            <meta property="og:description" content="Oleh-oleh &amp; hadiah haji umrah: kurma premium, sajadah, tasbih, dan gift set dengan packaging elegan." />
-            <meta property="og:image" content="{{ url('/favicon.png') }}" />
-            <meta property="og:url" content="{{ url()->current() }}" />
-            <meta name="twitter:card" content="summary_large_image" />
-        </x-inertia::head>
+
+        {{-- Tag SEO per halaman dikirim controller sebagai prop `seoHead` (lihat
+             App\Support\Seo\PageSeo) dan dirender di sini, sebelum JS berjalan.
+             Kalau meta ini hanya diletakkan di komponen <Head> Vue, crawler dan
+             social scraper akan menerima halaman tanpa judul maupun deskripsi
+             karena <div id="app"> baru diisi setelah hydration. --}}
+        @include('partials.seo-head', ['seo' => $page['props']['seoHead'] ?? null])
+
+        {{-- Entitas toko berlaku untuk semua halaman, jadi dicetak sekali di
+             layout dan diambil dari tabel settings. PageSeo hanya menambahkan
+             graf per halaman (Produk, Remah roti, FAQ) sebagai blok ld+json
+             terpisah, yang tetap valid untuk Google. --}}
+        @php($storeJsonLd = \App\Support\Seo\JsonLd::encode(\App\Support\Seo\StoreJsonLd::graph($page['props']['store'] ?? [])))
+        @if ($storeJsonLd)
+            <script type="application/ld+json">{!! $storeJsonLd !!}</script>
+        @endif
+
+        {{-- Tag ini tetap dikosongkan di server, tapi Inertia membutuhkan head
+             manager-nya tetap terpasang supaya komponen <Head :title="seoHead.title" />
+             bisa memperbarui <title> saat navigasi SPA tanpa full reload. Meta,
+             canonical, dan OG sengaja tidak diserialisasi ke sini agar tidak
+             ada tag ganda. --}}
+        <x-inertia::head />
     </head>
     <body>
         <x-inertia::app />

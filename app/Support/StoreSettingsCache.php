@@ -17,7 +17,11 @@ class StoreSettingsCache
                 'address' => $settings?->address,
                 'email' => $settings?->email,
                 'whatsapp' => $settings?->whatsapp,
-                'originCity' => $settings?->origin_city ?? 'Jakarta',
+                // Fallback wajib Makassar, bukan Jakarta: alamat ini ikut ke
+                // structured data Store dan dibandingkan Google Business Profile.
+                // Default yang salah di sini membuat situs dan GBP terlihat seperti
+                // dua bisnis berbeda.
+                'originCity' => $settings?->origin_city ?? 'Makassar',
                 'originDestinationId' => $settings?->origin_destination_id,
                 'freeShippingFrom' => $settings?->free_shipping_from ?? 0,
                 'freeShippingCities' => $settings?->freeShippingCitiesList() ?? [],

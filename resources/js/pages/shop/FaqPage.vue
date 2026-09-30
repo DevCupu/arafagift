@@ -1,33 +1,21 @@
 <script setup>
-import { computed } from 'vue'
 import { Head } from '@inertiajs/vue3'
 import FaqAccordion from '@/components/storefront/FaqAccordion.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import { useStore } from '@/composables/useStore'
 
-const props = defineProps({ faqs: { type: Array, required: true } })
+defineProps({
+  faqs: { type: Array, required: true },
+  seoHead: { type: Object, required: true },
+})
 const { whatsappHref } = useStore()
-
-const faqJsonLd = computed(() => ({
-  '@context': 'https://schema.org',
-  '@type': 'FAQPage',
-  mainEntity: props.faqs.map((faq) => ({
-    '@type': 'Question',
-    name: faq.q,
-    acceptedAnswer: { '@type': 'Answer', text: faq.a },
-  })),
-}))
 </script>
 
 <template>
   <div class="shell grid gap-12 py-14 lg:grid-cols-[0.85fr_1.15fr] lg:gap-20 lg:py-20">
-    <Head title="FAQ Oleh-Oleh Haji &amp; Umrah">
-      <meta name="description" content="Jawaban seputar pemesanan, pengiriman, dan pembayaran oleh-oleh &amp; hadiah haji umrah di ArafahGift.id." />
-      <link rel="canonical" href="/faq" />
-      <meta property="og:title" content="FAQ — ArafahGift.id" />
-      <meta property="og:description" content="Jawaban seputar pemesanan, pengiriman, dan pembayaran oleh-oleh &amp; hadiah haji umrah." />
-      <component :is="'script'" type="application/ld+json">{{ JSON.stringify(faqJsonLd) }}</component>
-    </Head>
+    <!-- Hanya judul; meta, canonical, dan JSON-LD FAQPage sudah dirender
+         server oleh PageController::faq(). -->
+    <Head :title="seoHead.title" />
     <div class="lg:sticky lg:top-28 lg:h-fit">
       <p class="eyebrow">FAQ</p>
       <h1 class="mt-6 text-[2.4rem] leading-[1.05] sm:text-[3rem]">Pertanyaan yang sering masuk</h1>

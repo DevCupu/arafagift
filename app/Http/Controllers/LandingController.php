@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Page;
 use App\Models\Product;
+use App\Support\Seo\PageSeo;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
@@ -40,6 +41,9 @@ class LandingController extends Controller
             ],
             'blocks' => $blocks->all(),
             'products' => $this->hydrateProducts($blocks),
+            // Halaman iklan tetap noindex karena selalu menyasar query berbayar
+            // dan biasanya menduplikasi isi koleksi yang sudah terindeks.
+            'seoHead' => PageSeo::noindex($page->title)->toArray(),
         ])->toResponse($request);
 
         // Aplikasi ini tanpa SSR, jadi <meta robots> baru ada setelah JS jalan.

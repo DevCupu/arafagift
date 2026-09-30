@@ -13,6 +13,7 @@ import { useToast } from '@/composables/useToast'
 const props = defineProps({
   order: { type: Object, default: null },
   searched: { type: Boolean, default: false },
+  seoHead: { type: Object, required: true },
 })
 
 const errors = computed(() => usePage().props.errors)
@@ -56,9 +57,7 @@ const currentStepIndex = computed(() => steps.findIndex((s) => s.id === props.or
 </script>
 
 <template>
-  <Head title="Lacak Pesanan">
-    <meta name="robots" content="noindex,follow" />
-  </Head>
+  <Head :title="seoHead.title" />
   <div class="shell py-16 sm:py-24">
     <div class="mx-auto max-w-xl">
       <div v-reveal class="flex flex-col items-center text-center">

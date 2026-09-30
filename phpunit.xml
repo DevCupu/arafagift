@@ -19,6 +19,10 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing"/>
+        <!-- Dipin di sini supaya test SEO tidak ikut berubah kalau .env lokal
+             berbeda. Nama brand ini masuk ke <title> dan structured data. -->
+        <env name="APP_NAME" value="Arafagift"/>
+        <env name="APP_URL" value="http://localhost"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>

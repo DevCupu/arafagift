@@ -13,15 +13,14 @@ defineProps({
   page: { type: Object, required: true },
   blocks: { type: Array, required: true },
   products: { type: Object, default: () => ({}) },
+  seoHead: { type: Object, required: true },
 })
 </script>
 
 <template>
-  <Head :title="page.title">
-    <!-- Halaman iklan sengaja tidak diindeks: kontennya tumpang tindih dengan
-         katalog dan hanya ditujukan untuk traffic berbayar. -->
-    <meta name="robots" content="noindex, nofollow" />
-  </Head>
+  <!-- Hanya judul. noindex, nofollow sudah dikirim controller lewat prop seoHead
+       sekaligus lewat header X-Robots-Tag, jadi tidak perlu diulang di sini. -->
+  <Head :title="seoHead.title" />
 
   <div class="bg-ivory">
     <div
