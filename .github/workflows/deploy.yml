@@ -151,11 +151,15 @@ jobs:
 
       # 9. Diagnosa mandiri saat smoke test gagal
       #
-      # APP_DEBUG=false di produksi, jadi respons 500 selalu bodies kosong.
-      # Tanpa langkah ini, "sitemap 500" hanya memberi tahu ada masalah tanpa
-      # memberitahu penyebabnya, dan kita harus menebak dari luar. Ambil log
-      # dan lingkungan server langsung ke log Actions.
-      - name: Dump server diagnostics when smoke test fails
+      # APP_DEBUG=false di produksi, jadi setiap 500 punya body kosong. Tanpa
+      # langkah ini, "sitemap 500" hanya memberi tahu ada masalah, bukan
+      # penyebabnya, dan kita harus menebak dari luar.
+      #
+      # Isinya sengaja dipancarkan sebagai annotation, bukan cuma dicetak ke
+      # log: annotation ikut muncul di halaman commit, di email notifikasi, dan
+      # di API check-runs, sehingga penyebabnya terlihat tanpa membuka log
+      # runner yang panjang.
+      - name: Report cause of SEO smoke test failure
         if: failure()
         uses: appleboy/ssh-action@v1.2.2
         with:
@@ -167,21 +171,26 @@ jobs:
             set +e
             cd /home/izim8295/arafagift
 
-            echo "===== PHP ====="
-            php -v 2>&1 | head -2
+            emit() {
+              printf '::error title=%s::%s\n' "$1" "$2"
+            }
 
-            echo "===== storage/logs ====="
-            ls -ld storage/logs 2>&1
-            ls -l storage/logs 2>&1 | head
+            if [ ! -f storage/logs/laravel.log ]; then
+              emit "log hilang" "storage/logs/laravel.log tidak ada di server"
+            elif [ ! -s storage/logs/laravel.log ]; then
+              emit "log kosong" "storage/logs/laravel.log ada tapi 0 byte; cek izin tulis"
+            else
+              # Garis paling relevan: error yang menyebut sitemap, atau 15 baris
+              # ERROR terakhir sebagai cadangan.
+              grep -i 'sitemap' storage/logs/laravel.log | tail -12 | while IFS= read -r line; do
+                emit "sitemap" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
+              done
 
-            echo "===== laravel.log (tail 120) ====="
-            tail -n 120 storage/logs/laravel.log 2>&1
+              grep -E 'production\.ERROR|local\.ERROR' storage/logs/laravel.log | tail -6 | while IFS= read -r line; do
+                emit "laravel error" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
+              done
+            fi
 
-            echo "===== route sitemap ====="
-            php artisan route:list --path=sitemap 2>&1
-
-            echo "===== driver cache ====="
-            php artisan about 2>&1 | sed -n '/^#* *Cache/,/^#* *[A-Z]/p'
-
-            echo "===== isi cache ====="
-            ls -la storage/framework/cache/data 2>&1 | head -30
+            emit "driver cache" "$(php artisan about 2>&1 | grep -m1 -iA1 'cache' | tr -d '\r' | cut -c1-300)"
+            emit "route sitemap" "$(php artisan route:list --path=sitemap 2>&1 | tr -d '\r' | cut -c1-400)"
+            emit "isi cache" "$(ls -la storage/framework/cache/data 2>&1 | head -12 | tr -d '\r' | cut -c1-600)"
