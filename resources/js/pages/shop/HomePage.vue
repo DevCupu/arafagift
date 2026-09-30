@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
-import { ArrowRight, Check, ChevronLeft, ChevronRight, Gift, MessageCircle, Shield, Truck } from 'lucide-vue-next'
+import { ArrowRight, Check, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import ProductCard from '@/components/storefront/ProductCard.vue'
@@ -12,7 +12,6 @@ import TestimonialGrid from '@/components/storefront/TestimonialGrid.vue'
 import InstagramGrid from '@/components/storefront/InstagramGrid.vue'
 import FaqAccordion from '@/components/storefront/FaqAccordion.vue'
 import QuickView from '@/components/storefront/QuickView.vue'
-import heroImgFallback from '@/assets/hero.webp'
 import { formatIDR } from '@/composables/useFormat'
 import { useStore } from '@/composables/useStore'
 
@@ -38,7 +37,7 @@ const values = homeContent.values ?? [
 ]
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
-const heroImg = hero.image || heroImgFallback
+const heroImg = hero.image || '/images/assets/hero-arafahgift-v2.png'
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
 const adRail = ref(null)
@@ -131,105 +130,57 @@ const bulkCtaHref = computed(() => {
       Kanan: foto full-bleed tanpa frame, gradient kiri & vignette untuk kedalaman
       Fade-in murni opacity (tanpa menggeser layout), berjenjang per elemen.
     -->
-    <section class="relative overflow-hidden bg-forest-deep" style="min-height: min(92svh, 720px);">
+    <section class="relative overflow-hidden border-b border-forest-soft/35 bg-forest-deep">
       <!-- Grain texture overlay -->
-      <div class="grain pointer-events-none absolute inset-0 opacity-25" />
 
       <!-- ── RIGHT: Foto full-bleed (absolute, kanan) ── -->
       <div
-        class="absolute inset-y-0 right-0 w-full lg:w-[52%]"
+        class="absolute inset-0"
         aria-hidden="true"
       >
         <img
           :src="heroImg"
           alt="Koleksi oleh-oleh Umrah & Hajj ArafahGift"
-          class="h-full w-full object-cover object-center"
+          class="h-full w-full object-cover object-[65%_center]"
           loading="eager"
           fetchpriority="high"
         />
         <!-- Gradient kiri foto → blend ke hijau tua -->
-        <div class="absolute inset-y-0 left-0 w-[58%] bg-gradient-to-r from-forest-deep via-forest-deep/60 to-transparent" />
+        <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/92 to-forest-deep/15 lg:via-forest-deep/58" />
         <!-- Vignette halus di kanan foto biar ada kedalaman -->
-        <div class="absolute inset-y-0 right-0 w-[28%] bg-gradient-to-l from-forest-deep/50 to-transparent" />
         <!-- Gradient bawah foto -->
-        <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-forest-deep/60 to-transparent" />
       </div>
 
       <!-- ── LEFT: Konten teks ── -->
-      <div class="shell relative flex h-full flex-col justify-center py-16 sm:py-20 lg:py-24">
-        <div class="w-full max-w-[560px]">
+      <div class="shell relative flex min-h-[32rem] flex-col justify-center py-14 sm:min-h-[36rem] sm:py-18 lg:min-h-[min(76svh,41rem)] lg:py-20">
+        <div class="w-full max-w-[32rem]">
+          <p class="text-[0.72rem] font-medium tracking-[0.12em] text-gold">{{ hero.eyebrow }}</p>
 
-          <!-- Eyebrow -->
-          <div class="hero-enter flex items-center gap-3">
-            <span class="h-px w-8 bg-gold/70" />
-            <span class="h-1.5 w-1.5 rotate-45 bg-gold" />
-            <p class="text-[0.68rem] font-semibold uppercase tracking-[0.25em] text-gold">
-              {{ hero.eyebrow }}
-            </p>
-          </div>
-
-          <!-- Headline: Poppins, baris terakhir emas -->
           <h1
-            class="hero-enter mt-5 sm:mt-6"
-            style="font-size: clamp(2.5rem, 6vw, 4.4rem); line-height: 1.04; font-weight: 600; letter-spacing: -0.02em; animation-delay: 80ms;"
+            class="mt-4 text-ivory sm:mt-5"
+            style="font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;"
           >
-            <span
-              v-for="(line, i) in headlineLines" :key="i"
-              class="block"
-              :class="i === headlineLines.length - 1 ? 'text-gold' : 'text-ivory'"
-            >{{ line }}</span>
+            <span v-for="(line, i) in headlineLines" :key="i" class="block">{{ line }}</span>
           </h1>
 
-          <!-- Sub -->
-          <p
-            class="hero-enter mt-6 max-w-[32rem] text-[1.05rem] leading-relaxed text-ivory/75 sm:text-[1.1rem]"
-            style="animation-delay: 160ms;"
-          >
+          <p class="mt-5 max-w-[28rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]">
             {{ hero.sub }}
           </p>
 
-          <!-- CTA buttons -->
-          <div class="hero-enter mt-8 flex flex-wrap items-center gap-3 sm:mt-10" style="animation-delay: 240ms;">
+          <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <AppButton :to="hero.cta.to" variant="gold" size="lg">
               {{ hero.cta.label }}
               <template #icon><ArrowRight class="h-4 w-4" /></template>
             </AppButton>
-            <AppButton
-              :to="hero.ctaSecondary.to"
-              size="lg"
-              class="group !border-ivory/35 !bg-transparent !text-ivory hover:!bg-ivory/10"
+            <Link
+              v-if="hero.ctaSecondary?.to"
+              :href="hero.ctaSecondary.to"
+              class="group inline-flex items-center gap-1.5 text-[0.84rem] font-medium text-ivory/75 transition hover:text-ivory"
             >
               {{ hero.ctaSecondary.label }}
-              <template #icon>
-                <span class="transition-transform duration-300 ease-calm group-hover:translate-x-0.5">
-                  <ArrowRight class="h-4 w-4" />
-                </span>
-              </template>
-            </AppButton>
+              <ArrowRight class="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" :stroke-width="1.6" />
+            </Link>
           </div>
-
-          <!-- Trust badges dengan separator vertikal -->
-          <div class="hero-enter mt-10 flex flex-wrap items-center gap-0 divide-x divide-ivory/15 sm:mt-12" style="animation-delay: 320ms;">
-            <div class="flex items-center gap-2 pr-5 sm:pr-6">
-              <Truck class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
-              <div class="text-[0.73rem] leading-tight text-ivory/55">
-                Dikirim dari<br/><strong class="font-semibold text-ivory/80">Jakarta</strong>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 px-5 sm:px-6">
-              <Gift class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
-              <div class="text-[0.73rem] leading-tight text-ivory/55">
-                Kartu Ucapan<br/><strong class="font-semibold text-ivory/80">Gratis</strong>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 pl-5 sm:pl-6">
-              <Shield class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
-              <div class="text-[0.73rem] leading-tight text-ivory/55">
-                Produk<br/><strong class="font-semibold text-ivory/80">Terpercaya</strong>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
     </section>

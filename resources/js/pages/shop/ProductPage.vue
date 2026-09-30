@@ -12,6 +12,7 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 import { useWishlist } from '@/composables/useWishlist'
+import { productWhatsAppMessage } from '@/composables/useProductWhatsApp'
 import { useStore } from '@/composables/useStore'
 
 const props = defineProps({
@@ -210,7 +211,7 @@ const productJsonLd = computed(() => {
           <p class="mt-3 text-[0.85rem] leading-relaxed text-muted">
             Harga menyesuaikan jumlah dan kartu bisa dicetak dengan nama jamaah. Kirim daftar kebutuhan Anda, kami balas dengan penawaran di hari yang sama.
           </p>
-          <AppButton :href="whatsappHref('Halo ArafahGift, saya mau tanya tentang produk ini.')" variant="outline" class="mt-6" block target="_blank" rel="noopener">Konsultasi via WhatsApp</AppButton>
+          <AppButton :href="whatsappHref(productWhatsAppMessage(product))" variant="outline" class="mt-6" block target="_blank" rel="noopener">Pesan produk ini via WhatsApp</AppButton>
         </aside>
       </div>
     </section>

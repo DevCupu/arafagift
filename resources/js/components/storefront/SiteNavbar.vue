@@ -60,11 +60,11 @@ watch([menuOpen, searchOpen], ([m, s]) => {
 
 <template>
   <header
-    class="sticky top-0 z-[100] border-b transition-colors duration-300 bg-forest-deep"
-    :class="scrolled ? 'border-forest-soft/40' : 'border-transparent'"
+    class="sticky top-0 z-[100] bg-forest-deep transition-all duration-300"
+    :class="scrolled ? 'md:py-2' : 'md:py-3'"
     style="transform: translate3d(0, 0, 0); backface-visibility: hidden;"
   >
-    <nav class="shell flex h-16 items-center justify-between gap-6 md:h-[72px]" aria-label="Utama">
+    <nav class="shell flex h-16 items-center justify-between gap-3 md:h-14 md:gap-4" aria-label="Utama">
       <button
         class="-ml-2 grid h-10 w-10 place-items-center text-ivory/85 hover:text-ivory md:hidden"
         :aria-expanded="menuOpen"
@@ -75,31 +75,32 @@ watch([menuOpen, searchOpen], ([m, s]) => {
       </button>
 
       <Link href="/" class="md:mr-8" aria-label="ArafahGift.id — beranda">
-        <BrandLogo tone="ivory" />
+        <span class="md:flex md:h-14 md:items-center md:rounded-[1.15rem] md:bg-forest md:px-5 md:shadow-soft">
+          <BrandLogo tone="ivory" />
+        </span>
       </Link>
 
-      <ul class="hidden flex-1 items-center gap-8 md:flex">
-        <li v-for="link in links" :key="link.to">
-          <Link
-            :href="link.to"
-            class="relative text-[0.82rem] tracking-wide text-ivory/75 transition-colors hover:text-ivory"
-            :class="page.url === link.to ? 'text-ivory' : ''"
-          >
-            {{ link.label }}
-            <span v-if="page.url === link.to" class="absolute -bottom-1 left-0 right-0 h-px bg-gold" />
-          </Link>
-        </li>
-      </ul>
+      <div class="hidden flex-1 justify-center md:flex">
+        <ul class="flex items-center gap-1 rounded-full bg-forest p-1.5 shadow-soft">
+          <li v-for="link in links" :key="link.to">
+            <Link
+              :href="link.to"
+              class="inline-flex whitespace-nowrap rounded-full px-3.5 py-2.5 text-[0.8rem] font-medium tracking-wide transition-colors"
+              :class="page.url === link.to ? 'bg-gold text-forest-deep' : 'text-ivory/78 hover:bg-ivory/10 hover:text-ivory'"
+            >{{ link.label }}</Link>
+          </li>
+        </ul>
+      </div>
 
-      <div class="flex items-center gap-1">
-        <button class="grid h-10 w-10 place-items-center text-ivory/75 transition hover:text-ivory" aria-label="Cari produk" @click="searchOpen = true">
+      <div class="flex items-center gap-1 md:rounded-[1.15rem] md:bg-forest md:px-2 md:shadow-soft">
+        <button class="grid h-10 w-10 place-items-center rounded-full text-ivory/75 transition hover:bg-ivory/10 hover:text-ivory" aria-label="Cari produk" @click="searchOpen = true">
           <Search class="h-[18px] w-[18px]" :stroke-width="1.5" />
         </button>
-        <Link href="/akun" class="hidden h-10 w-10 place-items-center text-ivory/75 transition hover:text-ivory sm:grid" aria-label="Akun saya">
+        <Link href="/akun" class="hidden h-10 w-10 place-items-center rounded-full text-ivory/75 transition hover:bg-ivory/10 hover:text-ivory sm:grid" aria-label="Akun saya">
           <User class="h-[18px] w-[18px]" :stroke-width="1.5" />
         </Link>
         <button
-          class="relative -mr-2 grid h-10 w-10 place-items-center text-ivory/75 transition hover:text-ivory"
+          class="relative grid h-10 w-10 place-items-center rounded-full text-ivory/75 transition hover:bg-ivory/10 hover:text-ivory"
           :aria-label="`Keranjang, ${count} item`"
           @click="openDrawer"
         >
