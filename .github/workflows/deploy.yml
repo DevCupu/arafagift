@@ -148,3 +148,40 @@ jobs:
           fi
 
           echo "Semua endpoint SEO sehat."
+
+      # 9. Diagnosa mandiri saat smoke test gagal
+      #
+      # APP_DEBUG=false di produksi, jadi respons 500 selalu bodies kosong.
+      # Tanpa langkah ini, "sitemap 500" hanya memberi tahu ada masalah tanpa
+      # memberitahu penyebabnya, dan kita harus menebak dari luar. Ambil log
+      # dan lingkungan server langsung ke log Actions.
+      - name: Dump server diagnostics when smoke test fails
+        if: failure()
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set +e
+            cd /home/izim8295/arafagift
+
+            echo "===== PHP ====="
+            php -v 2>&1 | head -2
+
+            echo "===== storage/logs ====="
+            ls -ld storage/logs 2>&1
+            ls -l storage/logs 2>&1 | head
+
+            echo "===== laravel.log (tail 120) ====="
+            tail -n 120 storage/logs/laravel.log 2>&1
+
+            echo "===== route sitemap ====="
+            php artisan route:list --path=sitemap 2>&1
+
+            echo "===== driver cache ====="
+            php artisan about 2>&1 | sed -n '/^#* *Cache/,/^#* *[A-Z]/p'
+
+            echo "===== isi cache ====="
+            ls -la storage/framework/cache/data 2>&1 | head -30
