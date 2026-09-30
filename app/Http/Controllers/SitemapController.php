@@ -15,13 +15,49 @@ use Throwable;
  * Karena itu endpoint ini tidak boleh pernah 500: satu baris produk yang
  * bermasalah lebih baik membuat sitemap berisi URL statis saja daripada membuat
  * seluruh toko tidak terdiscover. Perubahan katalog di panel admin sudah
- * meng-invalidasi cache ini lewat Cache::forget('sitemap-urls').
+ * meng-invalidasi cache ini lewat SitemapController::flush().
  */
 class SitemapController extends Controller
 {
+    /**
+     * Versi ikut naik setiap kali bentuk entri cache berubah. Key lama masih
+     * hidup di cache file/redis produksi sampai 24-48 jam, dan entri lamanya
+     * tidak punya kunci yang dipakai view sekarang.
+     *
+     * Ini bukan hypothetis:_entri basi dengan bentuk lama sempat membuat
+     * /sitemap.xml membalas 500 karena "Undefined array key" di view. Karena
+     * error itu tidak muncul di test (PHPUnit memakai error handler sendiri),
+     * bentuk cache harus dijaga lewat nomor versi, bukan hope.
+     */
+    private const CACHE_KEY = 'sitemap-urls-v2';
+
+    /**
+     * Dipanggil panel admin dan CacheWarm setiap kali katalog berubah.
+     * Sengaja ada method ini supaya nama key hanya hidup di satu tempat â€”
+     * Kalau key ditulis ulang di beberapa pemanggil, lupa satu di antaranya
+     * berarti sitemap tetap menyajikan URL produk yang sudah dihapus.
+     */
+    public static function flush(): void
+    {
+        Cache::forget(self::CACHE_KEY);
+    }
+
     public function index(): Response
     {
-        $xml = view('sitemap', ['urls' => self::urls()])->render();
+        try {
+            $xml = view('sitemap', ['urls' => self::urls()])->render();
+        } catch (Throwable $e) {
+            // Lapisan paling luar. Guard di catalogUrls() hanya menutup masalah
+            // di dalam query katalog; view dan cache di luar sana belum
+            // tersentuh. Endpoint ini tidak boleh 500 dalam keadaan apa pun,
+            // karena satu halaman error di sini berarti Google kehilangan peta
+            // URL seluruh toko.
+            Log::error('Sitemap gagal dirender, memakai fallback statis.', [
+                'message' => $e->getMessage(),
+            ]);
+
+            $xml = view('sitemap', ['urls' => self::staticUrls()])->render();
+        }
 
         return response($xml, 200)->header('Content-Type', 'text/xml; charset=utf-8');
     }
@@ -46,7 +82,7 @@ class SitemapController extends Controller
      */
     public static function urls(): array
     {
-        return Cache::flexible('sitemap-urls', [86400, 172800], function (): array {
+        return Cache::flexible(self::CACHE_KEY, [86400, 172800], function (): array {
             $urls = self::staticUrls();
 
             foreach (self::catalogUrls() as $url) {

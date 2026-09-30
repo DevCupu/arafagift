@@ -134,6 +134,6 @@ class AdminCategoryController extends Controller
     {
         Cache::forget('home-payload');
         Cache::forget('koleksi-payload');
-        Cache::forget('sitemap-urls');
+        SitemapController::flush();
     }
 }
