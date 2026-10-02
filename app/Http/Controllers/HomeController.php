@@ -8,6 +8,7 @@ use App\Models\Faq;
 use App\Models\Occasion;
 use App\Models\Product;
 use App\Models\Testimonial;
+use App\Support\Image\HeroImage;
 use App\Support\Seo\PageSeo;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
@@ -37,7 +38,7 @@ class HomeController extends Controller
         )
             ->withoutBrandSuffix()
             ->canonical(route('home'))
-            ->image('/images/assets/hero-arafahgift-v2.png')
+            ->image(HeroImage::socialPath())
             ->jsonLd([
                 '@context' => 'https://schema.org',
                 '@type' => 'WebSite',
@@ -70,6 +71,13 @@ class HomeController extends Controller
                 'featuredProducts' => Product::with(['category', 'occasions'])->where('featured', true)->orderBy('featured_order')->orderBy('id')->get()->map->toCard()->values()->all(),
                 'signatureProduct' => $signatureProduct?->toCatalog(),
                 'content' => $content,
+                // Dihitung di server supaya markup tidak perlu tahu bentuk
+                // path-nya: foto hero bisa berupa path relatif dari upload
+                // admin, URL absolut versi lama, atau file statis bawaan.
+                // Keduanya hanya path relatif, jadi host tidak ikut membeku di
+                // dalam cache payload ini.
+                'heroImage' => HeroImage::payload($content['hero']['image'] ?? null),
+                'heroSlideImage' => HeroImage::sliderPayload($content['hero']['image'] ?? null),
                 'testimonials' => Testimonial::orderBy('id')->get()->map(fn (Testimonial $t) => $t->only(['id', 'rating', 'quote', 'name', 'city', 'context', 'avatar']))->values()->all(),
                 'faqs' => Faq::orderBy('sort_order')->get()->map(fn (Faq $faq) => ['q' => $faq->question, 'a' => $faq->answer])->values()->all(),
             ];

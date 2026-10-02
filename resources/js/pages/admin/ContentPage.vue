@@ -4,7 +4,7 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { onUnmounted, ref, watch } from 'vue'
 import { router, useForm } from '@inertiajs/vue3'
 import { ArrowDown, ArrowUp, ImagePlus, Plus, X } from 'lucide-vue-next'
 import BulkActionBar from '@/components/admin/BulkActionBar.vue'
@@ -78,16 +78,40 @@ const form = useForm({
   },
   values: props.content.values?.length ? props.content.values.map((v) => ({ ...v })) : [],
   hero_image: null,
+  // Kembalikan hero ke foto bawaan. dulu tidak ada cara mengembalikan foto
+  // bawaan setelah sempat diunggah, jadi foto lama menggantung di storage.
+  hero_image_reset: false,
 })
 
 const heroImagePreview = ref(props.content.hero.image ?? null)
+// Object URL yang dibuat untuk pratinjau tidak dikumpulkan browser, jadi harus
+// dicabut sendiri. Kalau tidak, setiap unggahan baru menahan blob foto penuh
+// di memori selama sesi admin.
+let heroPreviewUrl = null
 
 const onHeroImageChange = (e) => {
   const file = e.target.files[0]
   if (!file) return
   form.hero_image = file
-  heroImagePreview.value = URL.createObjectURL(file)
+  form.hero_image_reset = false
+  revokeHeroPreview()
+  heroPreviewUrl = URL.createObjectURL(file)
+  heroImagePreview.value = heroPreviewUrl
 }
+
+const revokeHeroPreview = () => {
+  if (heroPreviewUrl) URL.revokeObjectURL(heroPreviewUrl)
+  heroPreviewUrl = null
+}
+
+const resetHeroImage = () => {
+  form.hero_image = null
+  form.hero_image_reset = true
+  revokeHeroPreview()
+  heroImagePreview.value = null
+}
+
+onUnmounted(revokeHeroPreview)
 
 const instagramPreviews = ref(
   props.content.instagram.posts?.length
@@ -341,13 +365,29 @@ const moveFaq = (index, dir) => {
                 <div class="arch aspect-[4/5] w-28 flex-none overflow-hidden border border-line bg-ivory">
                   <img v-if="heroImagePreview" :src="heroImagePreview" alt="Foto hero" class="h-full w-full object-cover" />
                 </div>
-                <label class="inline-flex cursor-pointer items-center gap-2 border border-dashed border-line px-4 py-2.5 text-[0.8rem] text-muted transition hover:border-olive/60 hover:text-forest">
-                  <ImagePlus class="h-4 w-4 text-gold" :stroke-width="1.4" />
-                  Unggah foto hero
-                  <input type="file" accept="image/*" class="sr-only" @change="onHeroImageChange" />
-                </label>
+                <div class="space-y-2">
+                  <label class="inline-flex cursor-pointer items-center gap-2 border border-dashed border-line px-4 py-2.5 text-[0.8rem] text-muted transition hover:border-olive/60 hover:text-forest">
+                    <ImagePlus class="h-4 w-4 text-gold" :stroke-width="1.4" />
+                    {{ form.hero_image ? 'Ganti foto' : 'Unggah foto hero' }}
+                    <input type="file" accept="image/*" class="sr-only" @change="onHeroImageChange" />
+                  </label>
+                  <p v-if="form.hero_image_reset" class="text-[0.72rem] text-muted">
+                    Akan kembali ke foto bawaan setelah disimpan.
+                  </p>
+                  <button
+                    v-else-if="props.content.hero.image"
+                    type="button"
+                    class="text-[0.72rem] text-muted underline underline-offset-2 transition hover:text-danger"
+                    @click="resetHeroImage"
+                  >
+                    Kembalikan ke foto bawaan
+                  </button>
+                </div>
               </div>
               <p v-if="form.errors.hero_image" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.hero_image }}</p>
+              <p class="mt-1.5 text-[0.72rem] text-muted">
+                Dipecah otomatis ke beberapa ukuran supaya halaman tetap ringan di ponsel.
+              </p>
             </div>
             <div>
               <label class="field-label" for="c-eyebrow">Label kecil</label>
