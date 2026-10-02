@@ -375,6 +375,56 @@ it('menyimpan path gambar hero relatif supaya host tidak ikut ter-cache', functi
 });
 
 /**
+ * Path hero yang tersimpan di database bisa saja menunjuk berkas yang sudah
+ * tidak ada: gambar statis lama dipindahkan supaya tidak ikut ter-deploy,
+ * atau file upload dihapus manual di server. Kalau path usang itu tetap
+ * dipakai apa adanya, elemen LCP homepage berakhir 404 tanpa srcset yang bisa
+ * dipulihkan, dan tidak ada yang melihatnya karena request tetap 200.
+ */
+it('kembali ke gambar hero default kalau path yang tersimpan sudah hilang', function () {
+    $content = Content::where('key', 'home')->firstOrFail();
+    $content->data = [
+        'hero' => [
+            'headline' => 'Hadiah dari Tanah Suci',
+            // Berkas ini memang tidak ada di public/: PNG sumber sekarang
+            // hidup di resources/ karena tidak perlu dilayani ke browser.
+            'image' => '/images/assets/hero-arafahgift-v2.png',
+        ],
+        'signature' => ['productSlug' => 'tidak-ada'],
+    ];
+    $content->save();
+
+    $payload = inertiaPageProps($this->get('/')->assertOk()->getContent());
+
+    expect($payload['heroImage']['fallback'])->toBe('/'.HeroImage::FALLBACK)
+        ->and($payload['heroImage']['avif'])->not->toBe('')
+        ->and($payload['heroImage']['webp'])->not->toBe('')
+        // Rasio ikut pulih, jadi placeholder tidak melompat saat muat.
+        ->and($payload['heroImage']['width'])->toBe(1750);
+});
+
+/**
+ * Path usang dari disk storage harus diperlakukan sama dengan path statis yang
+ * hilang, karena keduanya berakhir sebagai <img> yang 404.
+ */
+it('kembali ke gambar hero default untuk path storage yang sudah hilang', function () {
+    $content = Content::where('key', 'home')->firstOrFail();
+    $content->data = [
+        'hero' => [
+            'headline' => 'Hadiah dari Tanah Suci',
+            'image' => 'content/hero-dlhapus.jpg',
+        ],
+        'signature' => ['productSlug' => 'tidak-ada'],
+    ];
+    $content->save();
+
+    $payload = inertiaPageProps($this->get('/')->assertOk()->getContent());
+
+    expect($payload['heroImage']['fallback'])->toBe('/'.HeroImage::FALLBACK)
+        ->and($payload['heroImage']['avif'])->not->toBe('');
+});
+
+/**
  * Ambil prop Inertia dari blok data-page.
  *
  * Atribut data-page="app" hanya berisi id elemen, bukan payload-nya. Yang

@@ -182,6 +182,33 @@ final class ResponsiveImage
     }
 
     /**
+     * True hanya kalau referensinya dipastikan tidak ada di disk lokal.
+     *
+     * Dipakai HeroImage untuk kembali ke gambar default kalau berkas hero yang
+     * tersimpan di database sudah hilang, misalnya karena gambar statis lama
+     * dipindahkan atau file upload dihapus manual di server. Tanpa ini, path
+     * yang sudah usang tetap dipakai apa adanya dan elemen LCP di homepage
+     * berakhir 404 tanpa/src yang bisa dipulihkan.
+     *
+     * Kalau gambar dilayani dari luar disk lokal, misalnya disk publik
+     * diarahkan ke S3 atau CDN, lokal tidak bisa menilai apa pun. Kasus itu
+     * sengaja dianggap masih ada, karena tebakan kita tentang isi bucket lebih
+     * sering salah daripada benar.
+     */
+    public static function isMissing(?string $reference): bool
+    {
+        $path = self::normalize((string) $reference);
+
+        if ($path === null) {
+            return true;
+        }
+
+        $local = self::localPath($path);
+
+        return $local !== null && ! is_file($local);
+    }
+
+    /**
      * @param  list<int>  $widths
      * @param  array{int, int}|null  $source
      */
