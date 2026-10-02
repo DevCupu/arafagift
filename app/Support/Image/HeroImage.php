@@ -86,22 +86,28 @@ final class HeroImage
 
     public static function resolve(?string $stored = null): ?ResponsiveImage
     {
-        $reference = trim((string) $stored);
-
-        return ResponsiveImage::make(
-            $reference !== '' ? $reference : self::fallbackPath(),
-            self::WIDTHS,
-        );
+        return ResponsiveImage::make(self::reference($stored), self::WIDTHS);
     }
 
     public static function resolveSlider(?string $stored = null): ?ResponsiveImage
     {
+        return ResponsiveImage::make(self::reference($stored), self::SLIDER_WIDTHS);
+    }
+
+    /**
+     * Referensi hero yang benar-benar bisa dilayani. Nilai kosong dan path yang
+     * sudah tidak ada di disk dikembalikan sebagai gambar default, supaya
+     * homepage tidak pernah tampil dengan elemen LCP yang 404.
+     */
+    private static function reference(?string $stored): string
+    {
         $reference = trim((string) $stored);
 
-        return ResponsiveImage::make(
-            $reference !== '' ? $reference : self::fallbackPath(),
-            self::SLIDER_WIDTHS,
-        );
+        if ($reference === '' || ResponsiveImage::isMissing($reference)) {
+            return self::fallbackPath();
+        }
+
+        return $reference;
     }
 
     /**
