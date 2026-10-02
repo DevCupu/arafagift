@@ -80,21 +80,19 @@ it('tidak 500 saat katalog masih kosong', function () {
     $this->get('/sitemap.xml')->assertOk();
 });
 
-it('merender view dari entri berformat lama tanpa error dan tanpa tag kosong', function () {
+it('merender XML dari entri berformat lama tanpa error dan tanpa tag kosong', function () {
     // Ini lapisan yang benar-benar rusak di produksi. Entri cache versi lama
-    // hanya punya kunci loc, sedangkan view versi baru juga membaca
-    // changefreq dan priority. Akses kunci yang hilang menjadi
-    // ErrorException karena Laravel mengubah warning PHP jadi exception,
-    // dan itu membuat /sitemap.xml membalas 500.
-    //
-    // View dirender langsung, bukan lewat Cache::put. Cache::put tidak bisa
-    // mensimulasikan hit Cache::flexible: flexible akan menjalankan closure
-    // dan menimpa nilai yang baru dislocation, jadi test lewat cache selalu
-    // hijau tanpa menguji apa pun.
-    $xml = view('sitemap', ['urls' => [
+    // hanya punya kunci loc, sedangkan versi baru juga memakai changefreq dan
+    // priority. Controller sekarang memakai buildXml() murni PHP (tidak ada
+    // Blade), jadi kita uji buildXml() langsung via Reflection agar tidak
+    // terikat pada URL test-server (localhost) yang dicampur Cache::flexible.
+    $buildXml = new ReflectionMethod(SitemapController::class, 'buildXml');
+    $buildXml->setAccessible(true);
+
+    $xml = $buildXml->invoke(null, [
         ['loc' => 'https://arafagift.id/'],
         ['loc' => 'https://arafagift.id/koleksi/kurma'],
-    ]])->render();
+    ]);
 
     expect($xml)->toContain('<loc>https://arafagift.id/</loc>')
         ->and($xml)->toContain('<loc>https://arafagift.id/koleksi/kurma</loc>')

@@ -304,7 +304,10 @@ function headTagCount(string $html, string $needle): int
 it('mem-preload gambar hero di HTML pertama tanpa menjalankan JavaScript', function () {
     $html = $this->get('/')->assertOk()->getContent();
 
-    expect($html)->toContain('<link rel="preload"')
+    // Tag <link> di app.blade.php ditulis multi-baris sehingga HTML yang
+    // dirender memiliki newline di antara <link dan atributnya. Kita cek
+    // setiap atribut secara terpisah agar tidak bergantung pada format spasi.
+    expect($html)->toContain('rel="preload"')
         ->and($html)->toContain('as="image"')
         ->and($html)->toContain('type="image/avif"')
         ->and($html)->toContain('imagesizes="100vw"')
