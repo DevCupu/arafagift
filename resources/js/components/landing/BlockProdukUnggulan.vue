@@ -47,7 +47,7 @@ const normalizeProduct = (product, source = 'catalog') => ({
   reviews: product.reviews ? Number(product.reviews) : null,
   badge: product.badge,
   stock: product.stock,
-  description: product.description || product.short || 'Produk pilihan ArafahGift untuk hadiah pulang umrah yang rapi, pantas, dan siap diberikan.',
+  description: product.description || product.short || 'Produk pilihan Arafagift untuk hadiah pulang umrah yang rapi, pantas, dan siap diberikan.',
   includes: normalizeIncludes(product.includes),
   details: normalizeDetails(product.details),
 })
@@ -64,7 +64,7 @@ const discount = (item) =>
 
 const itemHref = (item, action = 'checkout') => {
   const label = action === 'detail' ? 'minta detail' : 'checkout'
-  return whatsappHref(`Halo ArafahGift, saya ingin ${label} "${item.name}".`)
+  return whatsappHref(`Halo Arafagift, saya ingin ${label} "${item.name}".`)
 }
 
 const openDetail = (item) => {

@@ -23,7 +23,7 @@ const columns = [
     ],
   },
   {
-    title: 'ArafahGift',
+    title: 'Arafagift',
     links: [
       { label: 'Tentang kami', to: '/tentang' },
       { label: 'FAQ', to: '/faq' },
@@ -68,12 +68,12 @@ const subscribe = () => {
           <a
             href="https://www.instagram.com/arafahajiumrahgift/" target="_blank" rel="noopener"
             class="grid h-10 w-10 place-items-center border border-ivory/20 transition hover:border-gold hover:text-gold"
-            aria-label="Instagram ArafahGift"
+            aria-label="Instagram Arafagift"
           ><Instagram class="h-4 w-4" :stroke-width="1.5" /></a>
           <a
             :href="whatsappHref()" target="_blank" rel="noopener"
             class="grid h-10 w-10 place-items-center border border-ivory/20 transition hover:border-gold hover:text-gold"
-            aria-label="WhatsApp ArafahGift"
+            aria-label="WhatsApp Arafagift"
           ><MessageCircle class="h-4 w-4" :stroke-width="1.5" /></a>
         </div>
       </div>
@@ -111,7 +111,7 @@ const subscribe = () => {
     </div>
 
     <div class="shell flex flex-col gap-2 border-t border-ivory/10 py-5 text-[0.72rem] text-ivory/45 pb-safe sm:flex-row sm:items-center sm:justify-between">
-      <p>© {{ new Date().getFullYear() }} ArafahGift.id — Jakarta, Indonesia</p>
+      <p>© {{ new Date().getFullYear() }} Arafagift.id — Jakarta, Indonesia</p>
       <p>Dibuat untuk mereka yang menunggu di rumah.</p>
     </div>
   </footer>

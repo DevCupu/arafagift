@@ -7,7 +7,7 @@ const props = defineProps({ content: { type: Object, required: true } })
 const { whatsappHref } = useStore()
 
 const items = computed(() => (props.content.items ?? []).filter((b) => b.image || b.title))
-const linkFor = (item) => item.href || whatsappHref('Halo ArafahGift, saya tertarik dengan promo ini.')
+const linkFor = (item) => item.href || whatsappHref('Halo Arafagift, saya tertarik dengan promo ini.')
 </script>
 
 <template>
@@ -25,7 +25,7 @@ const linkFor = (item) => item.href || whatsappHref('Halo ArafahGift, saya terta
           <img
             v-if="item.image"
             :src="item.image"
-            :alt="item.alt || item.title || 'Promo ArafahGift'"
+            :alt="item.alt || item.title || 'Promo Arafagift'"
             class="slow-zoom absolute inset-0 h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]"
             loading="lazy"
           />

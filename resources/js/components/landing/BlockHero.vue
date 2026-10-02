@@ -10,7 +10,7 @@ const { whatsappHref } = useStore()
 
 // Lebih pendek dari hero homepage: landing iklan harus muat 1 layar di mobile.
 const lines = computed(() => (props.content.headline ?? '').split('\n'))
-const href = computed(() => props.content.cta?.href || whatsappHref(`Halo ArafahGift, saya tertarik dengan penawaran ini.`))
+const href = computed(() => props.content.cta?.href || whatsappHref(`Halo Arafagift, saya tertarik dengan penawaran ini.`))
 </script>
 
 <template>

@@ -74,7 +74,7 @@ watch([menuOpen, searchOpen], ([m, s]) => {
         <Menu class="h-5 w-5" :stroke-width="1.5" />
       </button>
 
-      <Link href="/" class="md:mr-8" aria-label="ArafahGift.id — beranda">
+      <Link href="/" class="md:mr-8" aria-label="Arafagift.id — beranda">
         <span class="md:flex md:h-14 md:items-center md:rounded-[1.15rem] md:bg-forest md:px-5 md:shadow-soft">
           <BrandLogo tone="ivory" />
         </span>
