@@ -152,9 +152,15 @@ jobs:
             fi
           done
 
-          # Brand harus konsisten tanpa huruf h.
-          if grep -q "ArafahGift" /tmp/home.html; then
-            echo "::error::homepage masih mengirim brand lama 'ArafahGift'"
+          # Brand harus konsisten tanpa huruf h di bagian <head> yang dikendalikan kode.
+          # Hanya periksa <head>...</head> bukan seluruh HTML, karena Inertia menyematkan
+          # JSON data dari database (nama toko, konten cerita) di dalam <script data-page>
+          # yang bisa saja masih memakai nama lama dari database produksi.
+          head_section=$(sed -n '/<head/,/<\/head>/p' /tmp/home.html)
+          if echo "$head_section" | grep -q "ArafahGift"; then
+            echo "::error::tag <head> masih mengirim brand lama 'ArafahGift' — periksa meta title, description, og:title, atau structured data"
+            echo "--- head section ---"
+            echo "$head_section" | grep -i 'arafahgift' | head -10
             exit 1
           fi
 

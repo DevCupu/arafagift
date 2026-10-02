@@ -9,7 +9,7 @@ const { whatsappHref } = useStore()
 const open = ref(false)
 let timer = null
 
-const href = computed(() => props.content.href || whatsappHref('Halo ArafahGift, saya tertarik dengan promo ini.'))
+const href = computed(() => props.content.href || whatsappHref('Halo Arafagift, saya tertarik dengan promo ini.'))
 
 // ponytail: sessionStorage, satu kali per kunjungan — cukup untuk mencegah
 // popup muncul berulang tiap reload/scroll di sesi yang sama.

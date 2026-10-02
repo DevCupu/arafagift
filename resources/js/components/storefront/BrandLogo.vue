@@ -20,7 +20,7 @@ const heightClass = computed(() => {
 <template>
   <img
     :src="logoSrc"
-    alt="ArafahGift.id"
+    alt="Arafagift.id"
     :class="['w-auto object-contain transition-all duration-350', heightClass]"
   />
 </template>

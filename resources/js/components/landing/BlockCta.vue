@@ -7,7 +7,7 @@ import { useStore } from '@/composables/useStore'
 const props = defineProps({ content: { type: Object, required: true } })
 
 const { whatsappHref } = useStore()
-const href = computed(() => props.content.cta?.href || whatsappHref('Halo ArafahGift, saya mau tanya penawaran ini.'))
+const href = computed(() => props.content.cta?.href || whatsappHref('Halo Arafagift, saya mau tanya penawaran ini.'))
 </script>
 
 <template>
