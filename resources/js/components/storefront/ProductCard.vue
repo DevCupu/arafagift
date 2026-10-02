@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowUpRight, Eye, Heart, MessageCircle, ShoppingBag } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -20,6 +20,7 @@ const emit = defineEmits(['quickview'])
 const { add } = useCart()
 const { whatsappHref } = useStore()
 const wishlist = useWishlist()
+const imageFailed = ref(false)
 
 const soldOut = computed(() => props.product.stock === 0)
 const discount = computed(() =>
@@ -40,7 +41,7 @@ const discount = computed(() =>
         :aria-label="product.name"
       >
         <div
-          v-if="product.image"
+          v-if="product.image && !imageFailed"
           class="flex h-full w-full items-center justify-center p-2.5 transition-transform duration-500 ease-calm group-hover:scale-[1.015] sm:p-4"
         >
           <img
@@ -49,6 +50,7 @@ const discount = computed(() =>
             loading="lazy"
             decoding="async"
             class="h-full w-full object-contain object-center"
+            @error="imageFailed = true"
           />
         </div>
         <div v-else class="h-full w-full">

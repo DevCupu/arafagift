@@ -1,4 +1,4 @@
-{!! '<?xml version="1.0" encoding="UTF-8"?>' !!}
+{!! '<' . '?xml version="1.0" encoding="UTF-8"?>' !!}
 {{-- Entri di sini datang dari cache, dan cache bisa masih memuat bentuk lama
      yang tidak punya kunci changefreq atau priority. Karena itu setiap kunci
      dibaca dengan operator ?? dan tidak pernah memakai $url['kunci'] langsung.

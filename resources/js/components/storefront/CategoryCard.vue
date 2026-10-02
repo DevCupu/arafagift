@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowUpRight } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -7,6 +8,8 @@ defineProps({
   category: { type: Object, required: true },
   index: { type: Number, default: 0 },
 })
+
+const imageFailed = ref(false)
 </script>
 
 <template>
@@ -15,17 +18,18 @@ defineProps({
       <div class="h-full w-full transition-transform duration-[900ms] ease-calm group-hover:scale-[1.05]">
         <!-- Foto nyata jika tersedia, fallback ke SVG ilustrasi -->
         <img
-          v-if="category.image"
+          v-if="category.image && !imageFailed"
           :src="category.image"
           :alt="category.name"
           loading="lazy"
           class="h-full w-full object-cover"
+          @error="imageFailed = true"
         />
         <ProductArt v-else :art="category.art" :tone="index" />
       </div>
       <!-- Gradient overlay agar nama bisa terbaca di atas foto -->
       <div
-        v-if="category.image"
+        v-if="category.image && !imageFailed"
         class="pointer-events-none absolute inset-0 bg-gradient-to-t from-forest-deep/60 via-transparent to-transparent"
       />
     </div>
