@@ -27,6 +27,7 @@ use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WishlistController;
 use App\Support\Seo\PageSeo;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 // ---------- SEO ----------
@@ -138,6 +139,15 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
+// ---------- Fallback penyajian file storage (bila symlink hosting/cPanel belum aktif) ----------
+Route::get('/storage/{path}', function (string $path) {
+    abort_if(str_contains($path, '..'), 404);
+    $disk = Storage::disk('public');
+    abort_unless($disk->exists($path), 404);
+
+    return response()->file($disk->path($path));
+})->where('path', '.*');
 
 // ---------- Landing page iklan (Meta/Google Ads) ----------
 // Catch-all: WAJIB terdaftar paling akhir, setelah auth.php, supaya setiap route

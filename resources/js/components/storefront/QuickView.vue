@@ -14,7 +14,11 @@ const emit = defineEmits(['close'])
 
 const { add } = useCart()
 const qty = ref(1)
-watch(() => props.product, () => { qty.value = 1 })
+const imageFailed = ref(false)
+watch(() => props.product, () => {
+  qty.value = 1
+  imageFailed.value = false
+})
 
 const addToCart = () => {
   add(props.product, qty.value)
@@ -26,12 +30,13 @@ const addToCart = () => {
   <AppModal :open="!!product" label="Lihat cepat produk" @close="emit('close')">
     <div v-if="product" class="grid sm:grid-cols-[minmax(0,1.08fr)_minmax(19rem,0.92fr)]">
       <div class="aspect-square border-b border-line bg-ivory/55 sm:aspect-auto sm:min-h-[32rem] sm:border-b-0 sm:border-r">
-        <div v-if="product.image" class="flex h-full w-full items-center justify-center p-4 sm:p-7">
+        <div v-if="product.image && !imageFailed" class="flex h-full w-full items-center justify-center p-4 sm:p-7">
           <img
             :src="product.image"
             :alt="product.name"
             loading="lazy"
             class="h-full w-full object-contain object-center"
+            @error="imageFailed = true"
           />
         </div>
         <ProductArt v-else :art="product.art" :tone="product.id" />

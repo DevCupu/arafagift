@@ -14,6 +14,11 @@ const props = defineProps({
 
 const { whatsappHref } = useStore()
 const selected = ref(null)
+const failedImages = ref({})
+const isImageFailed = (id) => Boolean(failedImages.value[id])
+const markImageFailed = (id) => {
+  failedImages.value = { ...failedImages.value, [id]: true }
+}
 
 const normalizeIncludes = (includes = []) =>
   includes
@@ -96,11 +101,12 @@ const openDetail = (item) => {
             @click="openDetail(items[0])"
           >
             <img
-              v-if="items[0].image"
+              v-if="items[0].image && !isImageFailed(items[0].id)"
               :src="items[0].image"
               :alt="items[0].name"
               loading="lazy"
               class="h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]"
+              @error="markImageFailed(items[0].id)"
             />
             <ProductArt v-else :art="items[0].art" :tone="0" />
             <div class="absolute inset-0 bg-gradient-to-t from-forest-deep/60 via-transparent to-transparent" />
@@ -175,11 +181,12 @@ const openDetail = (item) => {
               @click="openDetail(item)"
             >
               <img
-                v-if="item.image"
+                v-if="item.image && !isImageFailed(item.id)"
                 :src="item.image"
                 :alt="item.name"
                 loading="lazy"
                 class="h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]"
+                @error="markImageFailed(item.id)"
               />
               <ProductArt v-else :art="item.art" :tone="i + 1" />
               <span
@@ -236,10 +243,11 @@ const openDetail = (item) => {
       <div v-if="selected" class="grid bg-surface sm:grid-cols-[0.92fr_1.08fr]">
         <div class="relative min-h-[330px] overflow-hidden bg-sand sm:min-h-[560px]">
           <img
-            v-if="selected.image"
+            v-if="selected.image && !isImageFailed(selected.id)"
             :src="selected.image"
             :alt="selected.name"
             class="h-full w-full object-cover"
+            @error="markImageFailed(selected.id)"
           />
           <ProductArt v-else :art="selected.art" :tone="0" />
           <div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-forest-deep/76 via-forest-deep/18 to-transparent" />
