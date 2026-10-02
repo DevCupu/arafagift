@@ -86,8 +86,10 @@ jobs:
 
             php artisan down --render="errors::503"
 
-            # Pastikan symlink storage terhubung untuk aset foto
-            php artisan storage:link --force
+            # Pastikan symlink public/storage ada via bash tanpa memanggil PHP exec()
+            if [ ! -e public/storage ]; then
+              ln -sfn ../storage/app/public public/storage 2>/dev/null || true
+            fi
 
             php artisan migrate --force
 
