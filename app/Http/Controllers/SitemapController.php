@@ -44,25 +44,22 @@ class SitemapController extends Controller
 
     public function index(): Response
     {
+        // Tidak memakai Blade view sama sekali. view() bergantung pada compiled
+        // template di storage/framework/views yang bisa corrupt (<?xml syntax error)
+        // dan PHP opcache di shared hosting yang mungkin masih cache kode lama.
+        // buildXml() murni PHP — tidak ada template, tidak ada cache view, selalu benar.
         try {
-            $xml = view('sitemap', ['urls' => self::urls()])->render();
+            $xml = self::buildXml(self::urls());
         } catch (Throwable $e) {
-            // Lapisan paling luar. Guard di catalogUrls() hanya menutup masalah
-            // di dalam query katalog; view dan cache di luar sana belum
-            // tersentuh. Endpoint ini tidak boleh 500 dalam keadaan apa pun,
-            // karena satu halaman error di sini berarti Google kehilangan peta
-            // URL seluruh toko.
-            Log::error('Sitemap gagal dirender, memakai fallback statis.', [
+            Log::error('Sitemap gagal dibangun, memakai URL statis.', [
                 'message' => $e->getMessage(),
             ]);
 
-            // Fallback TIDAK memakai view() lagi — kalau compiled view rusak
-            // (mis. syntax error dari cache lama), view fallback pun akan gagal.
-            // Generate XML langsung di PHP agar selalu 200 tanpa Blade sama sekali.
             $xml = self::buildXml(self::staticUrls());
         }
 
         return response($xml, 200)->header('Content-Type', 'text/xml; charset=utf-8');
+
     }
 
     /**

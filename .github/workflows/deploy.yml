@@ -123,6 +123,13 @@ jobs:
 
           base="https://arafagift.id"
 
+          # Tunggu 15 detik agar PHP opcache di server shared hosting sempat
+          # me-revalidate file yang baru di-deploy. Tanpa ini, web server bisa
+          # masih menjalankan bytecode lama dari SitemapController.php meski
+          # file di disk sudah diperbarui oleh git reset.
+          echo "Menunggu opcache revalidate..."
+          sleep 15
+
           check() {
             local path="$1" expect="$2"
             local code
