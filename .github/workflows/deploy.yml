@@ -203,15 +203,30 @@ jobs:
             elif [ ! -s storage/logs/laravel.log ]; then
               emit "log kosong" "storage/logs/laravel.log ada tapi 0 byte; cek izin tulis"
             else
-              # Garis paling relevan: error yang menyebut sitemap, atau 15 baris
-              # ERROR terakhir sebagai cadangan.
-              grep -i 'sitemap' storage/logs/laravel.log | tail -12 | while IFS= read -r line; do
-                emit "sitemap" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
-              done
+              # Hanya baca error yang terjadi dalam 5 menit terakhir agar
+              # error lama (sebelum deploy) tidak muncul sebagai annotation baru.
+              # Format timestamp Laravel: [YYYY-MM-DD HH:MM:SS]
+              cutoff=$(date -u -d '5 minutes ago' '+%Y-%m-%d %H:%M:%S')
 
-              grep -E 'production\.ERROR|local\.ERROR' storage/logs/laravel.log | tail -6 | while IFS= read -r line; do
-                emit "laravel error" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
-              done
+              recent=$(awk -v cutoff="$cutoff" '
+                /^\[/ {
+                  ts = substr($0, 2, 19)
+                  in_range = (ts >= cutoff)
+                }
+                in_range { print }
+              ' storage/logs/laravel.log)
+
+              if [ -z "$recent" ]; then
+                emit "log bersih" "Tidak ada error dalam 5 menit terakhir (error di annotations adalah dari log lama sebelum deploy ini)"
+              else
+                echo "$recent" | grep -i 'sitemap' | tail -12 | while IFS= read -r line; do
+                  emit "sitemap" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
+                done
+
+                echo "$recent" | grep -E 'production\.ERROR|local\.ERROR' | tail -6 | while IFS= read -r line; do
+                  emit "laravel error" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
+                done
+              fi
             fi
 
             emit "driver cache" "$(php artisan about 2>&1 | grep -m1 -iA1 'cache' | tr -d '\r' | cut -c1-300)"

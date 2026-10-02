@@ -56,10 +56,42 @@ class SitemapController extends Controller
                 'message' => $e->getMessage(),
             ]);
 
-            $xml = view('sitemap', ['urls' => self::staticUrls()])->render();
+            // Fallback TIDAK memakai view() lagi — kalau compiled view rusak
+            // (mis. syntax error dari cache lama), view fallback pun akan gagal.
+            // Generate XML langsung di PHP agar selalu 200 tanpa Blade sama sekali.
+            $xml = self::buildXml(self::staticUrls());
         }
 
         return response($xml, 200)->header('Content-Type', 'text/xml; charset=utf-8');
+    }
+
+    /**
+     * Generate sitemap XML tanpa Blade — aman dipakai saat template corrupt.
+     *
+     * @param array<int, array{loc: string, changefreq?: string, priority?: string, lastmod?: string}> $urls
+     */
+    private static function buildXml(array $urls): string
+    {
+        $lines = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'];
+
+        foreach ($urls as $url) {
+            $lines[] = '  <url>';
+            $lines[] = '    <loc>'.htmlspecialchars($url['loc'] ?? '', ENT_XML1 | ENT_COMPAT, 'UTF-8').'</loc>';
+            if (! empty($url['lastmod'])) {
+                $lines[] = '    <lastmod>'.htmlspecialchars($url['lastmod'], ENT_XML1 | ENT_COMPAT, 'UTF-8').'</lastmod>';
+            }
+            if (! empty($url['changefreq'])) {
+                $lines[] = '    <changefreq>'.htmlspecialchars($url['changefreq'], ENT_XML1 | ENT_COMPAT, 'UTF-8').'</changefreq>';
+            }
+            if (! empty($url['priority'])) {
+                $lines[] = '    <priority>'.htmlspecialchars($url['priority'], ENT_XML1 | ENT_COMPAT, 'UTF-8').'</priority>';
+            }
+            $lines[] = '  </url>';
+        }
+
+        $lines[] = '</urlset>';
+
+        return implode("\n", $lines);
     }
 
     public function robots(): Response
