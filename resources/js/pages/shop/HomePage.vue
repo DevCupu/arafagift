@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { ArrowRight, Check, ChevronLeft, ChevronRight, MessageCircle } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 import SectionHeader from '@/components/ui/SectionHeader.vue'
 import ProductCard from '@/components/storefront/ProductCard.vue'
 import CategoryCard from '@/components/storefront/CategoryCard.vue'
@@ -24,6 +25,11 @@ const props = defineProps({
   testimonials: { type: Array, required: true },
   faqs: { type: Array, required: true },
   seoHead: { type: Object, required: true },
+  // Sudah berupa srcset siap pakai dari server. Foto hero bisa datang dari
+  // upload admin maupun file statis bawaan, dan bentuk path-nya berbeda, jadi
+  // penyusunan srcset tidak boleh dilakukan di sini.
+  heroImage: { type: Object, default: null },
+  heroSlideImage: { type: Object, default: null },
 })
 
 const { whatsappHref } = useStore()
@@ -38,7 +44,6 @@ const values = homeContent.values ?? [
 ]
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
-const heroImg = hero.image || '/images/assets/hero-arafahgift-v2.png'
 const headlineLines = computed(() => hero.headline.split('\n'))
 const quickview = ref(null)
 const adRail = ref(null)
@@ -50,7 +55,10 @@ let adObserver = null
 
 const adSlides = computed(() => [
   {
-    image: heroImg,
+    // Foto yang sama dengan hero. srcset-nya sengaja dibuat satu lebar saja di
+    // server: kalau hero dan slider memilih lebar berbeda, browser mengunduh
+    // dua berkas untuk satu gambar yang sama.
+    picture: props.heroSlideImage,
     badge: 'Koleksi Pilihan',
     title: 'Hadiah yang sampai bersama doa.',
     body: 'Pilihan oleh-oleh elegan untuk keluarga dan orang-orang terkasih.',
@@ -125,28 +133,25 @@ const bulkCtaHref = computed(() => {
     <!-- ============ HERO ============ -->
     <!--
       Kiri : bg dark green, teks ivory & emas, dua CTA & trust badges
-      Kanan: foto full-bleed tanpa frame, gradient kiri & vignette untuk kedalaman
-      Fade-in murni opacity (tanpa menggeser layout), berjenjang per elemen.
+      Kanan: foto full-bleed tanpa frame, gradient kiri untuk kedalaman
+
+      Foto ini adalah LCP halaman, jadi sizes="100vw" (fotonya memang
+      full-bleed) dan priority agar browser membacanya duluan. Srcset-nya
+      dibentuk di server supaya gambar hero dari upload admin dan file statis
+      bawaan punya jalur yang sama.
     -->
     <section class="relative overflow-hidden border-b border-forest-soft/35 bg-forest-deep">
-      <!-- Grain texture overlay -->
-
-      <!-- ── RIGHT: Foto full-bleed (absolute, kanan) ── -->
-      <div
-        class="absolute inset-0"
-        aria-hidden="true"
-      >
-        <img
-          :src="heroImg"
+      <!-- ── Foto full-bleed sebagai latar, menutup penuh section ── -->
+      <div class="absolute inset-0">
+        <PictureImage
+          :image="heroImage"
           alt="Koleksi oleh-oleh Umrah & Hajj ArafahGift"
+          sizes="100vw"
+          priority
           class="h-full w-full object-cover object-[65%_center]"
-          loading="eager"
-          fetchpriority="high"
         />
         <!-- Gradient kiri foto → blend ke hijau tua -->
         <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/92 to-forest-deep/15 lg:via-forest-deep/58" />
-        <!-- Vignette halus di kanan foto biar ada kedalaman -->
-        <!-- Gradient bawah foto -->
       </div>
 
       <!-- ── LEFT: Konten teks ── -->
@@ -199,7 +204,21 @@ const bulkCtaHref = computed(() => {
               :href="slide.href"
               class="relative min-w-full snap-start overflow-hidden"
             >
-              <img :src="slide.image" :alt="slide.title" class="absolute inset-0 h-full w-full object-cover opacity-55" loading="lazy" />
+              <PictureImage
+                v-if="slide.picture"
+                :image="slide.picture"
+                :alt="slide.title"
+                sizes="(min-width: 1024px) 1024px, 100vw"
+                class="absolute inset-0 h-full w-full object-cover opacity-55"
+              />
+              <img
+                v-else
+                :src="slide.image"
+                :alt="slide.title"
+                class="absolute inset-0 h-full w-full object-cover opacity-55"
+                loading="lazy"
+                decoding="async"
+              />
               <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/80 to-forest-deep/25" />
               <div class="relative z-10 flex min-h-[300px] items-end p-6 sm:min-h-[340px] sm:p-10 lg:min-h-[380px] lg:p-14">
                 <div class="max-w-xl">

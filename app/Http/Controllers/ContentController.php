@@ -6,6 +6,7 @@ use App\Models\Content;
 use App\Models\Faq;
 use App\Models\Product;
 use App\Models\Testimonial;
+use App\Support\Image\HeroImageStore;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -14,7 +15,6 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use RuntimeException;
 
 class ContentController extends Controller
 {
@@ -125,14 +125,21 @@ class ContentController extends Controller
 
         $data['values'] = $validated['values'];
 
+        // Disimpan sebelum hero ditulis supaya berkas baru bisa menggantikan
+        // berkas lama tanpa menggantung di tengah jalan.
+        $previousHeroImage = $data['hero']['image'] ?? null;
+
+        // Foto hero adalah LCP halaman, jadi foto mentah dari unggahan tidak pernah
+        // langsung dipakai: HeroImageStore memotongnya ke master terkompresi
+        // plus ladder WebP/AVIF, dan hanya path relatifnya yang disimpan. URL
+        // absolut dari Storage::url() dulu ikut membawa APP_URL ke dalam isi
+        // database, jadi hero produksi bisa menunjuk ke host yang salah.
         if ($request->hasFile('hero_image')) {
-            $path = $request->file('hero_image')->store('content', 'public');
-
-            if ($path === false) {
-                throw new RuntimeException('Gagal menyimpan gambar hero.');
-            }
-
-            $data['hero']['image'] = Storage::disk('public')->url($path);
+            $data['hero']['image'] = HeroImageStore::store($request->file('hero_image'));
+            HeroImageStore::remove($previousHeroImage);
+        } elseif ($request->boolean('hero_image_reset')) {
+            $data['hero']['image'] = null;
+            HeroImageStore::remove($previousHeroImage);
         }
 
         $content->update(['data' => $data]);

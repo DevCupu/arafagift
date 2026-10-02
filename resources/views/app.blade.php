@@ -20,6 +20,34 @@
             rel="stylesheet"
         />
 
+        {{--
+            Preload gambar LCP.
+
+            Foto hero homepage adalah elemen terbesar yang dimuat pertama, dan
+            <picture> baru bisa dipilih setelah CSS dan SFC selesai
+            diurai. Tanpa preload, elemen itu baru ditemukan setelah Vue
+            mount, jadi preload di sini memotong beberapa ratus milidetik dari
+            LCP.
+
+            Yang di-preload adalah AVIF, bukan WebP: hanya satu dari keduanya
+            akan benar-benar diunduh. Browser yang tidak bisa AVIF mengabaikan
+            preload ini (karena type tidak cocok) lalu langsung mengambil
+            <source type="image/webp"> tanpa mengunduh dua kali.
+
+            Hanya homepage yang punya heroImage, jadi halaman lain tidak
+            ikut mem-payload apa pun.
+        --}}
+        @if (! empty($page['props']['heroImage']['avif']))
+            <link
+                rel="preload"
+                as="image"
+                type="image/avif"
+                imagesrcset="{{ $page['props']['heroImage']['avif'] }}"
+                imagesizes="100vw"
+                fetchpriority="high"
+            />
+        @endif
+
         @vite(['resources/css/app.css', 'resources/js/app.js', "resources/js/pages/{$page['component']}.vue"])
 
         {{-- Tag SEO per halaman dikirim controller sebagai prop `seoHead` (lihat

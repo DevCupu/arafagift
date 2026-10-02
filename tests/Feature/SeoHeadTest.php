@@ -6,6 +6,7 @@ use App\Models\Faq;
 use App\Models\Product;
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\Image\HeroImage;
 use App\Support\Seo\PageSeo;
 
 /*
@@ -293,4 +294,106 @@ function headTagCount(string $html, string $needle): int
     expect($end)->not->toBeFalse('respons harus punya </head>');
 
     return substr_count(substr($html, (int) $start, (int) $end - (int) $start), $needle);
+}
+
+/**
+ * Hero homepage adalah LCP dan <picture> baru bisa dipilih setelah JavaScript
+ * selesai mengurai SFC. Tanpa preload di HTML pertama, elemen itu baru
+ * ditemukan setelah Vue mount.
+ */
+it('mem-preload gambar hero di HTML pertama tanpa menjalankan JavaScript', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    expect($html)->toContain('<link rel="preload"')
+        ->and($html)->toContain('as="image"')
+        ->and($html)->toContain('type="image/avif"')
+        ->and($html)->toContain('imagesizes="100vw"')
+        ->and($html)->toContain('imagesrcset=');
+
+    // Hanya satu preload gambar. Dua tag preload untuk gambar yang sama
+    // membuat browser mengunduh satu gambar dua kali. Preload untuk JS dan
+    // CSS milik Vite tidak ikut dihitung.
+    expect(headTagCount($html, 'as="image"'))->toBe(1);
+});
+
+/**
+ * Yang di-preload harus AVIF dengan srcset yang sama persis seperti yang
+ * dikirim ke client, kalau tidak browser akan mengunduh gambar yang berbeda
+ * dari yang dipinta <picture> lalu wasting satu request.
+ */
+it('mem-preload varian yang sama persis dengan srcset yang dikirim ke client', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    preg_match('/imagesrcset="([^"]*)"/', $html, $preload);
+    expect($preload[1] ?? '')->not->toBe('');
+
+    $payload = inertiaPageProps($html);
+
+    expect($payload['heroImage']['avif'])->toBe($preload[1])
+        ->and($payload['heroImage']['fallback'])->toBe('/'.HeroImage::FALLBACK)
+        ->and($payload['heroImage']['webp'])->toContain('/images/assets/hero-arafahgift-v2-640.webp 640w');
+});
+
+it('tidak mengirim preload gambar di halaman selain homepage', function () {
+    $html = $this->get('/koleksi')->assertOk()->getContent();
+
+    // Hanya preload gambar yang dihitung. Preload untuk JS dan CSS tetap ada
+    // di halaman mana pun karena Fassad Vite.
+    expect(headTagCount($html, 'as="image"'))->toBe(0);
+});
+
+/**
+ * Dulu og:image memakai PNG 1,9 MB yang sama dengan LCP, jadi setiap share
+ * link WhatsApp atau Instagram mengunduh hampir 2 MB.
+ */
+it('membirim og:image kecil yang sudah dipotong ke rasio social preview', function () {
+    $html = $this->get('/')->assertOk()->getContent();
+
+    preg_match('/<meta property="og:image" content="([^"]*)">/', $html, $match);
+    $image = $match[1] ?? '';
+
+    expect($image)->toBe(url(HeroImage::socialPath()))
+        // URL absolut wajib; scraper tidak memproses path relatif.
+        ->and($image)->toStartWith('http');
+
+    $size = filesize(public_path(HeroImage::SOCIAL));
+
+    expect($size)->toBeInt()
+        ->and($size)->toBeLessThan(500 * 1024);
+});
+
+/**
+ * srcset hero harus relatif dari root domain, bukan URL absolut. Payload
+ * homepage disimpan di cache, jadi URL absolut akan ikut membeku memakai host
+ * yang berlaku ketika payload itu dibuat.
+ */
+it('menyimpan path gambar hero relatif supaya host tidak ikut ter-cache', function () {
+    $payload = inertiaPageProps($this->get('/')->assertOk()->getContent());
+
+    expect($payload['heroImage']['fallback'])->toStartWith('/images/')
+        ->and($payload['heroImage']['fallback'])->not->toContain('http');
+});
+
+/**
+ * Ambil prop Inertia dari blok data-page.
+ *
+ * Atribut data-page="app" hanya berisi id elemen, bukan payload-nya. Yang
+ * berisi JSON adalah script type="application/json" tepat sesudahnya.
+ */
+function inertiaPageProps(string $html): array
+{
+    $start = strpos($html, 'type="application/json">');
+
+    expect($start)->not->toBeFalse('respons harus punya blok data-page Inertia');
+
+    $start += strlen('type="application/json">');
+    $end = strpos($html, '</script>', (int) $start);
+
+    expect($end)->not->toBeFalse('blok data-page Inertia harus punya penutup');
+
+    $decoded = json_decode(substr($html, (int) $start, (int) $end - (int) $start), true);
+
+    expect($decoded)->toBeArray();
+
+    return $decoded['props'];
 }

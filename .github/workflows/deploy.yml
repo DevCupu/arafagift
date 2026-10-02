@@ -86,7 +86,18 @@ jobs:
 
             php artisan down --render="errors::503"
 
+            # public/storage ada di .gitignore, jadi git reset --hard tidak
+            # pernah membuatnya. Tanpa symlink ini, setiap foto yang diunggah
+            # dari panel admin (termasuk foto hero) akan 404 di produksi.
+            php artisan storage:link --force
+
             php artisan migrate --force
+
+            # Payload homepage disimpan di cache bersama srcset gambar hero di
+            # dalamnya. Kalau cache lama masih hidup sementara variant hero
+            # baru sudah ter-deploy, markup akan menunjuk berkas yang tidak ada.
+            php artisan cache:clear
+
             php artisan optimize
             php artisan app:cache-warm
 
