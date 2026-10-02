@@ -98,6 +98,12 @@ jobs:
             # baru sudah ter-deploy, markup akan menunjuk berkas yang tidak ada.
             php artisan cache:clear
 
+            # Hapus compiled view lama sebelum optimize agar Blade meng-compile
+            # ulang semua template dari awal. Tanpa ini, file lama di
+            # storage/framework/views tetap ada dan bisa menyebabkan syntax error
+            # (contoh: sitemap.blade.php lama yang punya <?xml di baris pertama).
+            php artisan view:clear
+
             php artisan optimize
             php artisan app:cache-warm
 
