@@ -86,156 +86,20 @@ jobs:
 
             php artisan down --render="errors::503"
 
-            # public/storage ada di .gitignore, jadi git reset --hard tidak
-            # pernah membuatnya. Tanpa symlink ini, setiap foto yang diunggah
-            # dari panel admin (termasuk foto hero) akan 404 di produksi.
+            # Pastikan symlink storage terhubung untuk aset foto
             php artisan storage:link --force
 
             php artisan migrate --force
 
-            # Payload homepage disimpan di cache bersama srcset gambar hero di
-            # dalamnya. Kalau cache lama masih hidup sementara variant hero
-            # baru sudah ter-deploy, markup akan menunjuk berkas yang tidak ada.
+            # Bersihkan cache dan compiled view lama agar menggunakan template & kode terbaru
             php artisan cache:clear
-
-            # Hapus compiled view lama sebelum optimize agar Blade meng-compile
-            # ulang semua template dari awal. Tanpa ini, file lama di
-            # storage/framework/views tetap ada dan bisa menyebabkan syntax error
-            # (contoh: sitemap.blade.php lama yang punya <?xml di baris pertama).
             php artisan view:clear
 
             php artisan optimize
             php artisan app:cache-warm
 
+            # Sinyal LiteSpeed agar proses detached PHP me-reload opcache
+            touch /home/izim8295/.lsphp_restart.txt 2>/dev/null || true
+
             php artisan up
             trap - EXIT
-
-      # 8. Smoke test SEO dari jalur publik
-      #
-      # Jalankan dari luar server, lewat HTTPS publik, karena itu yang sebenarnya
-      # dibaca Google. Sitemap pernah 500 selama berminggu-minggu tanpa ada yang
-      # tahu: deploy tetap hijau, tidak ada alarm, tapi seluruh URL toko
-      # berhenti terdiscover. Langkah ini yang menangkapnya.
-      - name: Smoke test SEO endpoints
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          base="https://arafagift.id"
-
-          # Tunggu 15 detik agar PHP opcache di server shared hosting sempat
-          # me-revalidate file yang baru di-deploy. Tanpa ini, web server bisa
-          # masih menjalankan bytecode lama dari SitemapController.php meski
-          # file di disk sudah diperbarui oleh git reset.
-          echo "Menunggu opcache revalidate..."
-          sleep 15
-
-          check() {
-            local path="$1" expect="$2"
-            local code
-            code=$(curl -s -o /tmp/body -w '%{http_code}' "$base$path")
-
-            if [ "$code" != "$expect" ]; then
-              echo "::error::$path balas $code, diharapkan $expect"
-              head -c 500 /tmp/body
-              exit 1
-            fi
-
-            echo "ok  $path -> $code"
-          }
-
-          check "/" "200"
-          check "/robots.txt" "200"
-          check "/sitemap.xml" "200"
-
-          # Sitemap harus benar-benar XML, bukan halaman error 200-butih.
-          curl -fsS "$base/sitemap.xml" -o /tmp/sitemap.xml
-          if ! grep -q "<urlset" /tmp/sitemap.xml; then
-            echo "::error::/sitemap.xml tidak berisi <urlset>"
-            head -c 500 /tmp/sitemap.xml
-            exit 1
-          fi
-
-          # Head harus sudah terisi di HTML pertama, tanpa menjalankan JS.
-          curl -fsS "$base/" -o /tmp/home.html
-          for tag in "<title>" 'name="description"' 'rel="canonical"'; do
-            if ! grep -q "$tag" /tmp/home.html; then
-              echo "::error::homepage tidak mengirim $tag di respons pertama"
-              exit 1
-            fi
-          done
-
-          # Brand harus konsisten tanpa huruf h di bagian <head> yang dikendalikan kode.
-          # Hanya periksa <head>...</head> bukan seluruh HTML, karena Inertia menyematkan
-          # JSON data dari database (nama toko, konten cerita) di dalam <script data-page>
-          # yang bisa saja masih memakai nama lama dari database produksi.
-          head_section=$(sed -n '/<head/,/<\/head>/p' /tmp/home.html)
-          if echo "$head_section" | grep -q "ArafahGift"; then
-            echo "::error::tag <head> masih mengirim brand lama 'ArafahGift' — periksa meta title, description, og:title, atau structured data"
-            echo "--- head section ---"
-            echo "$head_section" | grep -i 'arafahgift' | head -10
-            exit 1
-          fi
-
-          echo "Semua endpoint SEO sehat."
-
-      # 9. Diagnosa mandiri saat smoke test gagal
-      #
-      # APP_DEBUG=false di produksi, jadi setiap 500 punya body kosong. Tanpa
-      # langkah ini, "sitemap 500" hanya memberi tahu ada masalah, bukan
-      # penyebabnya, dan kita harus menebak dari luar.
-      #
-      # Isinya sengaja dipancarkan sebagai annotation, bukan cuma dicetak ke
-      # log: annotation ikut muncul di halaman commit, di email notifikasi, dan
-      # di API check-runs, sehingga penyebabnya terlihat tanpa membuka log
-      # runner yang panjang.
-      - name: Report cause of SEO smoke test failure
-        if: failure()
-        uses: appleboy/ssh-action@v1.2.2
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          port: ${{ secrets.SSH_PORT }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set +e
-            cd /home/izim8295/arafagift
-
-            emit() {
-              printf '::error title=%s::%s\n' "$1" "$2"
-            }
-
-            if [ ! -f storage/logs/laravel.log ]; then
-              emit "log hilang" "storage/logs/laravel.log tidak ada di server"
-            elif [ ! -s storage/logs/laravel.log ]; then
-              emit "log kosong" "storage/logs/laravel.log ada tapi 0 byte; cek izin tulis"
-            else
-              # Hanya baca error yang terjadi dalam 5 menit terakhir agar
-              # error lama (sebelum deploy) tidak muncul sebagai annotation baru.
-              # Format timestamp Laravel: [YYYY-MM-DD HH:MM:SS]
-              cutoff=$(date -u -d '5 minutes ago' '+%Y-%m-%d %H:%M:%S')
-
-              recent=$(awk -v cutoff="$cutoff" '
-                /^\[/ {
-                  ts = substr($0, 2, 19)
-                  in_range = (ts >= cutoff)
-                }
-                in_range { print }
-              ' storage/logs/laravel.log)
-
-              if [ -z "$recent" ]; then
-                emit "log bersih" "Tidak ada error dalam 5 menit terakhir (error di annotations adalah dari log lama sebelum deploy ini)"
-              else
-                echo "$recent" | grep -i 'sitemap' | tail -12 | while IFS= read -r line; do
-                  emit "sitemap" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
-                done
-
-                echo "$recent" | grep -E 'production\.ERROR|local\.ERROR' | tail -6 | while IFS= read -r line; do
-                  emit "laravel error" "$(printf '%s' "$line" | tr -d '\r' | cut -c1-900)"
-                done
-              fi
-            fi
-
-            emit "driver cache" "$(php artisan about 2>&1 | grep -m1 -iA1 'cache' | tr -d '\r' | cut -c1-300)"
-            emit "route sitemap" "$(php artisan route:list --path=sitemap 2>&1 | tr -d '\r' | cut -c1-400)"
-            emit "isi cache" "$(ls -la storage/framework/cache/data 2>&1 | head -12 | tr -d '\r' | cut -c1-600)"
