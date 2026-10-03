@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $settings->maintenance_title ?: 'Pemeliharaan Sistem' }} — {{ $settings->store_name ?: 'Arafagift' }}</title>
+    <title>Pemeliharaan Sistem — Arafagift</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
@@ -149,29 +149,38 @@
             </svg>
         </div>
 
-        <h1>{{ $settings->maintenance_title ?: 'Sistem Sedang Ditingkatkan' }}</h1>
+        @php
+            // $settings mungkin tidak tersedia saat maintenance mode (artisan down)
+            // Gunakan null-safe operator untuk menghindari error
+            $maintenanceTitle   = isset($settings) ? ($settings->maintenance_title  ?: 'Sistem Sedang Ditingkatkan') : 'Sistem Sedang Ditingkatkan';
+            $closedMessage      = isset($settings) ? ($settings->closed_message     ?: null) : null;
+            $maintenanceEndTime = isset($settings) ? ($settings->maintenance_end_time ?: null) : null;
+            $storeName          = isset($settings) ? ($settings->store_name         ?: 'Arafagift') : 'Arafagift';
+            $waRaw              = isset($settings) ? ($settings->whatsapp           ?: '628192242444') : '628192242444';
+            $waNumber = preg_replace('/[^0-9]/', '', (string) $waRaw);
+            if (str_starts_with($waNumber, '0')) {
+                $waNumber = '62' . substr($waNumber, 1);
+            }
+            $defaultMessage = 'Kami sedang melakukan peningkatan performa dan pemeliharaan server untuk memberikan pengalaman berbelanja oleh-oleh haji dan umrah yang lebih nyaman dan aman.';
+        @endphp
+
+        <h1>{{ $maintenanceTitle }}</h1>
 
         <p class="message">
-            {{ $settings->closed_message ?: 'Kami sedang melakukan peningkatan performa dan pemeliharaan server untuk memberikan pengalaman berbelanja oleh-oleh haji dan umrah yang lebih nyaman dan aman.' }}
+            {{ $closedMessage ?: $defaultMessage }}
         </p>
 
-        @if(!empty($settings->maintenance_end_time))
+        @if(!empty($maintenanceEndTime))
         <div class="time-box">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
-            <span>Estimasi Buka Kembali: <strong>{{ $settings->maintenance_end_time }}</strong></span>
+            <span>Estimasi Buka Kembali: <strong>{{ $maintenanceEndTime }}</strong></span>
         </div>
         @endif
 
         <div class="actions">
-            @php
-                $waNumber = preg_replace('/[^0-9]/', '', (string) ($settings->whatsapp ?: '628192242444'));
-                if (str_starts_with($waNumber, '0')) {
-                    $waNumber = '62' . substr($waNumber, 1);
-                }
-            @endphp
-            <a href="https://wa.me/{{ $waNumber }}?text={{ urlencode('Halo CS ' . ($settings->store_name ?: 'Arafagift') . ', saya ingin bertanya mengenai pemesanan selama masa pemeliharaan sistem.') }}" target="_blank" rel="noopener" class="btn-wa">
+            <a href="https://wa.me/{{ $waNumber }}?text={{ urlencode('Halo CS ' . $storeName . ', saya ingin bertanya mengenai pemesanan selama masa pemeliharaan sistem.') }}" target="_blank" rel="noopener" class="btn-wa">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
                 </svg>
@@ -180,7 +189,7 @@
         </div>
 
         <p class="footer-note">
-            &copy; {{ date('Y') }} {{ $settings->store_name ?: 'Arafagift' }}. Seluruh hak cipta dilindungi.
+            &copy; {{ date('Y') }} {{ $storeName }}. Seluruh hak cipta dilindungi.
         </p>
     </div>
 </body>
