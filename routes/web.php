@@ -136,6 +136,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/laporan', [AdminReportController::class, 'index'])->name('admin.reports');
     Route::get('/admin/pengaturan', [AdminSettingsController::class, 'edit'])->name('admin.settings');
     Route::put('/admin/pengaturan', [AdminSettingsController::class, 'update'])->name('admin.settings.update');
+    Route::post('/admin/pengaturan/cache/clear-all', [AdminSettingsController::class, 'clearAllCache'])->name('admin.settings.cache.clear-all');
+    Route::post('/admin/pengaturan/cache/rewarm', [AdminSettingsController::class, 'rewarmCache'])->name('admin.settings.cache.rewarm');
+    Route::post('/admin/pengaturan/cache/views', [AdminSettingsController::class, 'clearViews'])->name('admin.settings.cache.views');
+    Route::post('/admin/pengaturan/cache/opcache', [AdminSettingsController::class, 'reloadOpcache'])->name('admin.settings.cache.opcache');
 });
 
 require __DIR__.'/auth.php';
