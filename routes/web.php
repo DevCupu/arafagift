@@ -140,6 +140,13 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/pengaturan/cache/rewarm', [AdminSettingsController::class, 'rewarmCache'])->name('admin.settings.cache.rewarm');
     Route::post('/admin/pengaturan/cache/views', [AdminSettingsController::class, 'clearViews'])->name('admin.settings.cache.views');
     Route::post('/admin/pengaturan/cache/opcache', [AdminSettingsController::class, 'reloadOpcache'])->name('admin.settings.cache.opcache');
+    Route::post('/admin/pengaturan/storage/fix', [AdminSettingsController::class, 'fixStorageLink'])->name('admin.settings.storage.fix');
+    Route::get('/admin/pengaturan/logs', [AdminSettingsController::class, 'getLogs'])->name('admin.settings.logs');
+    Route::post('/admin/pengaturan/logs/clear', [AdminSettingsController::class, 'clearLogs'])->name('admin.settings.logs.clear');
+    Route::get('/admin/pengaturan/database/backup', [AdminSettingsController::class, 'backupDatabase'])->name('admin.settings.database.backup');
+    Route::post('/admin/pengaturan/database/optimize', [AdminSettingsController::class, 'optimizeDatabase'])->name('admin.settings.database.optimize');
+    Route::post('/admin/pengaturan/email/test', [AdminSettingsController::class, 'testEmail'])->name('admin.settings.email.test');
+    Route::get('/admin/pengaturan/maintenance/preview', [AdminSettingsController::class, 'previewMaintenance'])->name('admin.settings.maintenance.preview');
 });
 
 require __DIR__.'/auth.php';

@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('web', CompressResponse::class);
 
         $middleware->web(append: [
+            \App\Http\Middleware\CheckMaintenanceMode::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
