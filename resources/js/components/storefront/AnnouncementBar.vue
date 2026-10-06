@@ -44,11 +44,9 @@ const isMaintenance = computed(() => storeStatus.value === 'maintenance')
   </div>
 
   <!-- Standard Marquee / Announcement (when open) -->
-  <div v-else-if="message" class="border-b border-forest-soft/30 bg-forest">
-    <div class="shell flex h-9 items-center justify-center gap-3 text-[0.62rem] tracking-[0.1em] sm:text-[0.7rem] sm:tracking-[0.12em]">
-      <span class="hidden h-1 w-1 rotate-45 bg-ivory/70 sm:block" />
-      <p class="truncate uppercase text-ivory">{{ message }}</p>
-      <span class="hidden h-1 w-1 rotate-45 bg-ivory/70 sm:block" />
+  <div v-else-if="message" class="border-b border-ivory/10 bg-forest">
+    <div class="shell flex h-8 items-center justify-center text-[0.64rem] font-medium tracking-[0.13em] sm:text-[0.69rem]">
+      <p class="truncate uppercase text-ivory/90">{{ message }}</p>
     </div>
   </div>
 </template>

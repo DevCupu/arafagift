@@ -372,51 +372,42 @@ const bulkCtaHref = computed(() => {
     </section>
 
     <!-- ============ VALUE PROPS ============ -->
-    <!-- Nilai inti + momen keluarga, frame emas offset + caption melayang
-         biar terasa editorial premium tanpa menambah band gelap -->
     <section class="render-later bg-forest">
-      <div class="shell py-16 sm:py-24">
-        <SectionHeader
-          eyebrow="Kenapa ArafahGift"
-          title="Lebih dari sekadar oleh-oleh."
-          align="center"
-          :dark="true"
-          v-reveal
-        />
-        <div class="mt-12" v-reveal><ValueProps :items="values" :dark="true" numbered /></div>
+      <div class="shell grid items-center gap-12 py-16 sm:py-24 lg:grid-cols-[1fr_0.9fr] lg:gap-24">
+        <div>
+          <SectionHeader
+            eyebrow="Kenapa ArafahGift"
+            title="Lebih dari sekadar oleh-oleh."
+            :dark="true"
+            v-reveal
+          />
+          <div class="mt-10" v-reveal><ValueProps :items="values" :dark="true" numbered /></div>
+        </div>
 
-        <!-- Momen keluarga membuka gift set bersama -->
-        <figure class="mx-auto mt-16 max-w-[64rem]" v-reveal>
-          <div class="arch relative overflow-hidden border border-ivory/15">
+        <figure class="w-full max-w-[34rem] lg:justify-self-end" v-reveal="120">
+          <div class="arch overflow-hidden border border-ivory/15 bg-forest-deep shadow-[0_24px_60px_-38px_rgb(0_0_0/0.85)]">
             <img
               src="/images/assets/section-lebih-dari-oleh-oleh.webp"
               alt="Keluarga membuka gift set ArafahGift bersama"
-              class="aspect-[16/9] w-full object-cover"
+              class="aspect-[4/3] w-full object-cover"
               loading="lazy"
               decoding="async"
             />
-            <div class="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-forest-deep/75 to-transparent" />
-            <figcaption class="absolute inset-x-4 bottom-4 flex items-center justify-center gap-2.5 sm:inset-x-10 sm:bottom-6 sm:gap-4">
-              <span class="h-px w-5 bg-gold/70 sm:w-10" />
-              <span class="rounded-sm border border-ivory/20 bg-forest-deep/85 px-3.5 py-2 text-center text-[0.64rem] uppercase leading-relaxed tracking-[0.14em] text-ivory backdrop-blur-sm sm:px-5 sm:text-[0.72rem]">
-                Keluarga membuka gift set ArafahGift bersama
-              </span>
-              <span class="h-px w-5 bg-gold/70 sm:w-10" />
-            </figcaption>
           </div>
         </figure>
       </div>
     </section>
 
     <!-- ============ ROMBONGAN ============ -->
-    <section class="render-later shell pb-16 sm:pb-24">
-      <div class="grid items-stretch gap-px overflow-hidden rounded-[1rem] border border-line bg-forest-deep shadow-soft lg:grid-cols-[1.2fr_1fr]" v-reveal>
-        <div class="bg-forest p-8 sm:p-12">
+    <section class="render-later border-y border-line bg-surface">
+      <div class="shell py-16 sm:py-24">
+        <div class="grid overflow-hidden rounded-[1rem] border border-forest-deep bg-forest-deep shadow-[0_22px_56px_-34px_rgb(12_84_75/0.7)] lg:grid-cols-[1fr_0.9fr]" v-reveal>
+        <div class="p-8 sm:p-12 lg:p-14">
           <p class="eyebrow text-gold">{{ homeContent.bulk.eyebrow }}</p>
-          <h2 class="mt-6 max-w-md text-[2.1rem] leading-[1.08] text-ivory sm:text-[2.7rem]">{{ homeContent.bulk.title }}</h2>
-          <p class="mt-5 max-w-md text-[0.95rem] leading-relaxed text-ivory/65">{{ homeContent.bulk.sub }}</p>
-          <ul class="mt-8 space-y-3">
-            <li v-for="p in homeContent.bulk.points" :key="p" class="flex items-start gap-3 text-[0.88rem] text-ivory/85">
+          <h2 class="mt-6 max-w-md text-[2.15rem] leading-[1.06] text-ivory sm:text-[2.8rem]">{{ homeContent.bulk.title }}</h2>
+          <p class="mt-5 max-w-md text-[0.95rem] leading-relaxed text-ivory/66">{{ homeContent.bulk.sub }}</p>
+          <ul class="mt-9 max-w-md space-y-0 border-y border-ivory/15">
+            <li v-for="p in homeContent.bulk.points" :key="p" class="flex items-start gap-3 border-b border-ivory/10 py-4 text-[0.88rem] leading-relaxed text-ivory/88 last:border-b-0">
               <Check class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.6" />{{ p }}
             </li>
           </ul>
@@ -425,34 +416,33 @@ const bulkCtaHref = computed(() => {
             <template #icon><MessageCircle class="h-4 w-4" /></template>
           </AppButton>
         </div>
-        <div class="relative min-h-[320px] bg-forest-deep">
-          <img
-            src="/images/assets/souvenir-satu-rombongan.webp"
-            alt="Souvenir seragam untuk pesanan rombongan"
-            class="absolute inset-0 h-full w-full object-cover"
-            loading="lazy"
-            decoding="async"
-          />
-          <div class="absolute inset-x-8 bottom-8 rounded-[0.5rem] border border-forest-soft/40 bg-forest-deep/90 px-5 py-4 backdrop-blur">
-            <p class="font-display text-[1.15rem] leading-snug text-ivory">240 pouch untuk rombongan Solo</p>
-            <p class="mt-1.5 text-[0.75rem] text-ivory/55">Dicetak nama jamaah, dikirim tepat sebelum keberangkatan.</p>
+        <div class="flex items-center bg-forest p-5 sm:p-8 lg:p-10">
+          <div class="arch w-full overflow-hidden border border-ivory/15 bg-forest-deep">
+            <img
+              src="/images/assets/souvenir-satu-rombongan.webp"
+              alt="Souvenir seragam untuk pesanan rombongan"
+              class="aspect-[4/3] w-full object-cover"
+              loading="lazy"
+              decoding="async"
+            />
           </div>
+        </div>
         </div>
       </div>
     </section>
 
     <!-- ============ BRAND STORY ============ -->
-    <section class="render-later border-y border-forest/20 bg-forest-deep/[0.04]">
-      <div class="shell grid gap-12 py-16 lg:grid-cols-[1fr_1.1fr] lg:gap-20 lg:py-24">
-        <div class="flex gap-4" v-reveal>
-          <div class="arch mt-10 h-56 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
-            <img src="/images/assets/img-4.webp" alt="Persiapan oleh-oleh sebelum pulang" class="h-full w-full object-cover" loading="lazy" decoding="async" />
+    <section class="render-later bg-ivory">
+      <div class="shell grid items-center gap-12 py-16 lg:grid-cols-[0.9fr_1.1fr] lg:gap-24 lg:py-24">
+        <div class="grid grid-cols-[0.82fr_1fr] items-start gap-4 sm:gap-6" v-reveal>
+          <div class="arch mt-12 overflow-hidden border border-forest/15 bg-surface shadow-soft">
+            <img src="/images/assets/img-4.webp" alt="Persiapan oleh-oleh sebelum pulang" class="aspect-[3/4] h-full w-full object-cover" loading="lazy" decoding="async" />
           </div>
-          <div class="arch h-64 w-1/2 overflow-hidden border border-forest/20 bg-forest/[0.07]">
+          <div class="arch overflow-hidden border border-forest/15 bg-surface shadow-soft">
             <img
               src="/images/assets/perjalanan-pulang-membawa-cerita.webp"
               alt="Perlengkapan perjalanan dan gift set ArafahGift"
-              class="h-full w-full object-cover"
+              class="aspect-[4/5] h-full w-full object-cover"
               loading="lazy"
               decoding="async"
             />
@@ -464,9 +454,10 @@ const bulkCtaHref = computed(() => {
           <div class="mt-6 max-w-lg space-y-4 text-[0.95rem] leading-relaxed text-muted">
             <p v-for="(par, i) in homeContent.story.body" :key="i">{{ par }}</p>
           </div>
-          <p class="mt-8 font-display text-lg italic text-forest">{{ homeContent.story.signature }}</p>
-          <Link href="/tentang" class="link-underline mt-6 inline-block text-[0.85rem] text-forest">
+          <p class="mt-8 border-l-2 border-gold pl-4 font-display text-[1.05rem] leading-relaxed text-forest">{{ homeContent.story.signature }}</p>
+          <Link href="/tentang" class="link-underline mt-7 inline-flex items-center gap-2 text-[0.85rem] text-forest">
             Baca cerita lengkapnya
+            <ArrowRight class="h-4 w-4" :stroke-width="1.6" />
           </Link>
         </div>
       </div>
