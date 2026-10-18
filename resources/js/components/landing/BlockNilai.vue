@@ -11,7 +11,7 @@ const icons = { Sparkles, Gift, BadgeCheck, Send, Truck, Shield, Users, Heart, C
 <template>
   <section v-if="items.length" class="bg-forest-deep py-16 text-ivory sm:py-20">
     <div class="shell">
-      <div class="max-w-2xl">
+      <div class="max-w-2xl" v-reveal>
         <h2 v-if="content.title" class="!text-ivory text-[1.9rem] sm:text-[2.55rem]">{{ content.title }}</h2>
         <p class="mt-4 max-w-[56ch] text-[0.95rem] leading-7 !text-ivory/82">
           Alur pemesanan dibuat jelas dari kurasi isi, packing, sampai pengiriman, supaya tim travel tidak perlu mengurus detail kecil satu per satu.

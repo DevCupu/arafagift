@@ -228,6 +228,17 @@
     }
 }
 
+/* Announcement: repeated copies keep the text flowing without a blank gap. */
+.announcement-track {
+    display: flex;
+    width: max-content;
+}
+.announcement-copy {
+    flex: 0 0 auto;
+    padding: 0 1.5rem;
+    white-space: nowrap;
+}
+
 /* Scroll reveal (progressive enhancement — visible by default if JS/IO absent) */
 .reveal {
     opacity: 0;
@@ -241,8 +252,6 @@
     transform: none;
 }
 .reveal-child {
-    opacity: 0;
-    transform: translateY(16px);
     transition:
         opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1),
         transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
@@ -250,6 +259,10 @@
         background-color 0.28s ease,
         box-shadow 0.28s ease;
     transition-delay: var(--reveal-delay, 0ms);
+}
+.reveal .reveal-child {
+    opacity: 0;
+    transform: translateY(16px);
 }
 .reveal.is-in .reveal-child {
     opacity: 1;
@@ -260,9 +273,34 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
+    .announcement-track {
+        animation: announcementGlide 24s linear infinite;
+    }
+    .announcement-bar:hover .announcement-track {
+        animation-play-state: paused;
+    }
+    .landing-hero-image {
+        animation: landingImageSettle 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    .landing-hero-step {
+        animation: landingStepEnter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-delay: var(--landing-delay, 0ms);
+    }
     .slow-zoom {
         animation: slowZoom 14s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
+}
+
+@keyframes announcementGlide {
+    to { transform: translateX(-25%); }
+}
+@keyframes landingImageSettle {
+    from { transform: scale(1.035); }
+    to { transform: scale(1); }
+}
+@keyframes landingStepEnter {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
 }
 
 @keyframes slowZoom {
@@ -275,6 +313,22 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+    .announcement-track {
+        width: 100%;
+    }
+    .announcement-copy {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
+        padding: 0 var(--shell-x);
+        text-align: center;
+        text-overflow: ellipsis;
+        line-height: 2rem;
+    }
+    .announcement-copy[aria-hidden="true"] {
+        display: none;
+    }
     *,
     *::before,
     *::after {
@@ -286,7 +340,8 @@
         opacity: 1;
         transform: none;
     }
-    .reveal-child {
+    .reveal-child,
+    .reveal .reveal-child {
         opacity: 1;
         transform: none;
         transition: none;

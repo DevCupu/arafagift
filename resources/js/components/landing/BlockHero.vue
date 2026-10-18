@@ -18,19 +18,19 @@ const href = computed(() => props.content.cta?.href || whatsappHref(`Halo Arafag
     <div class="grain pointer-events-none absolute inset-0 opacity-25" />
 
     <div v-if="content.image" class="absolute inset-y-0 right-0 w-full lg:w-[52%]" aria-hidden="true">
-      <img :src="content.image" alt="" class="h-full w-full object-cover object-center" loading="eager" fetchpriority="high" />
+      <img :src="content.image" alt="" class="landing-hero-image h-full w-full object-cover object-center" loading="eager" fetchpriority="high" />
       <div class="absolute inset-y-0 left-0 w-[55%] bg-gradient-to-r from-forest-deep via-forest-deep/80 to-transparent" />
       <div class="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-forest-deep/70 to-transparent" />
     </div>
 
     <div class="shell relative flex flex-col justify-center py-16 sm:py-20">
-      <div class="w-full max-w-[540px]" v-reveal>
-        <div v-if="content.eyebrow" class="flex items-center gap-3">
+      <div class="w-full max-w-[540px]">
+        <div v-if="content.eyebrow" class="landing-hero-step flex items-center gap-3" style="--landing-delay: 60ms">
           <span class="h-px w-8 bg-gold" />
           <p class="text-[0.68rem] font-semibold uppercase tracking-[0.25em] text-gold">{{ content.eyebrow }}</p>
         </div>
 
-        <h1 class="mt-5" style="font-size: clamp(2.25rem, 5.8vw, 4rem); line-height: 1.04; font-weight: 700;">
+        <h1 class="landing-hero-step mt-5" style="--landing-delay: 150ms; font-size: clamp(2.25rem, 5.8vw, 4rem); line-height: 1.04; font-weight: 700;">
           <template v-for="(line, i) in lines" :key="i">
             <span
               class="block text-balance"
@@ -40,11 +40,11 @@ const href = computed(() => props.content.cta?.href || whatsappHref(`Halo Arafag
           </template>
         </h1>
 
-        <p v-if="content.sub" class="mt-5 max-w-[30rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]">
+        <p v-if="content.sub" class="landing-hero-step mt-5 max-w-[30rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]" style="--landing-delay: 280ms">
           {{ content.sub }}
         </p>
 
-        <div v-if="content.cta?.label" class="mt-8">
+        <div v-if="content.cta?.label" class="landing-hero-step mt-8" style="--landing-delay: 400ms">
           <AppButton :href="href" variant="gold" size="lg">
             {{ content.cta.label }}
             <template #icon><ArrowRight class="h-4 w-4" /></template>
