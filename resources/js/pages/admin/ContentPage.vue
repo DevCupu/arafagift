@@ -36,6 +36,9 @@ const tabs = [
   { id: 'faq', label: 'FAQ' },
   { id: 'instagram', label: 'Instagram' },
 ]
+const editableTabs = ['hero', 'announcement', 'giftset', 'bulk', 'story', 'values', 'instagram']
+const sectionByTab = { giftset: 'signature' }
+const saveErrorTab = ref(null)
 
 const artOptions = ['giftset', 'kurma', 'sajadah', 'tasbih', 'madu', 'parfum', 'souvenir']
 
@@ -127,11 +130,32 @@ const onInstagramImageChange = (i, e) => {
 }
 
 const save = () => {
+  const activeTab = tab.value
+  const section = sectionByTab[activeTab] ?? activeTab
+  const fields = {
+    hero: (data) => ({ hero: data.hero, hero_image: data.hero_image, hero_image_reset: data.hero_image_reset }),
+    announcement: (data) => ({ announcement: data.announcement }),
+    signature: (data) => ({ signature: data.signature }),
+    bulk: (data) => ({ bulk: data.bulk }),
+    story: (data) => ({ story: data.story }),
+    values: (data) => ({ values: data.values }),
+    instagram: (data) => ({ instagram: data.instagram }),
+  }
+  if (!fields[section]) return
+
   form
-    .transform((data) => ({ ...data, _method: 'put' }))
+    .transform((data) => ({ ...fields[section](data), section, _method: 'put' }))
     .post('/admin/konten', {
       preserveScroll: true,
-      onSuccess: () => push('Konten homepage disimpan', { tone: 'success' }),
+      onSuccess: () => {
+        saveErrorTab.value = null
+        push(`${tabs.find((item) => item.id === activeTab)?.label} disimpan`, { tone: 'success' })
+      },
+      onError: () => {
+        saveErrorTab.value = activeTab
+        tab.value = activeTab
+        push('Perubahan belum tersimpan. Periksa pesan kesalahan pada tab ini.', { tone: 'danger' })
+      },
     })
 }
 
@@ -335,9 +359,11 @@ const moveFaq = (index, dir) => {
     <header class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-[2.1rem] leading-none">Konten homepage</h1>
-        <p class="mt-3 text-[0.85rem] text-muted">Semua teks di bawah ini tampil langsung di halaman depan.</p>
+        <p class="mt-3 text-[0.85rem] text-muted">Edit dan simpan tiap tab untuk memperbarui homepage.</p>
       </div>
-      <AppButton size="sm" :loading="form.processing" @click="save">Simpan perubahan</AppButton>
+      <AppButton v-if="editableTabs.includes(tab)" size="sm" :loading="form.processing" @click="save">
+        Simpan {{ tabs.find((item) => item.id === tab)?.label }}
+      </AppButton>
     </header>
 
     <div class="no-scrollbar mt-8 flex gap-6 overflow-x-auto border-b border-line">
@@ -354,6 +380,12 @@ const moveFaq = (index, dir) => {
 
     <div class="mt-8 grid gap-6 xl:grid-cols-[1.4fr_1fr]">
       <section class="border border-line bg-surface p-6 sm:p-7">
+        <div v-if="saveErrorTab === tab && form.hasErrors" role="alert" class="mb-6 border border-danger/40 bg-danger/[0.07] p-4 text-[0.82rem] text-danger">
+          <p class="font-semibold">Perubahan belum tersimpan:</p>
+          <ul class="mt-2 list-disc space-y-1 pl-5">
+            <li v-for="(message, field) in form.errors" :key="field">{{ message }}</li>
+          </ul>
+        </div>
 
         <!-- ════════ HERO ════════ -->
         <template v-if="tab === 'hero'">
@@ -432,8 +464,8 @@ const moveFaq = (index, dir) => {
         <template v-else-if="tab === 'announcement'">
           <h2 class="font-display text-2xl">Banner pengumuman</h2>
           <label class="field-label mt-6" for="c-ann">Teks banner</label>
-          <input id="c-ann" v-model="form.announcement" class="field" />
-          <p class="mt-2 text-[0.78rem] text-muted">Tampil di baris paling atas seluruh halaman toko.</p>
+          <input id="c-ann" v-model="form.announcement" class="field" maxlength="180" />
+          <p class="mt-2 text-[0.78rem] text-muted">Tampil di baris paling atas seluruh halaman toko. Maksimal 180 karakter ({{ form.announcement.length }}/180).</p>
           <p v-if="form.errors.announcement" class="mt-1.5 text-[0.72rem] text-danger">{{ form.errors.announcement }}</p>
         </template>
 

@@ -5,6 +5,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Support\Image\HeroImage;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -66,6 +67,41 @@ function homePayload(string $announcement, array $extra = []): array
 beforeEach(function () {
     Storage::fake('public');
     $this->admin = User::factory()->create(['is_admin' => true]);
+});
+
+it('saves the banner without validating or overwriting another tab', function () {
+    $old = homePayload('Banner lama');
+    $old['signature']['productSlug'] = 'produk-yang-sudah-dihapus';
+    Content::create(['key' => 'home', 'data' => $old]);
+    Cache::put('home-content', $old);
+    Cache::put('home-payload', ['content' => $old]);
+
+    $this->actingAs($this->admin)->put(route('admin.content.update'), [
+        'section' => 'announcement',
+        'announcement' => 'Banner baru',
+    ])->assertSessionHasNoErrors();
+
+    $saved = Content::where('key', 'home')->firstOrFail()->data;
+    expect($saved['announcement'])->toBe('Banner baru')
+        ->and($saved['signature'])->toBe($old['signature'])
+        ->and(Cache::has('home-content'))->toBeFalse()
+        ->and(Cache::has('home-payload'))->toBeFalse();
+
+    $this->get(route('home'))->assertOk()->assertInertia(fn ($page) => $page
+        ->component('shop/HomePage')
+        ->where('announcement', 'Banner baru')
+        ->where('content.announcement', 'Banner baru'));
+});
+
+it('shows a validation error and keeps the old banner when the new text is empty', function () {
+    Content::create(['key' => 'home', 'data' => homePayload('Banner lama')]);
+
+    $this->actingAs($this->admin)->put(route('admin.content.update'), [
+        'section' => 'announcement',
+        'announcement' => '',
+    ])->assertSessionHasErrors('announcement');
+
+    expect(Content::where('key', 'home')->firstOrFail()->data['announcement'])->toBe('Banner lama');
 });
 
 it('lets an admin upload a hero image for the homepage', function () {
