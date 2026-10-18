@@ -77,7 +77,7 @@ const openDetail = (item) => {
     <div class="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent" />
 
     <div class="shell">
-      <div class="max-w-2xl">
+      <div class="max-w-2xl" v-reveal>
         <div v-if="content.eyebrow" class="flex items-center gap-3">
           <span class="h-px w-8 bg-gold" />
           <p class="text-[0.68rem] font-semibold uppercase tracking-[0.25em] text-gold">{{ content.eyebrow }}</p>

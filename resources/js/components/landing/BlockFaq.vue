@@ -7,7 +7,7 @@ defineProps({ content: { type: Object, required: true } })
 <template>
   <section class="py-16 sm:py-20">
     <div class="shell max-w-[46rem]">
-      <h2 v-if="content.title" class="mb-8 text-[1.7rem] sm:text-[2.1rem]">{{ content.title }}</h2>
+      <h2 v-if="content.title" class="mb-8 text-[1.7rem] sm:text-[2.1rem]" v-reveal>{{ content.title }}</h2>
       <div v-reveal><FaqAccordion :items="content.items ?? []" /></div>
     </div>
   </section>

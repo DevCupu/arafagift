@@ -15,7 +15,7 @@ const items = computed(() =>
 <template>
   <section v-if="items.length" class="py-16 sm:py-20">
     <div class="shell">
-      <h2 v-if="content.title" class="mb-10 text-[1.7rem] sm:text-[2.1rem]">{{ content.title }}</h2>
+      <h2 v-if="content.title" class="mb-10 text-[1.7rem] sm:text-[2.1rem]" v-reveal>{{ content.title }}</h2>
       <div v-reveal><TestimonialGrid :items="items" /></div>
     </div>
   </section>
