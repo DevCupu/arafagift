@@ -148,7 +148,7 @@ const bulkCtaHref = computed(() => {
           alt="Koleksi oleh-oleh Umrah & Hajj ArafahGift"
           sizes="100vw"
           priority
-          class="h-full w-full object-cover object-[65%_center]"
+          class="home-hero-image h-full w-full object-cover object-[65%_center]"
         />
         <!-- Gradient kiri foto → blend ke hijau tua -->
         <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/92 to-forest-deep/15 lg:via-forest-deep/58" />
@@ -157,20 +157,20 @@ const bulkCtaHref = computed(() => {
       <!-- ── LEFT: Konten teks ── -->
       <div class="shell relative flex min-h-[32rem] flex-col justify-center py-14 sm:min-h-[36rem] sm:py-18 lg:min-h-[min(76svh,41rem)] lg:py-20">
         <div class="w-full max-w-[32rem]">
-          <p class="text-[0.72rem] font-medium tracking-[0.12em] text-gold">{{ hero.eyebrow }}</p>
+          <p class="home-hero-step text-[0.72rem] font-medium tracking-[0.12em] text-gold" style="--landing-delay: 60ms">{{ hero.eyebrow }}</p>
 
           <h1
-            class="mt-4 text-ivory sm:mt-5"
-            style="font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;"
+            class="home-hero-step mt-4 text-ivory sm:mt-5"
+            style="--landing-delay: 150ms; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;"
           >
             <span v-for="(line, i) in headlineLines" :key="i" class="block">{{ line }}</span>
           </h1>
 
-          <p class="mt-5 max-w-[28rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]">
+          <p class="home-hero-step mt-5 max-w-[28rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]" style="--landing-delay: 280ms">
             {{ hero.sub }}
           </p>
 
-          <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <div class="home-hero-step mt-8 flex flex-wrap items-center gap-x-6 gap-y-3" style="--landing-delay: 400ms">
             <AppButton :to="hero.cta.to" variant="gold" size="lg">
               {{ hero.cta.label }}
               <template #icon><ArrowRight class="h-4 w-4" /></template>

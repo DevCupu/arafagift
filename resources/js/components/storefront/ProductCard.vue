@@ -32,7 +32,7 @@ const discount = computed(() =>
 
 <template>
   <article
-    class="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line/80 bg-surface shadow-soft transition duration-300 ease-calm hover:-translate-y-1 hover:border-gold/60 hover:shadow-lift"
+    class="product-card group relative flex h-full flex-col overflow-hidden rounded-xl border border-line/80 bg-surface shadow-soft transition-[transform,border-color,box-shadow] duration-500 ease-calm hover:border-gold/60 hover:shadow-lift focus-within:border-gold/60 focus-within:shadow-lift"
   >
     <div class="relative border-b border-line/70">
       <Link
@@ -42,7 +42,7 @@ const discount = computed(() =>
       >
         <div
           v-if="product.image && !imageFailed"
-          class="flex h-full w-full items-center justify-center p-2.5 transition-transform duration-500 ease-calm group-hover:scale-[1.015] sm:p-4"
+          class="product-card-image flex h-full w-full items-center justify-center p-2.5 transition-transform duration-700 ease-calm sm:p-4"
         >
           <img
             :src="product.image"

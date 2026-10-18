@@ -388,9 +388,7 @@ const placeOrder = async () => {
 }
 
 const confirmViaWhatsapp = () => {
-  const number = (store.value.whatsapp || '').replace(/\D/g, '')
-  const url = `https://wa.me/${number}?text=${encodeURIComponent(buildWaMessage(placedOrder.value))}`
-  window.open(url, '_blank', 'noopener')
+  window.open(whatsappHref(buildWaMessage(placedOrder.value)), '_blank', 'noopener')
 }
 
 onMounted(() => {

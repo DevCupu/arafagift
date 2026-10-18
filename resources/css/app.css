@@ -279,12 +279,27 @@
     .announcement-bar:hover .announcement-track {
         animation-play-state: paused;
     }
-    .landing-hero-image {
+    .landing-hero-image,
+    .home-hero-image {
         animation: landingImageSettle 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
-    .landing-hero-step {
+    .landing-hero-step,
+    .home-hero-step {
         animation: landingStepEnter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
         animation-delay: var(--landing-delay, 0ms);
+    }
+    @media (hover: hover) {
+        .product-card:hover {
+            transform: translateY(-3px);
+        }
+        .product-card:hover .product-card-image {
+            transform: scale(1.035);
+        }
+    }
+    @media (hover: none) {
+        .product-card:active {
+            transform: scale(0.992);
+        }
     }
     .slow-zoom {
         animation: slowZoom 14s cubic-bezier(0.22, 1, 0.36, 1) both;
