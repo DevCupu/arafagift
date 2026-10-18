@@ -32,7 +32,14 @@ class ContentController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
+        $section = $request->input('section');
+        $sections = ['hero', 'announcement', 'signature', 'bulk', 'story', 'values', 'instagram'];
+
+        if ($section !== null) {
+            $request->validate(['section' => ['required', Rule::in($sections)]]);
+        }
+
+        $rules = [
             'announcement' => ['required', 'string', 'max:180'],
             'hero.eyebrow' => ['required', 'string', 'max:80'],
             'hero.headline' => ['required', 'string', 'max:200'],
@@ -71,75 +78,104 @@ class ContentController extends Controller
             'values.*.title' => ['required', 'string', 'max:60'],
             'values.*.body' => ['required', 'string', 'max:240'],
             'hero_image' => ['nullable', 'image', 'max:4096'],
-        ]);
+            'hero_image_reset' => ['sometimes', 'boolean'],
+        ];
+
+        // Setiap tab disimpan sendiri agar isian tab lain tidak menggagalkan
+        // perubahan yang sedang diedit. Payload lama tanpa section tetap didukung.
+        if ($section !== null) {
+            $rules = array_filter($rules, function (string $key) use ($section): bool {
+                return $key === $section
+                    || str_starts_with($key, $section.'.')
+                    || ($section === 'hero' && in_array($key, ['hero_image', 'hero_image_reset'], true));
+            }, ARRAY_FILTER_USE_KEY);
+        }
+
+        $validated = $request->validate($rules);
 
         $content = Content::where('key', 'home')->firstOrFail();
         $data = $content->data;
 
-        $data['announcement'] = $validated['announcement'];
+        if ($section === null || $section === 'announcement') {
+            $data['announcement'] = $validated['announcement'];
+        }
 
-        $data['hero']['eyebrow'] = $validated['hero']['eyebrow'];
-        $data['hero']['headline'] = $validated['hero']['headline'];
-        $data['hero']['sub'] = $validated['hero']['sub'];
-        $data['hero']['cta']['label'] = $validated['hero']['cta']['label'];
-        $data['hero']['cta']['to'] = $validated['hero']['cta']['to'];
-        $data['hero']['ctaSecondary']['label'] = $validated['hero']['ctaSecondary']['label'];
-        $data['hero']['ctaSecondary']['to'] = $validated['hero']['ctaSecondary']['to'];
+        if ($section === null || $section === 'hero') {
+            $data['hero']['eyebrow'] = $validated['hero']['eyebrow'];
+            $data['hero']['headline'] = $validated['hero']['headline'];
+            $data['hero']['sub'] = $validated['hero']['sub'];
+            $data['hero']['cta']['label'] = $validated['hero']['cta']['label'];
+            $data['hero']['cta']['to'] = $validated['hero']['cta']['to'];
+            $data['hero']['ctaSecondary']['label'] = $validated['hero']['ctaSecondary']['label'];
+            $data['hero']['ctaSecondary']['to'] = $validated['hero']['ctaSecondary']['to'];
+        }
 
-        $data['signature']['eyebrow'] = $validated['signature']['eyebrow'];
-        $data['signature']['title'] = $validated['signature']['title'];
-        $data['signature']['body'] = $validated['signature']['body'];
-        $data['signature']['productSlug'] = $validated['signature']['productSlug'];
-        $data['signature']['cta']['label'] = $validated['signature']['cta']['label'];
-        $data['signature']['cta']['to'] = $validated['signature']['cta']['to'];
+        if ($section === null || $section === 'signature') {
+            $data['signature']['eyebrow'] = $validated['signature']['eyebrow'];
+            $data['signature']['title'] = $validated['signature']['title'];
+            $data['signature']['body'] = $validated['signature']['body'];
+            $data['signature']['productSlug'] = $validated['signature']['productSlug'];
+            $data['signature']['cta']['label'] = $validated['signature']['cta']['label'];
+            $data['signature']['cta']['to'] = $validated['signature']['cta']['to'];
+        }
 
-        $data['bulk']['eyebrow'] = $validated['bulk']['eyebrow'];
-        $data['bulk']['title'] = $validated['bulk']['title'];
-        $data['bulk']['sub'] = $validated['bulk']['sub'];
-        $data['bulk']['points'] = $validated['bulk']['points'];
-        $data['bulk']['cta']['label'] = $validated['bulk']['cta']['label'];
-        $data['bulk']['cta']['href'] = $validated['bulk']['cta']['href'];
+        if ($section === null || $section === 'bulk') {
+            $data['bulk']['eyebrow'] = $validated['bulk']['eyebrow'];
+            $data['bulk']['title'] = $validated['bulk']['title'];
+            $data['bulk']['sub'] = $validated['bulk']['sub'];
+            $data['bulk']['points'] = $validated['bulk']['points'];
+            $data['bulk']['cta']['label'] = $validated['bulk']['cta']['label'];
+            $data['bulk']['cta']['href'] = $validated['bulk']['cta']['href'];
+        }
 
-        $data['story']['eyebrow'] = $validated['story']['eyebrow'];
-        $data['story']['title'] = $validated['story']['title'];
-        $data['story']['body'] = $validated['story']['body'];
-        $data['story']['signature'] = $validated['story']['signature'];
+        if ($section === null || $section === 'story') {
+            $data['story']['eyebrow'] = $validated['story']['eyebrow'];
+            $data['story']['title'] = $validated['story']['title'];
+            $data['story']['body'] = $validated['story']['body'];
+            $data['story']['signature'] = $validated['story']['signature'];
+        }
 
-        $data['instagram']['handle'] = $validated['instagram']['handle'];
-        $data['instagram']['title'] = $validated['instagram']['title'];
-        $data['instagram']['url'] = $validated['instagram']['url'];
+        if ($section === null || $section === 'instagram') {
+            $data['instagram']['handle'] = $validated['instagram']['handle'];
+            $data['instagram']['title'] = $validated['instagram']['title'];
+            $data['instagram']['url'] = $validated['instagram']['url'];
 
-        $existingPosts = $data['instagram']['posts'] ?? [];
-        $data['instagram']['posts'] = array_map(function (array $post, int $i) use ($existingPosts) {
-            $file = $post['image'] ?? null;
-            unset($post['image']);
+            $existingPosts = $data['instagram']['posts'] ?? [];
+            $data['instagram']['posts'] = array_map(function (array $post, int $i) use ($existingPosts) {
+                $file = $post['image'] ?? null;
+                unset($post['image']);
 
-            if ($file instanceof UploadedFile) {
-                $post['image'] = Storage::disk('public')->url($file->store('content', 'public'));
-            } else {
-                $post['image'] = $existingPosts[$i]['image'] ?? null;
-            }
+                if ($file instanceof UploadedFile) {
+                    $post['image'] = Storage::disk('public')->url($file->store('content', 'public'));
+                } else {
+                    $post['image'] = $existingPosts[$i]['image'] ?? null;
+                }
 
-            return $post;
-        }, $validated['instagram']['posts'], array_keys($validated['instagram']['posts']));
+                return $post;
+            }, $validated['instagram']['posts'], array_keys($validated['instagram']['posts']));
+        }
 
-        $data['values'] = $validated['values'];
+        if ($section === null || $section === 'values') {
+            $data['values'] = $validated['values'];
+        }
 
         // Disimpan sebelum hero ditulis supaya berkas baru bisa menggantikan
         // berkas lama tanpa menggantung di tengah jalan.
-        $previousHeroImage = $data['hero']['image'] ?? null;
+        if ($section === null || $section === 'hero') {
+            $previousHeroImage = $data['hero']['image'] ?? null;
 
-        // Foto hero adalah LCP halaman, jadi foto mentah dari unggahan tidak pernah
-        // langsung dipakai: HeroImageStore memotongnya ke master terkompresi
-        // plus ladder WebP/AVIF, dan hanya path relatifnya yang disimpan. URL
-        // absolut dari Storage::url() dulu ikut membawa APP_URL ke dalam isi
-        // database, jadi hero produksi bisa menunjuk ke host yang salah.
-        if ($request->hasFile('hero_image')) {
-            $data['hero']['image'] = HeroImageStore::store($request->file('hero_image'));
-            HeroImageStore::remove($previousHeroImage);
-        } elseif ($request->boolean('hero_image_reset')) {
-            $data['hero']['image'] = null;
-            HeroImageStore::remove($previousHeroImage);
+            // Foto hero adalah LCP halaman, jadi foto mentah dari unggahan tidak pernah
+            // langsung dipakai: HeroImageStore memotongnya ke master terkompresi
+            // plus ladder WebP/AVIF, dan hanya path relatifnya yang disimpan. URL
+            // absolut dari Storage::url() dulu ikut membawa APP_URL ke dalam isi
+            // database, jadi hero produksi bisa menunjuk ke host yang salah.
+            if ($request->hasFile('hero_image')) {
+                $data['hero']['image'] = HeroImageStore::store($request->file('hero_image'));
+                HeroImageStore::remove($previousHeroImage);
+            } elseif ($request->boolean('hero_image_reset')) {
+                $data['hero']['image'] = null;
+                HeroImageStore::remove($previousHeroImage);
+            }
         }
 
         $content->update(['data' => $data]);
