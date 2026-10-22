@@ -31,6 +31,17 @@ Build produksi:
 npm run build             # hasil di public/build/
 ```
 
+Foto produk dan kategori baru otomatis mendapat varian AVIF/WebP dan preview
+sosial JPEG. Gambar asli serta referensi di database tetap disimpan. Untuk foto
+yang sudah ada, jalankan setelah deploy. Perintah ini aman diulang dan hanya
+membuat file yang belum ada:
+
+```bash
+php artisan app:optimize-product-images --dry-run
+php artisan app:optimize-product-images
+php artisan app:cache-warm
+```
+
 ### Deploy untuk trafik ramai
 
 Jangan jalankan production dengan `php artisan serve`. Gunakan Nginx/Apache +

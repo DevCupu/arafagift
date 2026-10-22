@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue'
 import ProductArt from '@/components/art/ProductArt.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 
 const props = defineProps({ product: { type: Object, required: true } })
 
@@ -25,10 +26,12 @@ watch(() => props.product.slug, () => {
         :aria-label="`Tampilan ${i + 1}`" :aria-current="active === i"
         @click="active = i"
       >
-        <img
+        <PictureImage
           v-if="product.image && !imageFailed"
+          :image="product.imageSources"
           :src="product.image"
           :alt="product.name"
+          sizes="64px"
           class="h-full w-full object-contain object-center p-1"
           @error="imageFailed = true"
         />
@@ -44,10 +47,13 @@ watch(() => props.product.slug, () => {
           leave-active-class="transition duration-200" leave-to-class="opacity-0"
         >
           <div :key="active" class="h-full w-full">
-            <img
+            <PictureImage
               v-if="product.image && !imageFailed"
+              :image="product.imageSources"
               :src="product.image"
               :alt="product.name"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              priority
               class="h-full w-full object-contain object-center p-4 sm:p-6"
               @error="imageFailed = true"
             />

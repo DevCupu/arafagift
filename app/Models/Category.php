@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Support\Image\CatalogImage;
 use Database\Factories\CategoryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -39,6 +40,7 @@ class Category extends Model
             'slug' => $this->slug,
             'art' => $this->art,
             'image' => $this->imageUrl(),
+            'imageSources' => CatalogImage::responsive($this->image),
             'tagline' => $this->tagline,
             'count' => $this->products_active_count ?? $this->product_count,
         ];

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowUpRight, Eye, Heart, MessageCircle, ShoppingBag } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppRating from '@/components/ui/AppRating.vue'
 import { formatIDR } from '@/composables/useFormat'
@@ -44,11 +45,11 @@ const discount = computed(() =>
           v-if="product.image && !imageFailed"
           class="product-card-image flex h-full w-full items-center justify-center p-2.5 transition-transform duration-700 ease-calm sm:p-4"
         >
-          <img
+          <PictureImage
+            :image="product.imageSources"
             :src="product.image"
             :alt="product.name"
-            loading="lazy"
-            decoding="async"
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             class="h-full w-full object-contain object-center"
             @error="imageFailed = true"
           />

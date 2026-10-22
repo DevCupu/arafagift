@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Setting;
+use App\Support\StoreSettingsCache;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -12,12 +13,18 @@ class CheckMaintenanceMode
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         // Rute esensial yang selalu boleh diakses: admin panel, otentikasi, aset storage, health check
         if ($request->is('admin*', 'login*', 'logout*', 'up', 'storage*', 'sanctum*')) {
+            return $next($request);
+        }
+
+        // The storefront already caches this setting and invalidates it when
+        // an admin saves settings. Avoid a database query on every page/API hit.
+        if ((StoreSettingsCache::store()['storeStatus'] ?? 'open') !== 'maintenance') {
             return $next($request);
         }
 

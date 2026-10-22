@@ -2,6 +2,7 @@
 import { ref, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import ProductArt from '@/components/art/ProductArt.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import AppModal from '@/components/ui/AppModal.vue'
 import AppRating from '@/components/ui/AppRating.vue'
@@ -31,10 +32,11 @@ const addToCart = () => {
     <div v-if="product" class="grid sm:grid-cols-[minmax(0,1.08fr)_minmax(19rem,0.92fr)]">
       <div class="aspect-square border-b border-line bg-ivory/55 sm:aspect-auto sm:min-h-[32rem] sm:border-b-0 sm:border-r">
         <div v-if="product.image && !imageFailed" class="flex h-full w-full items-center justify-center p-4 sm:p-7">
-          <img
+          <PictureImage
+            :image="product.imageSources"
             :src="product.image"
             :alt="product.name"
-            loading="lazy"
+            sizes="(min-width: 640px) 50vw, 100vw"
             class="h-full w-full object-contain object-center"
             @error="imageFailed = true"
           />
