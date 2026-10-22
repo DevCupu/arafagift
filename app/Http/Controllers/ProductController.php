@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Support\Image\CatalogImage;
 use App\Support\Seo\PageSeo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,13 @@ use Inertia\Response;
 
 class ProductController extends Controller
 {
+    public static function pageCacheKey(string $slug): string
+    {
+        // New payload includes responsive image sources. Do not reuse an old
+        // cached product payload that only contains the original image URL.
+        return "product-page:v2:{$slug}";
+    }
+
     public function search(Request $request): JsonResponse
     {
         $validated = $request->validate(['q' => ['required', 'string', 'min:2', 'max:100']]);
@@ -81,7 +89,7 @@ class ProductController extends Controller
             );
         }
 
-        $image = $product->imageUrl();
+        $image = CatalogImage::socialUrl($product->image);
 
         $graph = [
             '@context' => 'https://schema.org',
@@ -104,7 +112,7 @@ class ProductController extends Controller
         ];
 
         if ($image !== null) {
-            $graph['image'] = [$image];
+            $graph['image'] = [str_starts_with($image, '/') ? url($image) : $image];
         }
 
         return PageSeo::make($product->name, $description)
@@ -154,7 +162,7 @@ class ProductController extends Controller
      */
     public static function page(Product $product): array
     {
-        return Cache::flexible("product-page:{$product->slug}", [600, 3600], function () use ($product): array {
+        return Cache::flexible(self::pageCacheKey($product->slug), [600, 3600], function () use ($product): array {
             $product->load(['category', 'occasions', 'supplier']);
 
             $related = Product::with(['category', 'occasions'])

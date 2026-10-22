@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import { ArrowUpRight } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 
 defineProps({
   category: { type: Object, required: true },
@@ -17,11 +18,12 @@ const imageFailed = ref(false)
     <div class="arch aspect-[3/4] overflow-hidden border border-line bg-surface relative transition duration-300 ease-calm group-hover:shadow-lift">
       <div class="h-full w-full transition-transform duration-[900ms] ease-calm group-hover:scale-[1.05]">
         <!-- Foto nyata jika tersedia, fallback ke SVG ilustrasi -->
-        <img
+        <PictureImage
           v-if="category.image && !imageFailed"
+          :image="category.imageSources"
           :src="category.image"
           :alt="category.name"
-          loading="lazy"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
           class="h-full w-full object-cover"
           @error="imageFailed = true"
         />

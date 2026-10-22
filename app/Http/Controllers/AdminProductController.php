@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Supplier;
+use App\Support\Image\CatalogImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -73,7 +75,7 @@ class AdminProductController extends Controller
         $product->update($validated);
 
         $this->forgetCatalogCaches();
-        Cache::forget("product-page:{$product->slug}");
+        Cache::forget(ProductController::pageCacheKey($product->slug));
 
         return back()->with('success', 'Perubahan produk disimpan');
     }
@@ -86,7 +88,7 @@ class AdminProductController extends Controller
         $product->delete();
 
         $this->forgetCatalogCaches();
-        Cache::forget("product-page:{$product->slug}");
+        Cache::forget(ProductController::pageCacheKey($product->slug));
 
         return back()->with('success', "{$product->name} dihapus");
     }
@@ -110,7 +112,7 @@ class AdminProductController extends Controller
         $this->forgetCatalogCaches();
 
         foreach ($products as $product) {
-            Cache::forget("product-page:{$product->slug}");
+            Cache::forget(ProductController::pageCacheKey($product->slug));
         }
 
         return back()->with('success', $products->count().' produk dihapus');
@@ -129,7 +131,7 @@ class AdminProductController extends Controller
         $product->update($validated);
 
         $this->forgetCatalogCaches();
-        Cache::forget("product-page:{$product->slug}");
+        Cache::forget(ProductController::pageCacheKey($product->slug));
 
         return back()->with('success', "Stok {$product->name} diperbarui jadi {$product->stock}");
     }
@@ -187,6 +189,13 @@ class AdminProductController extends Controller
 
         if ($path === false) {
             throw new RuntimeException('Gagal menyimpan gambar produk.');
+        }
+
+        try {
+            CatalogImage::generate($path);
+        } catch (\Throwable $e) {
+            // The original upload remains usable even if GD or variant writing fails.
+            Log::warning('Varian gambar produk gagal dibuat.', ['path' => $path, 'message' => $e->getMessage()]);
         }
 
         return $path;

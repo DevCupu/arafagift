@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Image\CatalogImage;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -85,6 +86,7 @@ class Product extends Model
             'badge' => $this->badge,
             'art' => $this->art,
             'image' => $this->imageUrl(),
+            'imageSources' => CatalogImage::responsive($this->image),
             'stock' => $this->stock,
             'lowStock' => $this->low_stock_threshold,
             'weight' => $this->weight,
@@ -117,6 +119,7 @@ class Product extends Model
             'badge' => $this->badge,
             'art' => $this->art,
             'image' => $this->imageUrl(),
+            'imageSources' => CatalogImage::responsive($this->image),
             'stock' => $this->stock,
             'short' => $this->short,
             'occasions' => $this->occasions->pluck('slug')->all(),

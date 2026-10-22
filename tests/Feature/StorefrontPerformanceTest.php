@@ -2,6 +2,7 @@
 
 use App\Models\Faq;
 use App\Models\Product;
+use App\Support\StoreSettingsCache;
 use Illuminate\Support\Facades\DB;
 
 it('returns a compact search payload and caches repeated hot searches', function () {
@@ -12,6 +13,8 @@ it('returns a compact search payload and caches repeated hot searches', function
         'cost' => 50000,
     ]);
 
+    // Warm shared store settings so the query count measures search itself.
+    StoreSettingsCache::store();
     DB::enableQueryLog();
 
     $this->getJson('/pencarian?q=kurma')

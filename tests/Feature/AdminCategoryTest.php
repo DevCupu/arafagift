@@ -16,12 +16,14 @@ it('lets an admin create a category with an image', function () {
         'slug' => 'parfum-sunnah',
         'art' => 'giftset',
         'tagline' => 'Non alkohol',
-        'image' => UploadedFile::fake()->image('kategori.jpg'),
+        'image' => UploadedFile::fake()->image('kategori.jpg', 900, 900),
     ])->assertSessionHasNoErrors();
 
     $category = Category::where('slug', 'parfum-sunnah')->first();
     expect($category->image)->not->toBeNull();
     Storage::disk('public')->assertExists($category->image);
+    Storage::disk('public')->assertExists('categories/'.pathinfo($category->image, PATHINFO_FILENAME).'-320.webp');
+    expect($category->toCatalog()['imageSources']['webp'])->toContain('-320.webp 320w');
 });
 
 it('lets an admin replace a category image on update and removes the old upload', function () {

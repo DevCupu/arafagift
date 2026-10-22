@@ -20,7 +20,7 @@ class LandingController extends Controller
      */
     private const CARD_FIELDS = [
         'id', 'name', 'slug', 'price', 'comparePrice', 'category',
-        'art', 'image', 'stock', 'rating', 'reviews', 'badge',
+        'art', 'image', 'imageSources', 'stock', 'rating', 'reviews', 'badge',
         'short', 'description', 'includes', 'details',
     ];
 

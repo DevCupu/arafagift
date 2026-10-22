@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Support\Image\CatalogImage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -124,7 +126,17 @@ class AdminCategoryController extends Controller
 
         $path = $request->file('image')->store('categories', 'public');
 
-        return $path === false ? null : $path;
+        if ($path === false) {
+            return null;
+        }
+
+        try {
+            CatalogImage::generate($path);
+        } catch (\Throwable $e) {
+            Log::warning('Varian gambar kategori gagal dibuat.', ['path' => $path, 'message' => $e->getMessage()]);
+        }
+
+        return $path;
     }
 
     /**

@@ -4,6 +4,7 @@ import { Eye, MessageCircle, PackageCheck, Sparkles, Star } from 'lucide-vue-nex
 import AppModal from '@/components/ui/AppModal.vue'
 import AppRating from '@/components/ui/AppRating.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
+import PictureImage from '@/components/ui/PictureImage.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useStore } from '@/composables/useStore'
 
@@ -40,6 +41,7 @@ const normalizeProduct = (product, source = 'catalog') => ({
   slug: product.slug,
   category: product.category ?? 'Pilihan Arafah',
   image: product.image,
+  imageSources: product.imageSources,
   art: product.art ?? 'giftset',
   price: Number(product.price || 0),
   comparePrice: product.comparePrice ? Number(product.comparePrice) : null,
@@ -100,11 +102,12 @@ const openDetail = (item) => {
             :aria-label="`Lihat detail ${items[0].name}`"
             @click="openDetail(items[0])"
           >
-            <img
+            <PictureImage
               v-if="items[0].image && !isImageFailed(items[0].id)"
+              :image="items[0].imageSources"
               :src="items[0].image"
               :alt="items[0].name"
-              loading="lazy"
+              sizes="(min-width: 1024px) 45vw, 100vw"
               class="h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]"
               @error="markImageFailed(items[0].id)"
             />
@@ -180,11 +183,12 @@ const openDetail = (item) => {
               :aria-label="`Lihat detail ${item.name}`"
               @click="openDetail(item)"
             >
-              <img
+              <PictureImage
                 v-if="item.image && !isImageFailed(item.id)"
+                :image="item.imageSources"
                 :src="item.image"
                 :alt="item.name"
-                loading="lazy"
+                sizes="(min-width: 1024px) 132px, (min-width: 640px) 33vw, 112px"
                 class="h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]"
                 @error="markImageFailed(item.id)"
               />
@@ -242,10 +246,12 @@ const openDetail = (item) => {
     <AppModal :open="Boolean(selected)" :label="selected?.name || 'Detail produk'" @close="selected = null">
       <div v-if="selected" class="grid bg-surface sm:grid-cols-[0.92fr_1.08fr]">
         <div class="relative min-h-[330px] overflow-hidden bg-sand sm:min-h-[560px]">
-          <img
+          <PictureImage
             v-if="selected.image && !isImageFailed(selected.id)"
+            :image="selected.imageSources"
             :src="selected.image"
             :alt="selected.name"
+            sizes="(min-width: 640px) 45vw, 100vw"
             class="h-full w-full object-cover"
             @error="markImageFailed(selected.id)"
           />

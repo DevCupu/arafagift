@@ -2,6 +2,8 @@
 
 use App\Models\Setting;
 use App\Models\User;
+use App\Support\StoreSettingsCache;
+use Illuminate\Support\Facades\Auth;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['is_admin' => true]);
@@ -30,6 +32,27 @@ it('blocks non-admin users from updating settings', function () {
     $this->actingAs($user)->put(route('admin.settings.update'), [
         'store_name' => 'Hacked',
     ])->assertForbidden();
+});
+
+it('applies maintenance changes immediately even when store settings were cached', function () {
+    Setting::create(['store_name' => 'Arafagift', 'store_status' => 'open']);
+    StoreSettingsCache::store();
+
+    $this->actingAs($this->admin)->put(route('admin.settings.update'), [
+        'store_name' => 'Arafagift',
+        'store_status' => 'maintenance',
+    ])->assertSessionHasNoErrors();
+
+    Auth::logout();
+    $this->get('/robots.txt')->assertStatus(503);
+
+    $this->actingAs($this->admin)->put(route('admin.settings.update'), [
+        'store_name' => 'Arafagift',
+        'store_status' => 'open',
+    ])->assertSessionHasNoErrors();
+
+    Auth::logout();
+    $this->get('/robots.txt')->assertOk();
 });
 
 it('lets an admin update complete system settings across all categories', function () {
@@ -77,4 +100,3 @@ it('lets an admin update complete system settings across all categories', functi
         ->and($settings->low_stock_threshold)->toBe(10)
         ->and($settings->google_analytics_id)->toBe('G-TEST12345');
 });
-

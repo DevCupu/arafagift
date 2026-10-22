@@ -19,7 +19,7 @@ defineProps({ content: { type: Object, required: true } })
 
     <ul class="mt-10 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
       <li v-for="(post, i) in content.posts" :key="i" class="group relative aspect-square overflow-hidden rounded-[0.5rem] border border-line bg-surface shadow-soft">
-        <img v-if="post.image" :src="post.image" :alt="post.caption" class="h-full w-full object-cover" />
+        <img v-if="post.image" :src="post.image" :alt="post.caption" class="h-full w-full object-cover" loading="lazy" decoding="async" />
         <ProductArt v-else :art="post.art" :tone="i + 1" />
         <div
           class="absolute inset-0 flex items-end bg-forest-deep/0 p-3 opacity-0 transition duration-500 ease-calm group-hover:bg-forest-deep/55 group-hover:opacity-100"
