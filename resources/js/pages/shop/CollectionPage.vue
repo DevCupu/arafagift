@@ -39,6 +39,7 @@ const sorts = [
 ]
 
 const categoryMeta = computed(() => props.categories.find((c) => c.slug === activeCategory.value))
+const visibleCategories = computed(() => props.categories.filter((c) => c.count > 0))
 
 const list = computed(() => {
   let out = props.products.filter((p) => p.status === 'active')
@@ -113,7 +114,7 @@ watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
                   Semua produk
                 </Link>
               </li>
-              <li v-for="c in categories" :key="c.slug">
+              <li v-for="c in visibleCategories" :key="c.slug">
                 <Link
                   :href="`/koleksi/${c.slug}`"
                   class="flex items-center justify-between text-[0.85rem] transition"
@@ -186,10 +187,11 @@ watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
 
         <EmptyState
           v-else class="mt-10"
-          title="Tidak ada produk pada filter ini"
-          body="Coba lepas satu filter, atau lihat seluruh koleksi kami."
+          :title="categoryMeta?.count === 0 ? 'Produk koleksi ini sedang disiapkan' : 'Tidak ada produk pada filter ini'"
+          :body="categoryMeta?.count === 0 ? 'Jelajahi koleksi lain yang sudah tersedia.' : 'Coba lepas satu filter, atau lihat seluruh koleksi kami.'"
         >
-          <AppButton variant="outline" @click="resetFilters">Atur ulang filter</AppButton>
+          <AppButton v-if="categoryMeta?.count === 0" to="/koleksi" variant="outline">Lihat semua produk</AppButton>
+          <AppButton v-else variant="outline" @click="resetFilters">Atur ulang filter</AppButton>
         </EmptyState>
       </section>
     </div>

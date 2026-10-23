@@ -159,7 +159,11 @@ class SitemapController extends Controller
 
             // cursor(), bukan get(): daftar produk bisa tumbuh jauh melewati
             // memory_limit shared hosting, dan sitemap tidak butuh model penuh.
-            foreach (Category::query()->select(['id', 'slug'])->orderBy('id')->cursor() as $category) {
+            foreach (Category::query()
+                ->select(['id', 'slug'])
+                ->whereHas('products', fn ($query) => $query->where('status', 'active'))
+                ->orderBy('id')
+                ->cursor() as $category) {
                 $urls[] = self::url(route('collection', ['category' => $category->slug]), 'weekly', '0.8');
             }
 

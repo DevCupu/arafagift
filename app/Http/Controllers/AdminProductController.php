@@ -143,6 +143,7 @@ class AdminProductController extends Controller
     {
         Cache::forget('home-payload');
         Cache::forget('koleksi-payload');
+        Cache::forget('gift-set-available');
         SitemapController::flush();
     }
 

@@ -114,9 +114,18 @@ it('mengalihkan slug kategori berkapital ke versi kanonik dengan 301', function 
 it('memberi 404 sungguhan untuk kategori yang tidak ada', function () {
     Category::factory()->create(['slug' => 'kurma']);
 
-    // Sebelumnya /koleksi/gift-set membalas 200 dengan katalog kosong, yang
-    // dibaca Google sebagai halaman tipis dan duplicate content.
-    $this->get('/koleksi/gift-set')->assertNotFound();
+    $this->get('/koleksi/tidak-ada')->assertNotFound();
+});
+
+it('membuka kategori Gift Set baru tanpa mengindeks halaman yang belum punya produk', function () {
+    expect(Category::where('slug', 'gift-set')->exists())->toBeTrue();
+
+    $html = $this->get('/koleksi/gift-set')->assertOk()->getContent();
+
+    expect($html)->toContain('name="robots" content="noindex, nofollow"')
+        ->and($html)->toContain('<link rel="canonical" href="'.route('collection', ['category' => 'gift-set']).'">');
+
+    $this->get('/koleksi')->assertInertia(fn ($page) => $page->where('giftSetAvailable', false));
 });
 
 it('menandai halaman filter sebagai noindex tapi tetap memakai koleksi induk sebagai canonical', function () {
