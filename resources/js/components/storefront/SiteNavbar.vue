@@ -143,6 +143,7 @@ onUnmounted(() => { document.body.style.overflow = '' })
                 class="flex min-h-14 items-center rounded-lg border-l-2 px-4 font-display text-[1.2rem] transition-colors"
                 :class="isActive(link.to) ? 'border-gold bg-ivory/[0.07] text-ivory' : 'border-transparent text-ivory/68 hover:bg-ivory/[0.05] hover:text-ivory'"
                 :aria-current="isActive(link.to) ? 'page' : undefined"
+                @click="closeOverlays"
               >
                 {{ link.label }}
               </Link>
@@ -150,7 +151,7 @@ onUnmounted(() => { document.body.style.overflow = '' })
           </ul>
           <!-- Drawer footer -->
           <div class="space-y-1 border-t border-ivory/10 px-5 py-5 pb-safe">
-            <Link href="/akun" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory">
+            <Link href="/akun" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory" @click="closeOverlays">
               <User class="h-4 w-4 text-gold" :stroke-width="1.5" /> Akun saya
             </Link>
             <button
@@ -160,7 +161,7 @@ onUnmounted(() => { document.body.style.overflow = '' })
               <ShoppingBag class="h-4 w-4 text-gold" :stroke-width="1.5" /> Keranjang
               <span v-if="count" class="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 text-[0.62rem] font-bold text-forest-deep">{{ count }}</span>
             </button>
-            <Link href="/lacak-pesanan" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory">
+            <Link href="/lacak-pesanan" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory" @click="closeOverlays">
               <Search class="h-4 w-4 text-gold" :stroke-width="1.5" /> Lacak pesanan
             </Link>
             <a

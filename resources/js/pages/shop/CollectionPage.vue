@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { Head, Link } from '@inertiajs/vue3'
 import { SlidersHorizontal, X } from 'lucide-vue-next'
 import ProductCard from '@/components/storefront/ProductCard.vue'
-import ProductCardSkeleton from '@/components/ui/ProductCardSkeleton.vue'
 import QuickView from '@/components/storefront/QuickView.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -18,7 +17,6 @@ const props = defineProps({
 })
 
 const quickview = ref(null)
-const loading = ref(false)
 const filtersOpen = ref(false)
 
 const activeCategory = computed(() => props.category ?? 'semua')
@@ -63,11 +61,6 @@ const resetFilters = () => {
   priceBand.value = 'semua'
 }
 
-// Skeleton singkat setiap filter berubah — meniru fetch ke API Laravel.
-watch([activeCategory, activeOccasion, priceBand, sort], () => {
-  loading.value = true
-  setTimeout(() => (loading.value = false), 380)
-})
 watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
 </script>
 
@@ -116,7 +109,7 @@ watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
             <h3 class="text-eyebrow font-medium uppercase text-gold">Kategori</h3>
             <ul class="mt-4 space-y-2.5">
               <li>
-                <Link href="/koleksi" class="text-[0.85rem] transition" :class="activeCategory === 'semua' ? 'text-forest' : 'text-muted hover:text-forest'">
+                <Link href="/koleksi" class="text-[0.85rem] transition" :class="activeCategory === 'semua' ? 'text-forest' : 'text-muted hover:text-forest'" @click="filtersOpen = false">
                   Semua produk
                 </Link>
               </li>
@@ -125,6 +118,7 @@ watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
                   :href="`/koleksi/${c.slug}`"
                   class="flex items-center justify-between text-[0.85rem] transition"
                   :class="activeCategory === c.slug ? 'text-forest' : 'text-muted hover:text-forest'"
+                  @click="filtersOpen = false"
                 >
                   {{ c.name }}<span class="text-[0.7rem] text-muted/60">{{ c.count }}</span>
                 </Link>
@@ -183,11 +177,7 @@ watch(() => props.untuk, (v) => { activeOccasion.value = v ?? null })
           </div>
         </div>
 
-        <div v-if="loading" class="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-3 lg:gap-x-8">
-          <ProductCardSkeleton v-for="i in 6" :key="i" />
-        </div>
-
-        <div v-else-if="list.length" class="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-3 lg:gap-x-8">
+        <div v-if="list.length" class="mt-10 grid grid-cols-2 gap-x-5 gap-y-12 lg:grid-cols-3 lg:gap-x-8">
           <ProductCard
             v-for="(p, i) in list" :key="p.id" :product="p" :index="i"
             @quickview="quickview = $event"
