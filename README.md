@@ -42,6 +42,14 @@ php artisan app:optimize-product-images
 php artisan app:cache-warm
 ```
 
+Untuk menambahkan hanya kategori Gift Set tanpa menjalankan seluruh seeder demo:
+
+```bash
+php artisan db:seed --class=GiftSetCategorySeeder --force
+```
+
+Seeder ini aman diulang. Kategori yang sudah ada dan produk tidak diubah.
+
 ### Deploy untuk trafik ramai
 
 Jangan jalankan production dengan `php artisan serve`. Gunakan Nginx/Apache +
