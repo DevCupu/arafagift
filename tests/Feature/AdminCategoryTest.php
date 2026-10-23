@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -8,6 +9,19 @@ use Illuminate\Support\Facades\Storage;
 beforeEach(function () {
     Storage::fake('public');
     $this->admin = User::factory()->create(['is_admin' => true]);
+});
+
+it('shows the new Gift Set category and its active product count in admin', function () {
+    $giftSet = Category::where('slug', 'gift-set')->firstOrFail();
+    Product::factory()->for($giftSet)->create(['status' => 'active']);
+    Product::factory()->for($giftSet)->create(['status' => 'draft']);
+
+    $this->actingAs($this->admin)->get(route('admin.categories'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/CategoriesPage')
+            ->where('categories.0.slug', 'gift-set')
+            ->where('categories.0.count', 1));
 });
 
 it('lets an admin create a category with an image', function () {

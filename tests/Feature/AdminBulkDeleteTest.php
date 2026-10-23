@@ -50,8 +50,9 @@ it('bulk deletes categories but skips ones that still have products', function (
         'ids' => [...$empty->pluck('id')->all(), $used->id],
     ])->assertSessionHasErrors('category');
 
-    expect(Category::count())->toBe(1);
+    expect(Category::count())->toBe(2);
     expect(Category::find($used->id))->not->toBeNull();
+    expect(Category::where('slug', 'gift-set')->exists())->toBeTrue();
 });
 
 it('bulk deletes suppliers but skips ones still used by products', function () {

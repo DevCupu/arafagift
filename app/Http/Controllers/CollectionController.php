@@ -76,11 +76,11 @@ class CollectionController extends Controller
 
         $seo = $seo->canonical($canonical);
 
-        // Filter ?untuk= membuat kombinasi URL yang banyak tapi isinya hanya
-        // subset dari koleksi yang sama. Judul tetap informatif, canonical
-        // tetap ke koleksi induk, dan robots=noindex supaya tidak mengikis
-        // crawl budget tanpa menolak halaman yang berguna.
-        return ($occasion === null ? $seo : $seo->withNoIndex())->toArray();
+        // Filter dan kategori yang belum punya produk tetap dapat dibuka,
+        // tetapi tidak perlu masuk indeks sampai ada katalog yang relevan.
+        $isEmptyCategory = $match !== null && (int) $match['count'] === 0;
+
+        return ($occasion === null && ! $isEmptyCategory ? $seo : $seo->withNoIndex())->toArray();
     }
 
     /**

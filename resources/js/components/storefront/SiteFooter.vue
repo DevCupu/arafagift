@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { computed, ref } from 'vue'
+import { Link, usePage } from '@inertiajs/vue3'
 import { Instagram, MessageCircle } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -9,15 +9,16 @@ import { useStore } from '@/composables/useStore'
 
 const { push } = useToast()
 const { whatsappHref } = useStore()
+const page = usePage()
 const email = ref('')
 const sending = ref(false)
 
-const columns = [
+const columns = computed(() => [
   {
     title: 'Belanja',
     links: [
       { label: 'Semua koleksi', to: '/koleksi' },
-      { label: 'Gift Set', to: '/koleksi/gift-set' },
+      ...(page.props.giftSetAvailable ? [{ label: 'Gift Set', to: '/koleksi/gift-set' }] : []),
       { label: 'Kurma', to: '/koleksi/kurma' },
       { label: 'Souvenir rombongan', to: '/koleksi/souvenir-rombongan' },
     ],
@@ -40,7 +41,7 @@ const columns = [
       { label: 'Pengembalian', to: '/legal/pengiriman-pengembalian' },
     ],
   },
-]
+])
 
 const subscribe = () => {
   if (!email.value.includes('@')) {

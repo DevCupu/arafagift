@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Category;
 use App\Models\Content;
 use App\Models\Order;
 use App\Support\Seo\PageSeo;
@@ -69,6 +70,13 @@ class HandleInertiaRequests extends Middleware
                 return is_array($homeData) ? ($homeData['announcement'] ?? '') : '';
             },
             'store' => fn (): array => StoreSettingsCache::store(),
+            'giftSetAvailable' => fn (): bool => Cache::flexible(
+                'gift-set-available',
+                [600, 3600],
+                fn (): bool => Category::where('slug', 'gift-set')
+                    ->whereHas('products', fn ($query) => $query->where('status', 'active'))
+                    ->exists(),
+            ),
             // Fail-closed: setiap halaman yang tidak memasang head-nya sendiri
             // (akun, admin, checkout, 404) mewarisi noindex di sini, bukan
             // title homepage. Controller halaman publik menimpanya dengan

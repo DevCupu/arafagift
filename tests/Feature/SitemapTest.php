@@ -57,6 +57,12 @@ it('menyertakan kategori dan hanya produk aktif', function () {
         ->and($locs)->not->toContain(route('product', $draft->slug));
 });
 
+it('tidak memasukkan kategori Gift Set yang masih kosong', function () {
+    $locs = sitemapLocs($this->get('/sitemap.xml')->getContent());
+
+    expect($locs)->not->toContain(route('collection', ['category' => 'gift-set']));
+});
+
 it('tidak pernah membocorkan query string ke dalam loc', function () {
     Category::factory()->create();
     Product::factory()->create();

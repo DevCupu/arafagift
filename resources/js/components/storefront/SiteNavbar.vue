@@ -1,5 +1,5 @@
 <script setup>
-import { onUnmounted, ref, watch } from 'vue'
+import { computed, onUnmounted, ref, watch } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import { Menu, MessageCircle, Search, ShoppingBag, User, X } from 'lucide-vue-next'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
@@ -12,13 +12,13 @@ const page = usePage()
 const { whatsappHref } = useStore()
 const { count, openDrawer, pulse } = useCart()
 
-const links = [
+const links = computed(() => [
   { label: 'Home', to: '/' },
   { label: 'Koleksi', to: '/koleksi' },
-  { label: 'Gift Set', to: '/koleksi/gift-set' },
+  ...(page.props.giftSetAvailable ? [{ label: 'Gift Set', to: '/koleksi/gift-set' }] : []),
   { label: 'Tentang Kami', to: '/tentang' },
   { label: 'FAQ', to: '/faq' },
-]
+])
 
 const menuOpen = ref(false)
 const searchOpen = ref(false)

@@ -45,6 +45,13 @@ const values = homeContent.values ?? [
 const signatureProduct = props.signatureProduct
 const hero = homeContent.hero
 const headlineLines = computed(() => hero.headline.split('\n'))
+const visibleCategories = computed(() => props.categories.filter((category) => category.count > 0))
+const giftSetAvailable = computed(() => visibleCategories.value.some((category) => category.slug === 'gift-set'))
+const heroSecondary = computed(() =>
+  hero.ctaSecondary?.to === '/koleksi/gift-set' && !giftSetAvailable.value
+    ? { label: 'Lihat semua produk', to: '/koleksi' }
+    : hero.ctaSecondary,
+)
 const quickview = ref(null)
 const adRail = ref(null)
 const adSlideRoot = ref(null)
@@ -70,8 +77,8 @@ const adSlides = computed(() => [
     badge: 'Signature Gift Set',
     title: 'Satu box untuk momen yang diingat.',
     body: 'Isi lengkap, kemasan rapi, siap diberikan tanpa perlu dibungkus ulang.',
-    cta: 'Lihat gift set',
-    href: '/koleksi/gift-set',
+    cta: giftSetAvailable.value ? 'Lihat gift set' : 'Lihat semua produk',
+    href: giftSetAvailable.value ? '/koleksi/gift-set' : '/koleksi',
   },
   {
     image: '/images/assets/souvenir-satu-rombongan.webp',
@@ -176,11 +183,11 @@ const bulkCtaHref = computed(() => {
               <template #icon><ArrowRight class="h-4 w-4" /></template>
             </AppButton>
             <Link
-              v-if="hero.ctaSecondary?.to"
-              :href="hero.ctaSecondary.to"
+              v-if="heroSecondary?.to"
+              :href="heroSecondary.to"
               class="group inline-flex items-center gap-1.5 text-[0.84rem] font-medium text-ivory/75 transition hover:text-ivory"
             >
-              {{ hero.ctaSecondary.label }}
+              {{ heroSecondary.label }}
               <ArrowRight class="h-3.5 w-3.5 transition-transform duration-200 group-hover:translate-x-0.5" :stroke-width="1.6" />
             </Link>
           </div>
@@ -297,7 +304,7 @@ const bulkCtaHref = computed(() => {
         v-reveal
       >
         <div
-          v-for="(c, i) in categories" :key="c.slug"
+          v-for="(c, i) in visibleCategories" :key="c.slug"
           class="reveal-child"
           :style="{ '--reveal-delay': `${i * 60}ms` }"
         >

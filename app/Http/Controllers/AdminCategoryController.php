@@ -18,7 +18,7 @@ class AdminCategoryController extends Controller
     public function index(): Response
     {
         return Inertia::render('admin/CategoriesPage', [
-            'categories' => Category::withCount('products')->orderBy('id')->get()->map->toCatalog()->values(),
+            'categories' => Category::withCountActiveProducts()->orderBy('id')->get()->map->toCatalog()->values(),
         ]);
     }
 
@@ -146,6 +146,7 @@ class AdminCategoryController extends Controller
     {
         Cache::forget('home-payload');
         Cache::forget('koleksi-payload');
+        Cache::forget('gift-set-available');
         SitemapController::flush();
     }
 }
