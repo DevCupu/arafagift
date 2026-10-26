@@ -15,6 +15,7 @@ import FaqAccordion from '@/components/storefront/FaqAccordion.vue'
 import QuickView from '@/components/storefront/QuickView.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useStore } from '@/composables/useStore'
+import { useHeroMotion } from '@/composables/useHeroMotion'
 
 const props = defineProps({
   categories: { type: Array, required: true },
@@ -53,6 +54,8 @@ const heroSecondary = computed(() =>
     : hero.ctaSecondary,
 )
 const quickview = ref(null)
+const heroRoot = ref(null)
+useHeroMotion(heroRoot)
 const adRail = ref(null)
 const adSlideRoot = ref(null)
 const activeAd = ref(0)
@@ -147,37 +150,40 @@ const bulkCtaHref = computed(() => {
       dibentuk di server supaya gambar hero dari upload admin dan file statis
       bawaan punya jalur yang sama.
     -->
-    <section class="relative overflow-hidden border-b border-forest-soft/35 bg-forest-deep">
+    <section ref="heroRoot" class="relative overflow-hidden border-b border-forest-soft/35 bg-forest-deep">
       <!-- ── Foto full-bleed sebagai latar, menutup penuh section ── -->
-      <div class="absolute inset-0">
+      <div class="hero-motion-media absolute inset-x-0 -top-[8%] -bottom-[8%]">
         <PictureImage
           :image="heroImage"
           alt="Koleksi oleh-oleh Umrah & Hajj ArafahGift"
           sizes="100vw"
           priority
-          class="home-hero-image h-full w-full object-cover object-[65%_center]"
+          class="hero-motion-image h-full w-full object-cover object-[65%_center]"
         />
-        <!-- Gradient kiri foto → blend ke hijau tua -->
-        <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/92 to-forest-deep/15 lg:via-forest-deep/58" />
       </div>
+      <!-- Gradient kiri foto → blend ke hijau tua -->
+      <div class="absolute inset-0 bg-gradient-to-r from-forest-deep via-forest-deep/92 to-forest-deep/15 lg:via-forest-deep/58" />
 
       <!-- ── LEFT: Konten teks ── -->
       <div class="shell relative flex min-h-[32rem] flex-col justify-center py-14 sm:min-h-[36rem] sm:py-18 lg:min-h-[min(76svh,41rem)] lg:py-20">
         <div class="w-full max-w-[32rem]">
-          <p class="home-hero-step text-[0.72rem] font-medium tracking-[0.12em] text-gold" style="--landing-delay: 60ms">{{ hero.eyebrow }}</p>
+          <p class="hero-motion-eyebrow text-[0.72rem] font-medium tracking-[0.12em] text-gold">{{ hero.eyebrow }}</p>
 
           <h1
-            class="home-hero-step mt-4 text-ivory sm:mt-5"
-            style="--landing-delay: 150ms; font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;"
+            class="mt-4 text-ivory sm:mt-5"
+            style="font-size: clamp(2.3rem, 4.6vw, 4rem); line-height: 1.08; font-weight: 600; letter-spacing: -0.03em;"
           >
-            <span v-for="(line, i) in headlineLines" :key="i" class="block">{{ line }}</span>
+            <span v-for="(line, i) in headlineLines" :key="i" class="block overflow-hidden">
+              <span class="hero-motion-line block">{{ line }}</span>
+            </span>
           </h1>
+          <span aria-hidden="true" class="hero-motion-rule mt-6 block h-px w-20 origin-left bg-gold" />
 
-          <p class="home-hero-step mt-5 max-w-[28rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]" style="--landing-delay: 280ms">
+          <p class="hero-motion-detail mt-5 max-w-[28rem] text-[0.98rem] leading-relaxed text-ivory/72 sm:text-[1.05rem]">
             {{ hero.sub }}
           </p>
 
-          <div class="home-hero-step mt-8 flex flex-wrap items-center gap-x-6 gap-y-3" style="--landing-delay: 400ms">
+          <div class="hero-motion-detail mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
             <AppButton :to="hero.cta.to" variant="gold" size="lg">
               {{ hero.cta.label }}
               <template #icon><ArrowRight class="h-4 w-4" /></template>
@@ -281,10 +287,9 @@ const bulkCtaHref = computed(() => {
       />
       <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3" v-reveal>
         <div
-          v-for="(o, i) in occasions"
+          v-for="o in occasions"
           :key="o.slug"
           class="reveal-child"
-          :style="{ '--reveal-delay': `${i * 60}ms` }"
         >
           <OccasionCard :occasion="o" />
         </div>
@@ -306,7 +311,6 @@ const bulkCtaHref = computed(() => {
         <div
           v-for="(c, i) in visibleCategories" :key="c.slug"
           class="reveal-child"
-          :style="{ '--reveal-delay': `${i * 60}ms` }"
         >
           <CategoryCard :category="c" :index="i" />
         </div>
@@ -323,7 +327,6 @@ const bulkCtaHref = computed(() => {
         <div
           v-for="(p, i) in featuredProducts.slice(0, 4)"
           :key="p.id" class="reveal-child"
-          :style="{ '--reveal-delay': `${i * 70}ms` }"
         >
           <ProductCard
             :product="p" :index="i"

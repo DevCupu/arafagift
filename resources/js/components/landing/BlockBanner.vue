@@ -20,7 +20,6 @@ const linkFor = (item) => item.href || whatsappHref('Halo Arafagift, saya tertar
           :href="linkFor(item)"
           class="reveal-child group relative flex min-h-[310px] overflow-hidden rounded-2xl border border-ivory/12 bg-forest text-left shadow-lift transition duration-300 ease-calm hover:-translate-y-0.5 hover:border-gold/70 lg:min-h-[390px]"
           :class="i === 1 ? 'lg:min-h-[390px]' : ''"
-          :style="{ '--reveal-delay': `${i * 120}ms` }"
         >
           <img
             v-if="item.image"

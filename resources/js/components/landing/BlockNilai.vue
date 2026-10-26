@@ -24,7 +24,6 @@ const icons = { Sparkles, Gift, BadgeCheck, Send, Truck, Shield, Users, Heart, C
           :key="item.title"
           class="reveal-child group relative overflow-hidden rounded-2xl border border-ivory/14 bg-forest p-5 shadow-soft transition duration-300 ease-calm hover:border-gold/50 hover:bg-forest-soft/30 sm:p-6"
           :class="i === 0 ? 'md:col-span-2 lg:col-span-1 lg:row-span-2' : ''"
-          :style="{ '--reveal-delay': `${i * 85}ms` }"
         >
           <div v-if="item.image" class="-mx-5 -mt-5 mb-5 aspect-[16/10] overflow-hidden sm:-mx-6 sm:-mt-6">
             <img :src="item.image" :alt="item.title" class="h-full w-full object-cover transition duration-[900ms] ease-calm group-hover:scale-[1.04]" loading="lazy" />

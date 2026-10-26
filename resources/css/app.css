@@ -239,34 +239,9 @@
     white-space: nowrap;
 }
 
-/* Scroll reveal (progressive enhancement — visible by default if JS/IO absent) */
-.reveal {
+/* GSAP marks only offscreen elements pending; content is visible without JS. */
+.reveal-pending {
     opacity: 0;
-    transform: translateY(18px);
-    transition:
-        opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-}
-.reveal.is-in {
-    opacity: 1;
-    transform: none;
-}
-.reveal-child {
-    transition:
-        opacity 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.72s cubic-bezier(0.22, 1, 0.36, 1),
-        border-color 0.28s ease,
-        background-color 0.28s ease,
-        box-shadow 0.28s ease;
-    transition-delay: var(--reveal-delay, 0ms);
-}
-.reveal .reveal-child {
-    opacity: 0;
-    transform: translateY(16px);
-}
-.reveal.is-in .reveal-child {
-    opacity: 1;
-    transform: none;
 }
 .slow-zoom {
     transform: scale(1.01);
@@ -278,15 +253,6 @@
     }
     .announcement-bar:hover .announcement-track {
         animation-play-state: paused;
-    }
-    .landing-hero-image,
-    .home-hero-image {
-        animation: landingImageSettle 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-    .landing-hero-step,
-    .home-hero-step {
-        animation: landingStepEnter 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
-        animation-delay: var(--landing-delay, 0ms);
     }
     @media (hover: hover) {
         .product-card:hover {
@@ -309,15 +275,6 @@
 @keyframes announcementGlide {
     to { transform: translateX(-25%); }
 }
-@keyframes landingImageSettle {
-    from { transform: scale(1.035); }
-    to { transform: scale(1); }
-}
-@keyframes landingStepEnter {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: none; }
-}
-
 @keyframes slowZoom {
     from {
         transform: scale(1);
@@ -351,15 +308,8 @@
         transition-duration: 0.01ms !important;
         scroll-behavior: auto !important;
     }
-    .reveal {
+    .reveal-pending {
         opacity: 1;
-        transform: none;
-    }
-    .reveal-child,
-    .reveal .reveal-child {
-        opacity: 1;
-        transform: none;
-        transition: none;
     }
     .slow-zoom {
         animation: none;

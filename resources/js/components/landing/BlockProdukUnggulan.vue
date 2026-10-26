@@ -94,7 +94,6 @@ const openDetail = (item) => {
         <article
           v-if="items[0]"
           class="reveal-child group grid overflow-hidden rounded-2xl border border-forest/15 bg-surface shadow-lift sm:grid-cols-[0.94fr_1fr]"
-          style="--reveal-delay: 0ms"
         >
           <button
             type="button"
@@ -175,7 +174,6 @@ const openDetail = (item) => {
             v-for="(item, i) in items.slice(1)"
             :key="item.id"
             class="reveal-child group grid grid-cols-[112px_1fr] gap-4 rounded-2xl border border-line bg-surface p-3 shadow-soft transition duration-300 ease-calm hover:-translate-y-0.5 hover:border-gold/70 hover:shadow-lift sm:grid-cols-1 lg:grid-cols-[132px_1fr]"
-            :style="{ '--reveal-delay': `${(i + 1) * 95}ms` }"
           >
             <button
               type="button"

@@ -1,39 +1,39 @@
-// v-reveal: fade-up saat elemen masuk viewport.
-// Elemen yang sudah terlihat saat mount (atau saat halaman dibuka dengan
-// posisi scroll tertentu) langsung tampil tanpa animasi, sehingga tidak ada
-// konten yang "hilang" ketika pengguna melompat ke tengah halaman.
+// Scroll reveals only load GSAP on pages that actually use the directive.
+// Content remains visible when motion is reduced or the animation cannot load.
 export const reveal = {
   mounted(el, binding) {
-    const reduced =
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+    if (motionQuery.matches || el.getBoundingClientRect().top < window.innerHeight * 1.1) return
 
-    if (typeof IntersectionObserver === 'undefined' || reduced) {
-      el.classList.add('is-in')
-      return
+    let cancelled = false
+    let cleanup = null
+    el.classList.add('reveal-pending')
+    const onMotionChange = (event) => {
+      if (event.matches) el._revealCleanup?.()
+    }
+    motionQuery.addEventListener('change', onMotionChange)
+
+    el._revealCleanup = () => {
+      cancelled = true
+      motionQuery.removeEventListener('change', onMotionChange)
+      cleanup?.()
+      el.classList.remove('reveal-pending')
     }
 
-    el.classList.add('reveal')
-    if (binding.value) el.style.transitionDelay = `${binding.value}ms`
-
-    const show = () => {
-      el.classList.add('is-in')
-      el.style.transitionDelay = ''
-    }
-
-    // Sudah berada di viewport saat dipasang → tampilkan segera.
-    if (el.getBoundingClientRect().top < window.innerHeight * 1.1) {
-      requestAnimationFrame(show)
-    }
-
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) { show(); io.disconnect() }
-      },
-      { threshold: 0.08, rootMargin: '0px 0px -40px 0px' },
-    )
-    io.observe(el)
-    el._io = io
+    import('./gsapReveal.js')
+      .then(({ animateReveal }) => {
+        if (cancelled) return
+        // The visitor may have scrolled here while the animation module loaded.
+        if (el.getBoundingClientRect().top < window.innerHeight * 0.9) {
+          el.classList.remove('reveal-pending')
+          return
+        }
+        cleanup = animateReveal(el, Number(binding.value) || 0)
+      })
+      .catch(() => el.classList.remove('reveal-pending'))
   },
-  unmounted(el) { el._io && el._io.disconnect() },
+  unmounted(el) {
+    el._revealCleanup?.()
+    delete el._revealCleanup
+  },
 }
