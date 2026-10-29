@@ -78,6 +78,8 @@ const choose = (destination) => {
   emit('select', destination)
 }
 
+defineExpose({ choose })
+
 const reset = () => {
   selectedLabel.value = ''
   query.value = ''

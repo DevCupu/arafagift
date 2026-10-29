@@ -43,13 +43,15 @@ it('rejects checkout when the requested quantity exceeds available stock', funct
     expect(Order::count())->toBe(0);
 });
 
-it('lets guests view checkout but requires login to place the order', function () {
+it('lets guests place an order without logging in', function () {
     $this->get('/checkout')->assertStatus(200);
 
     $product = Product::factory()->create(['stock' => 5]);
     $this->postJson('/checkout', checkoutPayload([
         'items' => [['id' => $product->id, 'qty' => 1]],
-    ]))->assertStatus(401);
+    ]))->assertOk();
+
+    expect(Order::first()->user_id)->toBeNull();
 });
 
 it('stores the shipping cost fetched from RajaOngkir, not any cost sent by the client', function () {

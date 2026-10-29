@@ -1,15 +1,13 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { ArrowUpRight, Eye, Heart, MessageCircle, ShoppingBag } from 'lucide-vue-next'
+import { Eye, Heart, ShoppingBag } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
 import PictureImage from '@/components/ui/PictureImage.vue'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppRating from '@/components/ui/AppRating.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
-import { productWhatsAppMessage } from '@/composables/useProductWhatsApp'
-import { useStore } from '@/composables/useStore'
 import { useWishlist } from '@/composables/useWishlist'
 
 const props = defineProps({
@@ -19,7 +17,6 @@ const props = defineProps({
 const emit = defineEmits(['quickview'])
 
 const { add } = useCart()
-const { whatsappHref } = useStore()
 const wishlist = useWishlist()
 const imageFailed = ref(false)
 
@@ -111,17 +108,6 @@ const discount = computed(() =>
           <Eye class="h-4 w-4" :stroke-width="1.5" />
         </button>
       </div>
-
-      <a
-        :href="whatsappHref(productWhatsAppMessage(product))"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="group/wa mt-2 flex h-9 items-center justify-center gap-1.5 rounded-lg border border-forest/35 bg-forest/[0.06] px-3 text-[0.68rem] font-medium text-forest transition duration-200 hover:-translate-y-px hover:border-forest hover:bg-forest hover:text-ivory active:translate-y-px sm:h-10 sm:text-[0.73rem]"
-      >
-        <MessageCircle class="h-3.5 w-3.5 flex-none" :stroke-width="1.8" />
-        <span>Pesan via WhatsApp</span>
-        <ArrowUpRight class="h-3.5 w-3.5 flex-none transition-transform duration-200 group-hover/wa:translate-x-0.5 group-hover/wa:-translate-y-0.5" :stroke-width="1.8" />
-      </a>
     </div>
   </article>
 </template>

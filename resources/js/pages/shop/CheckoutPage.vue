@@ -6,10 +6,11 @@ export default { layout: BareLayout }
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
-import { AlertCircle, ArrowLeft, Check, ChevronUp, Gift, LockKeyhole, MapPin, MessageCircle, Truck, X } from 'lucide-vue-next'
+import { AlertCircle, ArrowLeft, Check, ChevronUp, Gift, MapPin, MessageCircle, Truck, User, X } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import BrandLogo from '@/components/storefront/BrandLogo.vue'
 import DestinationSearch from '@/components/shop/DestinationSearch.vue'
+import MapPinPicker from '@/components/shop/MapPinPicker.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
@@ -23,19 +24,8 @@ const store = computed(() => page.props.store)
 const cart = useCart()
 const { whatsappHref } = useStore()
 
-// Tamu boleh melihat & mengisi halaman checkout dulu; login baru diminta saat "Buat Pesanan".
-// Isian disimpan sementara biar tidak hilang saat pindah ke halaman login.
-const CHECKOUT_DRAFT_KEY = 'arafahgift.checkout.draft'
-const isGuest = computed(() => !page.props.auth?.user)
+// Tamu boleh checkout tanpa login; yang sudah login datanya terisi otomatis dari akun.
 const user = computed(() => page.props.auth?.user)
-const accountHasPhone = computed(() => !!user.value?.phone?.trim())
-
-const redirectToLogin = () => {
-  try {
-    sessionStorage.setItem(CHECKOUT_DRAFT_KEY, JSON.stringify({ form: { ...form }, manualCity: manualCity.value }))
-  } catch { /* mode privat: abaikan */ }
-  window.location.assign(`/login?redirect=${encodeURIComponent('/checkout')}`)
-}
 
 const steps = [
   { id: 1, label: 'Alamat' },
@@ -80,8 +70,11 @@ watch(summaryOpen, (open) => {
 const form = reactive({
   name: '', email: '', phone: '',
   street: '', rt: '', rw: '', landmark: '', city: '', province: '', postal: '', destinationId: null,
-  giftMessage: '', note: '', hideInvoice: true,
+  giftMessage: '', note: '', hideInvoice: true, pin: null,
 })
+
+// ponytail: koordinat disimpan sebagai tautan Google Maps di catatan pesanan (tanpa kolom/migrasi baru).
+const pinUrl = computed(() => form.pin ? `https://maps.google.com/?q=${form.pin.lat},${form.pin.lng}` : null)
 
 // Digabung jadi satu baris alamat siap-kirim (WhatsApp, ringkasan, payload) dari kolom terpisah.
 // dipecah biar user lebih terpandu isi detailnya, tapi sisi server/WA tetap terima satu string alamat.
@@ -114,6 +107,8 @@ const validate = (current) => {
   clearServerFeedback()
   Object.keys(errors).forEach((k) => delete errors[k])
   if (current === 1) {
+    if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
+    if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
     if (form.street.trim().length < 8) errors.address = 'Tulis nama jalan dan nomor rumah.'
     if (manualCity.value) {
       if (!form.city.trim()) errors.destination = 'Isi kota atau kabupaten.'
@@ -122,10 +117,6 @@ const validate = (current) => {
     } else if (!shippingUnavailable.value && !hasFreeShipping.value && !selectedShipping.value) {
       errors.destination = 'Tunggu pilihan kurir termuat, atau pilih salah satu.'
     }
-  }
-  if (current === 2) {
-    if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
-    if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
   }
   return Object.keys(errors).length === 0
 }
@@ -273,6 +264,36 @@ const onDestinationSelect = (destination) => {
   fetchShipping()
 }
 
+// Isi otomatis alamat dari hasil reverse-geocode titik peta. Yang sudah diketik pelanggan di
+// jalan/RT/RW/patokan tidak ditimpa; kota tujuan dicari lewat kode pos (paling presisi) lalu kelurahan/kecamatan.
+const destinationRef = ref(null)
+const searchDestination = async (term) => {
+  const res = await fetch(`/api/shipping/destinations?search=${encodeURIComponent(term)}`, { headers: { Accept: 'application/json' } })
+  const payload = res.ok ? await res.json() : null
+  return payload?.success && Array.isArray(payload.data) ? payload.data : []
+}
+const applyLocation = async (a) => {
+  const road = a.road || a.pedestrian || a.residential || ''
+  const street = [road, a.house_number && `No. ${a.house_number}`].filter(Boolean).join(' ')
+  if (!form.street.trim() && street) form.street = street
+  if (!form.landmark.trim() && a.amenity) form.landmark = `dekat ${a.amenity}`
+  const area = a.village || a.suburb || a.neighbourhood || ''
+  const district = a.city_district || a.county || ''
+  const city = a.city || a.town || a.municipality || a.regency || ''
+  if (manualCity.value) {
+    if (!form.city.trim()) form.city = city || district
+    if (!form.postal && a.postcode) form.postal = a.postcode
+    return
+  }
+  for (const term of [a.postcode, `${area} ${district}`, district || city]) {
+    if (!term || term.trim().length < 3) continue
+    try {
+      const [first] = await searchDestination(term.trim())
+      if (first) return destinationRef.value?.choose(first)
+    } catch { /* abaikan, pelanggan bisa cari manual */ }
+  }
+}
+
 const etdText = (etd) => {
   const value = String(etd ?? '').trim()
   if (!value || value === '-') return 'Estimasi belum tersedia'
@@ -304,6 +325,7 @@ const buildWaMessage = (order) => {
     `WhatsApp: ${form.phone}`,
     form.email ? `Email: ${form.email}` : null,
     `Alamat: ${fullAddress.value}, ${form.city}${form.postal ? ` ${form.postal}` : ''}${form.province ? `, ${form.province}` : ''}`,
+    pinUrl.value ? `Titik peta: ${pinUrl.value}` : null,
     form.giftMessage ? `Kartu ucapan: "${form.giftMessage}"` : null,
     form.hideInvoice ? `Tolong sembunyikan nota harga di dalam paket.` : null,
   ]
@@ -314,9 +336,8 @@ const submitting = ref(false)
 const placedOrder = ref(null)
 
 const placeOrder = async () => {
-  if (isGuest.value) return redirectToLogin()
   clearServerFeedback()
-  if (!validate(1) || !validate(2)) return
+  if (!validate(1)) return
   if (submitting.value) return
   submitting.value = true
 
@@ -341,7 +362,7 @@ const placeOrder = async () => {
         courier: selectedShipping.value?.courier || null,
         service: selectedShipping.value?.service || null,
         giftMessage: form.giftMessage || null,
-        note: form.note || null,
+        note: [form.note, pinUrl.value && `Titik peta: ${pinUrl.value}`].filter(Boolean).join('\n') || null,
         hideInvoice: form.hideInvoice,
         items: cart.items.value.map((i) => ({ id: i.id, qty: i.qty })),
       }),
@@ -379,7 +400,6 @@ const placeOrder = async () => {
     placedOrder.value = await res.json()
     cart.clear()
     clearServerFeedback()
-    try { sessionStorage.removeItem(CHECKOUT_DRAFT_KEY) } catch { /* abaikan */ }
   } catch {
     serverMessage.value = 'Terjadi kesalahan jaringan. Coba lagi.'
   } finally {
@@ -392,17 +412,6 @@ const confirmViaWhatsapp = () => {
 }
 
 onMounted(() => {
-  const raw = sessionStorage.getItem(CHECKOUT_DRAFT_KEY)
-  if (raw) {
-    try {
-      const draft = JSON.parse(raw)
-      if (draft?.form) Object.assign(form, draft.form)
-      manualCity.value = !!draft?.manualCity
-    } catch { /* draft korup: abaikan */ }
-    sessionStorage.removeItem(CHECKOUT_DRAFT_KEY)
-  }
-  // Data pemesan dari akun mengisi field yang masih kosong saja — draft (input user)
-  // tetap menang biar tidak menimpa yang sudah diketik sebelum pindah ke halaman login.
   if (user.value) {
     if (!form.name) form.name = user.value.name ?? ''
     if (!form.phone) form.phone = user.value.phone ?? ''
@@ -416,34 +425,63 @@ onMounted(() => {
 <template>
   <Head :title="page.props.seoHead.title" />
   <div class="min-h-[100dvh] bg-ivory">
-    <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-16 sm:px-10">
+    <div v-if="placedOrder" class="mx-auto max-w-xl px-5 py-10 sm:px-10 sm:py-14">
       <BrandLogo size="sm" />
-      <div class="mt-8 border border-line bg-surface p-8 text-center">
-        <span class="grid h-12 w-12 place-items-center rounded-full bg-forest text-ivory mx-auto"><Check class="h-6 w-6" /></span>
-        <h1 class="mt-5 text-[1.9rem] leading-none">Pesanan berhasil dibuat</h1>
-        <p class="mt-3 text-[0.85rem] text-muted">Nomor pesanan Anda</p>
-        <p class="mt-1 font-display text-3xl text-forest">{{ placedOrder.id }}</p>
-        <p class="mt-2 text-[0.78rem] text-muted">Status: {{ statusMeta(placedOrder.status).label }}</p>
-      </div>
 
-      <dl class="mt-6 divide-y divide-line border-y border-line text-[0.87rem]">
-        <div v-for="(it, i) in placedOrder.items" :key="i" class="flex justify-between gap-6 py-3">
-          <dt class="text-muted">{{ it.name }} × {{ it.qty }}</dt>
-          <dd class="text-forest">{{ formatIDR(it.price * it.qty) }}</dd>
+      <div class="mt-8 overflow-hidden rounded-[0.75rem] border border-line bg-surface shadow-soft">
+        <div class="bg-forest-deep px-6 py-8 text-center text-ivory">
+          <span class="mx-auto grid h-14 w-14 place-items-center rounded-full border border-gold/50 bg-gold/15"><Check class="h-7 w-7 text-gold" :stroke-width="2" /></span>
+          <h1 class="mt-5 text-[1.8rem] leading-tight text-ivory">Pesanan berhasil dibuat</h1>
+          <p class="mt-1 text-[0.82rem] text-ivory/70">Terima kasih, {{ placedOrder.customer }}</p>
+          <div class="mx-auto mt-5 inline-block rounded-full border border-gold/40 bg-ivory/5 px-5 py-2">
+            <span class="block text-[0.62rem] uppercase tracking-[0.18em] text-ivory/60">Nomor pesanan</span>
+            <span class="font-display text-xl tracking-wide text-gold">{{ placedOrder.id }}</span>
+          </div>
         </div>
-      </dl>
 
-      <div class="mt-8 flex flex-col gap-3">
-        <AppButton size="lg" @click="confirmViaWhatsapp">
-          <template #icon><MessageCircle class="h-4 w-4" /></template>
-          Konfirmasi via WhatsApp
-        </AppButton>
-        <Link href="/lacak-pesanan" class="text-center text-[0.8rem] text-muted underline transition hover:text-forest">
-          Lacak status pesanan ini nanti
-        </Link>
-        <Link href="/" class="text-center text-[0.8rem] text-muted transition hover:text-forest">
-          Kembali ke beranda
-        </Link>
+        <div class="p-6 sm:p-7">
+          <ol class="space-y-4">
+            <li class="flex items-start gap-3">
+              <span class="grid h-6 w-6 flex-none place-items-center rounded-full bg-forest text-ivory"><Check class="h-3.5 w-3.5" :stroke-width="2.5" /></span>
+              <p class="text-[0.85rem] text-forest"><strong>Pesanan tercatat</strong><span class="block text-[0.75rem] text-muted">Status: {{ statusMeta(placedOrder.status).label }}</span></p>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="grid h-6 w-6 flex-none place-items-center rounded-full border-2 border-gold bg-gold/15 font-display text-[0.7rem] text-forest">2</span>
+              <p class="text-[0.85rem] text-forest"><strong>Kirim pesan WhatsApp</strong><span class="block text-[0.75rem] text-muted">Pesanan diproses setelah Anda mengirim chat ke kami.</span></p>
+            </li>
+            <li class="flex items-start gap-3">
+              <span class="grid h-6 w-6 flex-none place-items-center rounded-full border border-line font-display text-[0.7rem] text-muted">3</span>
+              <p class="text-[0.85rem] text-muted"><strong class="text-forest">Bayar &amp; kami kirim</strong><span class="block text-[0.75rem]">Metode bayar dikonfirmasi langsung di chat.</span></p>
+            </li>
+          </ol>
+
+          <dl class="mt-7 divide-y divide-line border-y border-line text-[0.87rem]">
+            <div v-for="(it, i) in placedOrder.items" :key="i" class="flex justify-between gap-6 py-3">
+              <dt class="text-muted">{{ it.name }} × {{ it.qty }}</dt>
+              <dd class="flex-none text-forest">{{ formatIDR(it.price * it.qty) }}</dd>
+            </div>
+            <div v-if="placedOrder.shipping?.cost" class="flex justify-between gap-6 py-3">
+              <dt class="text-muted">Ongkos kirim</dt>
+              <dd class="text-forest">{{ formatIDR(placedOrder.shipping.cost) }}</dd>
+            </div>
+            <div class="flex justify-between gap-6 py-3.5">
+              <dt class="font-semibold text-forest">Total</dt>
+              <dd class="font-display text-xl text-forest">{{ formatIDR(placedOrder.items.reduce((s, i) => s + i.price * i.qty, 0) + (placedOrder.shipping?.cost || 0)) }}</dd>
+            </div>
+          </dl>
+          <p class="mt-3 flex items-start gap-2 text-[0.75rem] leading-relaxed text-muted">
+            <MapPin class="mt-0.5 h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" /> {{ placedOrder.address }}
+          </p>
+
+          <AppButton size="lg" block class="mt-7" @click="confirmViaWhatsapp">
+            <template #icon><MessageCircle class="h-4 w-4" /></template>
+            Kirim pesanan via WhatsApp
+          </AppButton>
+          <div class="mt-5 flex items-center justify-center gap-5 text-[0.78rem] text-muted">
+            <Link href="/lacak-pesanan" class="underline transition hover:text-forest">Lacak pesanan</Link>
+            <Link href="/" class="transition hover:text-forest">Kembali ke beranda</Link>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -487,15 +525,29 @@ onMounted(() => {
         <!-- 1. Alamat -->
         <section v-if="step === 1" class="mt-10">
           <p class="eyebrow">Langkah 1 dari 2</p>
-          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Alamat pengiriman</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Cari kota tujuan untuk melihat pilihan kurir dan ongkirnya.</p>
+          <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Data &amp; alamat pengiriman</h1>
+          <p class="mt-3 text-[0.85rem] text-muted">Isi data penerima, lalu cari kota tujuan untuk melihat pilihan kurir dan ongkirnya.</p>
 
-          <!-- Nomor WhatsApp belum terisi di akun (diperlukan untuk konfirmasi) -->
-          <div v-if="user && !accountHasPhone" class="mt-8 border border-gold/40 bg-gold/[0.07] p-4 sm:p-5">
-            <label class="field-label" for="phone">Nomor WhatsApp (untuk konfirmasi)</label>
-            <input id="phone" v-model="form.phone" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
-            <p class="mt-1.5 text-[0.72rem] leading-relaxed text-muted">Belum ada di akun Anda. Dipakai untuk konfirmasi pesanan via WhatsApp.</p>
-            <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
+          <!-- Data pemesan: tamu mengisi sendiri, member terisi otomatis dari akun -->
+          <div class="mt-8 grid gap-5 rounded-[0.75rem] border border-line bg-surface p-5 shadow-soft sm:grid-cols-2 sm:p-6">
+            <div class="flex items-center gap-2.5 sm:col-span-2">
+              <User class="h-4 w-4 text-gold" :stroke-width="1.5" />
+              <h2 class="font-display text-lg text-forest">Data pemesan</h2>
+            </div>
+            <div class="sm:col-span-2">
+              <label class="field-label" for="name">Nama lengkap</label>
+              <input id="name" v-model="form.name" class="field" autocomplete="name" :aria-invalid="!!errors.name" />
+              <p v-if="errors.name" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.name }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="phone">Nomor WhatsApp</label>
+              <input id="phone" v-model="form.phone" type="tel" autocomplete="tel" class="field" placeholder="08xx xxxx xxxx" :aria-invalid="!!errors.phone" />
+              <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
+            </div>
+            <div>
+              <label class="field-label" for="email">Email (opsional)</label>
+              <input id="email" v-model="form.email" type="email" autocomplete="email" class="field" />
+            </div>
           </div>
 
           <div class="mt-8">
@@ -503,7 +555,7 @@ onMounted(() => {
             <button
               v-if="!form.street.trim()"
               type="button"
-              class="flex w-full flex-col items-center gap-1 border border-dashed bg-surface p-10 text-center transition hover:bg-ivory sm:p-12"
+              class="flex w-full flex-col items-center gap-1 rounded-[0.75rem] border border-dashed bg-surface p-10 text-center shadow-soft transition hover:bg-ivory sm:p-12"
               :class="errors.address || errors.destination ? 'border-danger/60' : 'border-forest/30 hover:border-forest/60'"
               @click="openAddressModal"
             >
@@ -518,7 +570,7 @@ onMounted(() => {
               {{ errors.address || errors.destination }}
             </p>
 
-            <div v-else class="border border-line bg-surface p-5 sm:p-6">
+            <div v-else class="rounded-[0.75rem] border border-line bg-surface p-5 shadow-soft sm:p-6">
               <div class="flex items-start justify-between gap-4">
                 <div class="flex items-center gap-2.5">
                   <MapPin class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
@@ -574,7 +626,7 @@ onMounted(() => {
                   <p v-if="shippingWeight" class="text-[0.72rem] text-muted">Berat {{ weightText(shippingWeight) }}</p>
                 </div>
 
-                <section v-for="group in shippingGroups" :key="group.code" class="overflow-hidden border border-line bg-surface">
+                <section v-for="group in shippingGroups" :key="group.code" class="overflow-hidden rounded-[0.75rem] border border-line bg-surface shadow-soft">
                   <header class="flex items-center justify-between gap-4 bg-ivory/55 px-4 py-3">
                     <div class="flex min-w-0 items-center gap-3">
                       <span class="grid h-9 w-9 flex-none place-items-center border border-line bg-surface text-[0.68rem] font-bold tracking-wide text-forest">
@@ -632,7 +684,7 @@ onMounted(() => {
           </div>
           </div>
 
-          <div class="mt-8 border border-dashed border-gold/40 bg-gold/[0.07] p-5">
+          <div class="mt-8 rounded-[0.75rem] border border-dashed border-gold/40 bg-gold/[0.07] p-5">
             <div class="flex items-center gap-2.5">
               <Gift class="h-4 w-4 text-gold" :stroke-width="1.5" />
               <h2 class="font-display text-xl text-forest">Kartu ucapan gratis</h2>
@@ -664,7 +716,7 @@ onMounted(() => {
         <section v-else class="mt-10">
           <p class="eyebrow">Langkah 2 dari 2</p>
           <h1 class="mt-4 text-[2rem] leading-[1.05] tracking-[-0.02em] sm:text-[2.2rem]">Tinjau pesanan</h1>
-          <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi sebelum lanjut ke WhatsApp.</p>
+          <p class="mt-3 text-[0.85rem] text-muted">Periksa sekali lagi. Setelah itu pesanan dikirim ke kami lewat WhatsApp.</p>
           <dl class="mt-8 divide-y divide-line border-y border-line text-[0.87rem]">
             <div class="flex justify-between gap-6 py-4">
               <dt class="text-muted">Pemesan</dt>
@@ -738,6 +790,7 @@ onMounted(() => {
                       <template v-if="!manualCity">
                         <DestinationSearch
                           id="city"
+                          ref="destinationRef"
                           v-model="form.destinationId"
                           :initial-label="form.city ? `${form.city}${form.province ? ', ' + form.province : ''}` : ''"
                           @select="onDestinationSelect"
@@ -760,6 +813,7 @@ onMounted(() => {
                       <p class="mt-1.5 text-[0.68rem] leading-relaxed text-muted">Terisi otomatis setelah lokasi dipilih.</p>
                     </div>
                   </div>
+                  <MapPinPicker v-model="form.pin" @address="applyLocation" />
                 </div>
 
                 <footer class="flex border-t border-line px-5 py-4 sm:px-6">
@@ -770,7 +824,8 @@ onMounted(() => {
           </Transition>
         </Teleport>
 
-        <div class="mt-10 flex items-center gap-3">
+        <!-- Bar aksi menempel di bawah layar pada ponsel biar tombol selalu terjangkau -->
+        <div class="sticky bottom-0 z-30 -mx-5 mt-10 flex items-center gap-3 border-t border-line bg-ivory/95 px-5 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0 sm:backdrop-blur-none">
           <AppButton v-if="step > 1" variant="quiet" size="lg" @click="back">Kembali</AppButton>
           <AppButton v-if="step < steps.length" size="lg" class="flex-1 sm:flex-none sm:min-w-[12rem]" :disabled="shippingLoading" @click="next">Lanjut</AppButton>
           <AppButton v-else size="lg" class="flex-1 sm:flex-none sm:min-w-[16rem]" :loading="submitting" :disabled="shippingLoading" @click="placeOrder">
@@ -779,10 +834,6 @@ onMounted(() => {
         </div>
         <p class="mt-5 text-[0.72rem] text-muted">
           Metode bayar dikonfirmasi langsung di chat WhatsApp.
-        </p>
-        <p v-if="isGuest && step === steps.length" class="mt-4 flex items-start gap-2 border border-gold/40 bg-gold/[0.07] p-3 text-[0.78rem] leading-relaxed text-forest">
-          <LockKeyhole class="mt-0.5 h-3.5 w-3.5 flex-none text-gold" :stroke-width="1.5" />
-          Anda akan diminta masuk akun dulu saat membuat pesanan. Keranjang dan isian ini tetap tersimpan.
         </p>
 
         <button

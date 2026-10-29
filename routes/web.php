@@ -39,14 +39,12 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/koleksi/{category?}', [CollectionController::class, 'index'])->name('collection');
 Route::get('/pencarian', [ProductController::class, 'search'])->middleware('throttle:30,1,pencarian')->name('product.search');
 Route::get('/produk/{product:slug}', [ProductController::class, 'show'])->name('product');
-// Tamu boleh lihat halaman checkout + hitung ongkir dulu (keranjang/kalkulasi); login baru diminta saat pesanan dibuat (POST tetap rahasia).
+// Checkout terbuka untuk tamu: isi data lalu pesan via WhatsApp tanpa harus login.
 Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage', [
     'seoHead' => PageSeo::noindex('Checkout')->toArray(),
 ]))->name('checkout');
 Route::post('/shipping/cost', [ShippingController::class, 'cost'])->middleware('throttle:30,1,shipping')->name('shipping.cost');
-Route::middleware('auth')->group(function () {
-    Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
-});
+Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
 Route::get('/lacak-pesanan', [OrderTrackingController::class, 'index'])->middleware('throttle:20,1,lacak-pesanan')->name('order.track');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
