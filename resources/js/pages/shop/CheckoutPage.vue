@@ -4,7 +4,7 @@ export default { layout: BareLayout }
 </script>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { Head, Link, usePage } from '@inertiajs/vue3'
 import {
   AlertCircle, ArrowLeft, Banknote, Check, ChevronRight, ChevronUp, Copy, CreditCard,
@@ -187,6 +187,7 @@ const next = () => {
   const ok = validate(step.value)
   if (ok) {
     step.value = Math.min(steps.length, step.value + 1)
+    nextTick(() => window.scrollTo({ top: 0, behavior: 'smooth' }))
     return
   }
   // Alamat belum diisi: buka modal isi alamat langsung supaya validasinya terlihat.
@@ -568,6 +569,29 @@ const buildWaMessage = (order) => {
 
 const submitting = ref(false)
 const placedOrder = ref(null)
+const confirmationSeconds = ref(15 * 60)
+let confirmationTimer = null
+
+const confirmationTime = computed(() => {
+  const minutes = Math.floor(confirmationSeconds.value / 60).toString().padStart(2, '0')
+  const seconds = (confirmationSeconds.value % 60).toString().padStart(2, '0')
+  return `${minutes}:${seconds}`
+})
+
+const startConfirmationTimer = (order) => {
+  if (confirmationTimer) clearInterval(confirmationTimer)
+  const createdAt = Date.parse(order?.date ?? '')
+  const deadline = Number.isNaN(createdAt) ? Date.now() + 15 * 60 * 1000 : createdAt + 15 * 60 * 1000
+  const update = () => {
+    confirmationSeconds.value = Math.max(0, Math.ceil((deadline - Date.now()) / 1000))
+    if (!confirmationSeconds.value && confirmationTimer) {
+      clearInterval(confirmationTimer)
+      confirmationTimer = null
+    }
+  }
+  update()
+  confirmationTimer = window.setInterval(update, 1000)
+}
 
 const placeOrder = async () => {
   clearServerFeedback()
@@ -650,6 +674,7 @@ const placeOrder = async () => {
     }
 
     placedOrder.value = await res.json()
+    startConfirmationTimer(placedOrder.value)
     persistProfile()
     cart.clear()
     clearServerFeedback()
@@ -663,6 +688,10 @@ const placeOrder = async () => {
 const confirmViaWhatsapp = () => {
   window.open(whatsappHref(buildWaMessage(placedOrder.value)), '_blank', 'noopener')
 }
+
+onUnmounted(() => {
+  if (confirmationTimer) clearInterval(confirmationTimer)
+})
 
 onMounted(() => {
   loadProfile()
@@ -768,17 +797,20 @@ watch(fulfillment, (mode) => {
           <p class="mt-2 text-center text-[0.68rem] leading-relaxed text-muted">Pesan WhatsApp sudah disiapkan dengan nomor pesanan {{ placedOrder.id }}.</p>
         </div>
 
-        <div class="mx-6 mb-5 rounded-[0.75rem] border border-gold/35 bg-gold/[0.07] p-4">
-          <div class="flex items-start gap-3">
+        <div class="mx-6 mb-5 rounded-[0.75rem] border border-gold/35 bg-gold/[0.07] p-3.5">
+          <div class="flex items-center gap-3">
             <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-gold/20 text-forest">
-              <MessageCircle class="h-4 w-4" :stroke-width="1.8" />
+              <span class="font-mono text-[0.7rem] font-bold">{{ confirmationTime }}</span>
             </span>
             <div class="min-w-0">
-              <p class="text-[0.88rem] font-semibold text-forest">Langkah terakhir: konfirmasi pesanan</p>
-              <p class="mt-1 text-[0.76rem] leading-relaxed text-muted">
-                Klik WhatsApp di atas agar admin dapat mengecek pesanan, mengonfirmasi ongkir atau jadwal pengantaran, lalu mengirim instruksi pembayaran.
+              <p class="text-[0.84rem] font-semibold text-forest">Prioritas konfirmasi {{ confirmationSeconds > 0 ? 'sekarang' : 'tetap tersedia' }}</p>
+              <p class="mt-0.5 text-[0.7rem] leading-relaxed text-muted">
+                Admin lebih cepat mengecek ongkir, jadwal antar, dan instruksi pembayaran jika Anda langsung mengirim pesan.
               </p>
             </div>
+          </div>
+          <div class="mt-3 h-1 overflow-hidden rounded-full bg-gold/15" aria-hidden="true">
+            <div class="h-full bg-gold transition-[width] duration-1000 ease-linear" :style="{ width: `${Math.min(100, (confirmationSeconds / (15 * 60)) * 100)}%` }" />
           </div>
         </div>
 
