@@ -1,14 +1,22 @@
 <script setup>
-import { onBeforeUnmount, watch } from 'vue'
+import { computed, onBeforeUnmount, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import { Gift, ShoppingBag, Trash2, X } from 'lucide-vue-next'
+import { Gift, MapPin, ShoppingBag, Trash2, Truck, X } from 'lucide-vue-next'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import QuantityInput from '@/components/ui/QuantityInput.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
+import { useStore } from '@/composables/useStore'
 
 const cart = useCart()
+const { store } = useStore()
+
+const storeClosed = computed(() => (store.value.storeStatus ?? 'open') !== 'open')
+const minOrder = computed(() => Number(store.value.minOrderAmount ?? 0))
+const belowMinimum = computed(() => minOrder.value > 0 && cart.subtotal.value < minOrder.value)
+const canCheckout = computed(() => !storeClosed.value && !belowMinimum.value)
+const pickupEnabled = computed(() => store.value.pickupEnabled !== false)
 
 const onKey = (e) => { if (e.key === 'Escape') cart.closeDrawer() }
 
@@ -109,7 +117,28 @@ onBeforeUnmount(() => {
             Anda hemat {{ formatIDR(cart.savings.value) }}
           </p>
           <p class="mt-1 text-[0.75rem] text-muted">Ongkos kirim dihitung di halaman checkout.</p>
-          <AppButton to="/checkout" block size="lg" class="mt-4" @click="cart.closeDrawer()">Checkout</AppButton>
+
+          <p v-if="storeClosed" class="mt-3 border border-danger/30 bg-danger/[0.06] px-3 py-2 text-[0.75rem] leading-relaxed text-danger">
+            {{ store.closedMessage || 'Toko sedang tutup. Checkout dibuka kembali saat jam operasional.' }}
+          </p>
+          <p v-else-if="belowMinimum" class="mt-3 border border-gold/40 bg-gold/[0.07] px-3 py-2 text-[0.75rem] leading-relaxed text-forest">
+            Minimum belanja {{ formatIDR(minOrder) }}. Tambah {{ formatIDR(minOrder - cart.subtotal.value) }} lagi.
+          </p>
+
+          <template v-if="canCheckout">
+            <div class="mt-4 grid gap-2">
+              <AppButton to="/checkout?mode=delivery" block size="lg" @click="cart.closeDrawer()">
+                <template #icon><Truck class="h-4 w-4" /></template>
+                Pesan Antar
+              </AppButton>
+              <AppButton v-if="pickupEnabled" to="/checkout?mode=pickup" variant="outline" block size="lg" @click="cart.closeDrawer()">
+                <template #icon><MapPin class="h-4 w-4" /></template>
+                Ambil di Tempat
+              </AppButton>
+            </div>
+          </template>
+          <AppButton v-else block size="lg" class="mt-4" disabled>Checkout belum tersedia</AppButton>
+
           <button class="mt-3 w-full text-center text-[0.78rem] text-muted transition hover:text-forest" @click="cart.closeDrawer()">
             Lanjut belanja
           </button>

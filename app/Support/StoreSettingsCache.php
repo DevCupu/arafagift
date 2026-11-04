@@ -34,6 +34,11 @@ class StoreSettingsCache
                 'bulkMinimum' => $settings?->bulk_minimum ?? 0,
                 'handlingTime' => $settings?->handling_time,
                 'shippingNote' => $settings?->shipping_note,
+                'pickupEnabled' => (bool) ($settings?->pickup_enabled ?? true),
+                'pickupInstructions' => $settings?->pickup_instructions,
+                'arafagiftDeliveryStart' => $settings?->arafagift_delivery_start?->format('H:i') ?? '13:00',
+                'arafagiftDeliveryEnd' => $settings?->arafagift_delivery_end?->format('H:i') ?? '16:00',
+                'minOrderAmount' => (int) ($settings?->min_order_amount ?? 0),
                 'storeStatus' => $settings?->store_status ?? 'open',
                 'closedMessage' => $settings?->closed_message,
                 'maintenanceTitle' => $settings?->maintenance_title,
@@ -45,6 +50,9 @@ class StoreSettingsCache
                 'bankAccountNumber' => $settings?->bank_account_number,
                 'bankAccountName' => $settings?->bank_account_name,
                 'paymentInstructions' => $settings?->payment_instructions,
+                'qrisImageUrl' => $settings?->qris_image_path
+                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($settings->qris_image_path)
+                    : null,
                 'metaTitle' => $settings?->meta_title,
                 'metaDescription' => $settings?->meta_description,
                 'googleAnalyticsId' => $settings?->google_analytics_id,

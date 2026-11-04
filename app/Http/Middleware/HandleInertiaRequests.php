@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\Category;
 use App\Models\Content;
 use App\Models\Order;
+use App\Models\PaymentMethod;
 use App\Support\Seo\PageSeo;
 use App\Support\StoreSettingsCache;
 use Illuminate\Http\Request;
@@ -70,6 +71,7 @@ class HandleInertiaRequests extends Middleware
                 return is_array($homeData) ? ($homeData['announcement'] ?? '') : '';
             },
             'store' => fn (): array => StoreSettingsCache::store(),
+            'paymentMethods' => fn (): array => Cache::flexible('payment-methods', [600, 3600], fn (): array => PaymentMethod::active()->get()->map->toCatalog()->values()->all()),
             'giftSetAvailable' => fn (): bool => Cache::flexible(
                 'gift-set-available',
                 [600, 3600],

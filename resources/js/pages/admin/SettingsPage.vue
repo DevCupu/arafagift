@@ -46,14 +46,47 @@ import { useToast } from '@/composables/useToast'
 
 const props = defineProps({
   settings: { type: Object, required: true },
+  paymentMethods: { type: Array, default: () => [] },
   systemInfo: { type: Object, default: () => ({}) },
   logInfo: { type: Object, default: () => ({ exists: false, size: '0 B', updated_at: '—' }) },
   databaseTables: { type: Array, default: () => [] },
 })
 const { push } = useToast()
-
 const activeTab = ref('profile')
 const cacheLoading = ref(null)
+const methods = ref(props.paymentMethods.map((m) => ({ ...m })))
+
+const qrisPreview = computed(() => {
+  if (form.qris_image) return URL.createObjectURL(form.qris_image)
+  return props.settings.qris_image_path ? `/storage/${props.settings.qris_image_path}` : null
+})
+
+const onQrisChange = (event) => {
+  form.qris_image = event.target.files?.[0] ?? null
+}
+
+const togglePaymentMethod = (method) => {
+  router.put(`/admin/pengaturan/metode-bayar/${method.id}`, {
+    is_active: !method.is_active,
+    instructions: method.instructions ?? '',
+  }, {
+    preserveScroll: true,
+    onSuccess: () => {
+      method.is_active = !method.is_active
+      push(`Metode ${method.name} ${method.is_active ? 'diaktifkan' : 'dinonaktifkan'}.`, { tone: 'success' })
+    },
+  })
+}
+
+const saveMethodInstructions = (method) => {
+  router.put(`/admin/pengaturan/metode-bayar/${method.id}`, {
+    is_active: method.is_active,
+    instructions: method.instructions ?? '',
+  }, {
+    preserveScroll: true,
+    onSuccess: () => push(`Instruksi ${method.name} disimpan.`, { tone: 'success' }),
+  })
+}
 
 // Log viewer modal state
 const showLogModal = ref(false)
@@ -96,6 +129,11 @@ const form = useForm({
   bulk_minimum:              props.settings.bulk_minimum ?? 0,
   handling_time:             props.settings.handling_time ?? '',
   shipping_note:             props.settings.shipping_note ?? '',
+  pickup_enabled:            props.settings.pickup_enabled ?? true,
+  pickup_instructions:       props.settings.pickup_instructions ?? '',
+  arafagift_delivery_start: props.settings.arafagift_delivery_start?.slice(0, 5) ?? '13:00',
+  arafagift_delivery_end:   props.settings.arafagift_delivery_end?.slice(0, 5) ?? '16:00',
+  min_order_amount:          props.settings.min_order_amount ?? 0,
   store_status:              props.settings.store_status ?? 'open',
   closed_message:            props.settings.closed_message ?? '',
   low_stock_threshold:       props.settings.low_stock_threshold ?? 5,
@@ -107,6 +145,7 @@ const form = useForm({
   bank_account_number:       props.settings.bank_account_number ?? '',
   bank_account_name:         props.settings.bank_account_name ?? '',
   payment_instructions:      props.settings.payment_instructions ?? '',
+  qris_image:                null,
   meta_title:                props.settings.meta_title ?? '',
   meta_description:          props.settings.meta_description ?? '',
   google_analytics_id:       props.settings.google_analytics_id ?? '',
@@ -116,7 +155,11 @@ const form = useForm({
 const save = () => {
   form.put('/admin/pengaturan', {
     preserveScroll: true,
-    onSuccess: () => push('Pengaturan sistem berhasil diperbarui ✓', { tone: 'success' }),
+    forceFormData: !!form.qris_image,
+    onSuccess: () => {
+      form.qris_image = null
+      push('Pengaturan sistem berhasil diperbarui ✓', { tone: 'success' })
+    },
   })
 }
 
@@ -413,6 +456,62 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
             </div>
 
             <div class="sm:col-span-2">
+              <label class="field-label" for="s-minorder">Minimum Belanja untuk Checkout (Rp)</label>
+              <input id="s-minorder" v-model="form.min_order_amount" type="number" min="0" class="field" placeholder="0" />
+              <p class="mt-1 text-xs text-muted">Subtotal minimum agar pelanggan bisa checkout. Isi <strong>0</strong> untuk tanpa minimum.</p>
+            </div>
+
+            <div class="sm:col-span-2 rounded-xl border border-line bg-ivory/40 p-5 space-y-4">
+              <div class="flex items-start justify-between gap-4">
+                <div>
+                  <p class="text-sm font-semibold text-forest">Ambil di Tempat (Pickup)</p>
+                  <p class="mt-0.5 text-xs text-muted">Izinkan pelanggan memesan lalu mengambil sendiri di toko tanpa ongkir.</p>
+                </div>
+                <label class="relative inline-flex cursor-pointer items-center">
+                  <input v-model="form.pickup_enabled" type="checkbox" class="peer sr-only" />
+                  <span class="h-6 w-11 rounded-full bg-line transition peer-checked:bg-forest" />
+                  <span class="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+                  <span class="sr-only">Aktifkan pickup</span>
+                </label>
+              </div>
+              <div>
+                <label class="field-label" for="s-pickup-ins">Instruksi Pengambilan</label>
+                <textarea
+                  id="s-pickup-ins" v-model="form.pickup_instructions" rows="3" class="field bg-white"
+                  placeholder="Tunjukkan nomor pesanan ke kasir. Pesanan siap diambil maksimal 1×24 jam setelah dikonfirmasi."
+                />
+                <p class="mt-1 text-xs text-muted">Tampil di halaman checkout, halaman lacak, dan pesan WhatsApp pelanggan.</p>
+              </div>
+            </div>
+
+            <div class="sm:col-span-2 rounded-xl border border-forest/15 bg-forest/[0.035] p-5">
+              <div class="flex items-start gap-3">
+                <div class="grid h-9 w-9 flex-none place-items-center rounded-lg bg-forest text-ivory">
+                  <Truck class="h-4 w-4" :stroke-width="1.7" />
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-forest">Jam pengantaran Kurir ArafahGift</p>
+                  <p class="mt-0.5 text-xs leading-relaxed text-muted">Atur rentang waktu yang ditampilkan kepada pelanggan Kota Makassar. Admin tetap mengonfirmasi jadwal sebelum pesanan diantar.</p>
+                </div>
+              </div>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label class="field-label" for="s-arafa-start">Mulai pengantaran</label>
+                  <input id="s-arafa-start" v-model="form.arafagift_delivery_start" type="time" class="field bg-white" />
+                </div>
+                <div>
+                  <label class="field-label" for="s-arafa-end">Selesai pengantaran</label>
+                  <input id="s-arafa-end" v-model="form.arafagift_delivery_end" type="time" class="field bg-white" />
+                </div>
+              </div>
+              <p class="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-forest/75">
+                <Info class="mt-0.5 h-3.5 w-3.5 flex-none text-gold" />
+                Pelanggan akan melihat jadwal <strong>{{ form.arafagift_delivery_start || '13:00' }}-{{ form.arafagift_delivery_end || '16:00' }} WITA</strong> saat memilih Kurir ArafahGift.
+              </p>
+              <p v-if="form.errors.arafagift_delivery_end" class="mt-2 text-xs text-danger">{{ form.errors.arafagift_delivery_end }}</p>
+            </div>
+
+            <div class="sm:col-span-2">
               <label class="field-label" for="s-cities">Kota Bebas Ongkir Tanpa Syarat Nominal</label>
               <input id="s-cities" v-model="form.free_shipping_cities" class="field" placeholder="Makassar, Maros, Gowa, Sungguminasa" />
               <p class="mt-1 text-xs text-muted">Pisahkan dengan koma. Pembeli di kota ini selalu gratis ongkir tanpa batas minimum belanja.</p>
@@ -438,6 +537,9 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
               <div class="grid grid-cols-2 gap-2 text-xs text-muted">
                 <div>Gratis ongkir min: <strong class="text-forest">Rp {{ formatRp(form.free_shipping_from) }}</strong></div>
                 <div>Min. rombongan: <strong class="text-forest">{{ form.bulk_minimum || '-' }} pcs</strong></div>
+                <div>Min. checkout: <strong class="text-forest">{{ form.min_order_amount > 0 ? `Rp ${formatRp(form.min_order_amount)}` : 'Tanpa minimum' }}</strong></div>
+                <div>Pickup: <strong class="text-forest">{{ form.pickup_enabled ? 'Aktif' : 'Nonaktif' }}</strong></div>
+                <div>Antar ArafahGift: <strong class="text-forest">{{ form.arafagift_delivery_start || '13:00' }}-{{ form.arafagift_delivery_end || '16:00' }} WITA</strong></div>
                 <div>Handling: <strong class="text-forest">{{ form.handling_time || '-' }}</strong></div>
                 <div>Kota bebas: <strong class="text-forest">{{ form.free_shipping_cities || '-' }}</strong></div>
               </div>
@@ -462,7 +564,7 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
                 <label
                   v-for="opt in [
                     { value: 'open', emoji: '🟢', label: 'Buka Normal', desc: 'Menerima pesanan secara normal tanpa hambatan' },
-                    { value: 'holiday', emoji: '🟡', label: 'Libur Musiman', desc: 'Menerima pesanan tetapi dipending sementara' },
+                    { value: 'holiday', emoji: '🟡', label: 'Libur Musiman', desc: 'Checkout ditutup sementara, katalog tetap bisa dilihat' },
                     { value: 'maintenance', emoji: '🔴', label: 'Pemeliharaan', desc: 'Aplikasi ditutup sementara (Halaman 503 aktif)' },
                   ]"
                   :key="opt.value"
@@ -613,6 +715,21 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
               />
             </div>
 
+            <div class="sm:col-span-2 rounded-xl border border-line bg-ivory/40 p-5">
+              <p class="text-sm font-semibold text-forest">Gambar QRIS Toko</p>
+              <p class="mt-0.5 text-xs text-muted">Ditampilkan di checkout dan halaman lacak saat pelanggan memilih QRIS.</p>
+              <div class="mt-3 flex flex-wrap items-start gap-4">
+                <img v-if="qrisPreview" :src="qrisPreview" alt="QRIS ArafahGift" class="h-40 w-40 border border-line bg-white object-contain p-2" />
+                <div v-else class="grid h-40 w-40 place-items-center border border-dashed border-line text-center text-[0.72rem] text-muted">Belum ada gambar QRIS</div>
+                <div class="min-w-0 flex-1">
+                  <label class="field-label" for="s-qris">Unggah gambar QRIS</label>
+                  <input id="s-qris" type="file" accept="image/*" class="field text-xs" @change="onQrisChange" />
+                  <p class="mt-1 text-xs text-muted">PNG/JPG maksimal 2 MB. Gambar lama otomatis diganti saat menyimpan.</p>
+                  <p v-if="form.errors.qris_image" class="mt-1 text-xs text-danger">{{ form.errors.qris_image }}</p>
+                </div>
+              </div>
+            </div>
+
             <!-- Preview card rekening -->
             <div class="sm:col-span-2">
               <p class="text-xs font-semibold text-forest mb-2 flex items-center gap-1.5">
@@ -623,6 +740,38 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
                 <p class="font-display text-lg text-forest font-bold">{{ form.bank_name || 'Nama Bank' }}</p>
                 <p class="mt-1 font-mono text-2xl font-bold tracking-widest text-forest/80">{{ form.bank_account_number || '– – – –' }}</p>
                 <p class="mt-1 text-sm text-muted">a/n <strong class="text-forest">{{ form.bank_account_name || 'Nama Pemilik' }}</strong></p>
+              </div>
+            </div>
+
+            <!-- Metode pembayaran yang tampil di checkout -->
+            <div class="sm:col-span-2">
+              <p class="text-xs font-semibold text-forest mb-1 flex items-center gap-1.5">
+                <CreditCard class="h-3.5 w-3.5 text-gold" />Metode Pembayaran Aktif
+              </p>
+              <p class="mb-3 text-xs text-muted">Aktifkan hanya metode yang benar-benar tersedia. Kartu kredit butuh payment gateway, jadi biarkan nonaktif.</p>
+              <div class="space-y-3">
+                <div v-for="method in methods" :key="method.id" class="rounded-xl border border-line bg-ivory/40 p-4">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p class="text-sm font-semibold text-forest">{{ method.name }} <span class="font-mono text-[0.68rem] text-muted">({{ method.code }})</span></p>
+                      <p v-if="method.note" class="text-xs text-muted">{{ method.note }}</p>
+                    </div>
+                    <button
+                      type="button"
+                      class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition"
+                      :class="method.is_active ? 'border-emerald-400/50 bg-emerald-50 text-emerald-700' : 'border-line bg-surface text-muted'"
+                      @click="togglePaymentMethod(method)"
+                    >
+                      <span class="h-1.5 w-1.5 rounded-full" :class="method.is_active ? 'bg-emerald-600' : 'bg-muted'" />
+                      {{ method.is_active ? 'Aktif' : 'Nonaktif' }}
+                    </button>
+                  </div>
+                  <div class="mt-3">
+                    <label class="field-label" :for="`method-ins-${method.id}`">Instruksi tambahan</label>
+                    <textarea :id="`method-ins-${method.id}`" v-model="method.instructions" rows="2" class="field bg-white" placeholder="Tampil saat pelanggan memilih metode ini." />
+                    <button type="button" class="mt-2 text-xs font-semibold text-forest underline underline-offset-4" @click="saveMethodInstructions(method)">Simpan instruksi</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

@@ -6,6 +6,17 @@ Backend **Laravel 13** (MySQL) + frontend **Vue 3 (Composition API)** disambungk
 
 ---
 
+## Dokumentasi deploy
+
+| Dokumen | Isi |
+|---|---|
+| [`docs/DEPLOY.md`](docs/DEPLOY.md) | **Tutorial lengkap** deploy CI/CD ke shared hosting, dari nol |
+| [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) | Workflow CI/CD yang aktif (dan bisa dipakai untuk proyek baru) |
+
+Alur singkat: push ke `main` → GitHub Actions build frontend → SSH ke hosting → migrasi & cache → live.
+
+---
+
 ## Menjalankan
 
 Butuh PHP 8.3+, Composer, Node 18+, dan MySQL.

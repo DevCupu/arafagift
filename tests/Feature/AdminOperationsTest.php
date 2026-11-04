@@ -45,6 +45,32 @@ it('rejects an invalid order status', function () {
     ])->assertSessionHasErrors('status');
 });
 
+it('marks payment as paid when the order advances past pending', function () {
+    $order = Order::factory()->create(['status' => 'pending', 'payment_status' => 'unpaid']);
+
+    $this->actingAs($this->admin)->put(route('admin.order.update', $order), [
+        'status' => 'processing',
+    ])->assertSessionHasNoErrors();
+
+    expect($order->fresh()->payment_status)->toBe('paid');
+});
+
+it('lets an admin change the payment status manually', function () {
+    $order = Order::factory()->create(['status' => 'processing', 'payment_status' => 'unpaid']);
+
+    $this->actingAs($this->admin)->patch(route('admin.order.payment', $order), [
+        'payment_status' => 'paid',
+    ])->assertSessionHasNoErrors();
+
+    expect($order->fresh()->payment_status)->toBe('paid');
+
+    $this->actingAs($this->admin)->patch(route('admin.order.payment', $order), [
+        'payment_status' => 'refunded',
+    ])->assertSessionHasNoErrors();
+
+    expect($order->fresh()->payment_status)->toBe('refunded');
+});
+
 it('blocks deleting a category that still has products', function () {
     $category = Category::factory()->create();
     Product::factory()->create(['category_id' => $category->id]);

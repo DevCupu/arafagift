@@ -25,6 +25,52 @@ it('lets an admin update store settings including free shipping cities', functio
     expect($settings->freeShippingCitiesList())->toBe(['Makassar', 'Jakarta Selatan']);
 });
 
+it('lets an admin update pickup and minimum order settings', function () {
+    Setting::create(['store_name' => 'Toko Awal', 'free_shipping_from' => 0, 'bulk_minimum' => 0]);
+
+    $this->actingAs($this->admin)->put(route('admin.settings.update'), [
+        'store_name' => 'ArafahGift.id',
+        'pickup_enabled' => true,
+        'pickup_instructions' => 'Ambil di kasir lantai 1.',
+        'min_order_amount' => 75000,
+    ])->assertSessionHasNoErrors();
+
+    $settings = Setting::first();
+    expect($settings->pickup_enabled)->toBeTrue();
+    expect($settings->pickup_instructions)->toBe('Ambil di kasir lantai 1.');
+    expect((int) $settings->min_order_amount)->toBe(75000);
+});
+
+it('lets an admin configure the ArafahGift delivery window', function () {
+    Setting::create(['store_name' => 'Toko Awal', 'free_shipping_from' => 0, 'bulk_minimum' => 0]);
+
+    $this->actingAs($this->admin)->put(route('admin.settings.update'), [
+        'store_name' => 'ArafahGift.id',
+        'arafagift_delivery_start' => '13:00',
+        'arafagift_delivery_end' => '16:00',
+    ])->assertSessionHasNoErrors();
+
+    $settings = Setting::first();
+    expect($settings->arafagift_delivery_start->format('H:i'))->toBe('13:00')
+        ->and($settings->arafagift_delivery_end->format('H:i'))->toBe('16:00');
+});
+
+it('lets an admin activate or deactivate a payment method', function () {
+    $method = \App\Models\PaymentMethod::firstOrCreate(
+        ['code' => 'cod'],
+        ['name' => 'COD', 'is_active' => true, 'sort_order' => 30],
+    );
+
+    $this->actingAs($this->admin)->put(route('admin.settings.payment-method', $method), [
+        'is_active' => false,
+        'instructions' => 'Bayar tunai saat diterima.',
+    ])->assertSessionHasNoErrors();
+
+    $method->refresh();
+    expect($method->is_active)->toBeFalse();
+    expect($method->instructions)->toBe('Bayar tunai saat diterima.');
+});
+
 it('blocks non-admin users from updating settings', function () {
     Setting::create(['store_name' => 'Toko Awal', 'free_shipping_from' => 0, 'bulk_minimum' => 0]);
     $user = User::factory()->create(['is_admin' => false]);

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use App\Models\Product;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class OrderPricing
@@ -15,6 +16,30 @@ class OrderPricing
         } while (Order::withTrashed()->where('order_number', $orderNumber)->exists());
 
         return $orderNumber;
+    }
+
+    public static function trackingToken(): string
+    {
+        do {
+            $token = Str::random(32);
+        } while (Order::withTrashed()->where('tracking_token', $token)->exists());
+
+        return $token;
+    }
+
+    /**
+     * Order lama (atau yang dibuat sebelum migrasi token) tetap bisa dilacak.
+     */
+    public static function ensureTrackingToken(Order $order): string
+    {
+        if (is_string($order->tracking_token) && $order->tracking_token !== '') {
+            return $order->tracking_token;
+        }
+
+        $token = self::trackingToken();
+        $order->forceFill(['tracking_token' => $token])->saveQuietly();
+
+        return $token;
     }
 
     /**

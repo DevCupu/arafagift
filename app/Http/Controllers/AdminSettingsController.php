@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PaymentMethod;
 use App\Models\Setting;
 use App\Support\StoreSettingsCache;
 use Illuminate\Http\JsonResponse;
@@ -55,6 +56,7 @@ class AdminSettingsController extends Controller
 
         return Inertia::render('admin/SettingsPage', [
             'settings' => Setting::firstOrFail(),
+            'paymentMethods' => PaymentMethod::orderBy('sort_order')->orderBy('id')->get(),
             'systemInfo' => $systemInfo,
             'logInfo' => $logInfo,
             'databaseTables' => $this->getDatabaseTables(),
@@ -87,6 +89,13 @@ class AdminSettingsController extends Controller
             'handling_time' => ['nullable', 'string', 'max:100'],
             'shipping_note' => ['nullable', 'string', 'max:500'],
 
+            // Pengambilan di toko & minimum order checkout
+            'pickup_enabled' => ['nullable', 'boolean'],
+            'pickup_instructions' => ['nullable', 'string', 'max:1000'],
+            'arafagift_delivery_start' => ['nullable', 'date_format:H:i'],
+            'arafagift_delivery_end' => ['nullable', 'date_format:H:i', 'after:arafagift_delivery_start'],
+            'min_order_amount' => ['nullable', 'integer', 'min:0'],
+
             // Operasional, Maintenance & Status
             'store_status' => ['nullable', 'string', 'in:open,holiday,maintenance'],
             'closed_message' => ['nullable', 'string', 'max:500'],
@@ -101,6 +110,7 @@ class AdminSettingsController extends Controller
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_name' => ['nullable', 'string', 'max:100'],
             'payment_instructions' => ['nullable', 'string', 'max:1000'],
+            'qris_image' => ['nullable', 'image', 'max:2048'],
 
             // SEO & Analitik
             'meta_title' => ['nullable', 'string', 'max:120'],
@@ -113,11 +123,41 @@ class AdminSettingsController extends Controller
         $validated['bulk_minimum'] = $validated['bulk_minimum'] ?? 0;
         $validated['low_stock_threshold'] = $validated['low_stock_threshold'] ?? 5;
         $validated['store_status'] = $validated['store_status'] ?? 'open';
+        $validated['pickup_enabled'] = $validated['pickup_enabled'] ?? true;
+        $validated['arafagift_delivery_start'] = $validated['arafagift_delivery_start'] ?? '13:00';
+        $validated['arafagift_delivery_end'] = $validated['arafagift_delivery_end'] ?? '16:00';
+        $validated['min_order_amount'] = $validated['min_order_amount'] ?? 0;
 
-        Setting::firstOrFail()->update($validated);
+        $settings = Setting::firstOrFail();
+
+        if ($request->hasFile('qris_image')) {
+            $oldPath = $settings->qris_image_path;
+            $validated['qris_image_path'] = $request->file('qris_image')->store('payment', 'public');
+
+            if ($oldPath) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+            }
+        }
+
+        unset($validated['qris_image']);
+
+        $settings->update($validated);
         StoreSettingsCache::forget();
 
         return back()->with('success', 'Pengaturan sistem toko berhasil disimpan');
+    }
+
+    public function updatePaymentMethod(Request $request, PaymentMethod $paymentMethod): RedirectResponse
+    {
+        $validated = $request->validate([
+            'is_active' => ['required', 'boolean'],
+            'instructions' => ['nullable', 'string', 'max:1000'],
+        ]);
+
+        $paymentMethod->update($validated);
+        Cache::forget('payment-methods');
+
+        return back()->with('success', "Metode {$paymentMethod->name} diperbarui.");
     }
 
     public function clearAllCache(): RedirectResponse

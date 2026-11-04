@@ -20,6 +20,11 @@ class PromotionFactory extends Factory
             'usage' => '0 / 100',
             'period' => '1-31 Ags 2026',
             'status' => 'active',
+            'discount_type' => 'percent',
+            'discount_value' => 10,
+            'min_purchase' => 0,
+            'applies_to' => 'all',
+            'is_active' => true,
         ];
     }
 }

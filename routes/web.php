@@ -15,6 +15,7 @@ use App\Http\Controllers\AdminReportController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSupplierController;
 use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\CheckoutVoucherController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HomeController;
@@ -44,8 +45,13 @@ Route::get('/checkout', fn () => Inertia::render('shop/CheckoutPage', [
     'seoHead' => PageSeo::noindex('Checkout')->toArray(),
 ]))->name('checkout');
 Route::post('/shipping/cost', [ShippingController::class, 'cost'])->middleware('throttle:30,1,shipping')->name('shipping.cost');
+Route::post('/checkout/voucher', [CheckoutVoucherController::class, 'check'])->middleware('throttle:20,1,voucher')->name('checkout.voucher');
 Route::post('/checkout', [CheckoutController::class, 'store'])->middleware('throttle:10,1,checkout')->name('checkout.store');
 Route::get('/lacak-pesanan', [OrderTrackingController::class, 'index'])->middleware('throttle:20,1,lacak-pesanan')->name('order.track');
+Route::get('/lacak/{token}', [OrderTrackingController::class, 'showByToken'])
+    ->where('token', '[A-Za-z0-9]{16,64}')
+    ->middleware('throttle:30,1,lacak-token')
+    ->name('order.track.token');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
 Route::get('/legal/{slug}', [PageController::class, 'legal'])->name('legal');
@@ -80,6 +86,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::delete('/admin/pesanan/bulk', [AdminOrderController::class, 'bulkDestroy'])->name('admin.orders.bulkDestroy');
     Route::get('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'show'])->name('admin.order');
     Route::put('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'update'])->name('admin.order.update');
+    Route::patch('/admin/pesanan/{order:order_number}/pembayaran', [AdminOrderController::class, 'updatePayment'])->name('admin.order.payment');
     Route::delete('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'destroy'])->name('admin.order.destroy');
     Route::get('/admin/produk', [AdminProductController::class, 'index'])->name('admin.products');
     Route::get('/admin/produk/baru', [AdminProductController::class, 'create'])->name('admin.products.new');
@@ -109,6 +116,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/promo', [AdminPromotionController::class, 'index'])->name('admin.promotions');
     Route::post('/admin/promo', [AdminPromotionController::class, 'store'])->name('admin.promotions.store');
     Route::delete('/admin/promo/bulk', [AdminPromotionController::class, 'bulkDestroy'])->name('admin.promotions.bulkDestroy');
+    Route::put('/admin/promo/{promotion}', [AdminPromotionController::class, 'update'])->name('admin.promotions.update');
     Route::delete('/admin/promo/{promotion}', [AdminPromotionController::class, 'destroy'])->name('admin.promotions.destroy');
     Route::get('/admin/konten', [ContentController::class, 'edit'])->name('admin.content');
     Route::put('/admin/konten', [ContentController::class, 'update'])->name('admin.content.update');
@@ -138,6 +146,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/admin/pengaturan/cache/rewarm', [AdminSettingsController::class, 'rewarmCache'])->name('admin.settings.cache.rewarm');
     Route::post('/admin/pengaturan/cache/views', [AdminSettingsController::class, 'clearViews'])->name('admin.settings.cache.views');
     Route::post('/admin/pengaturan/cache/opcache', [AdminSettingsController::class, 'reloadOpcache'])->name('admin.settings.cache.opcache');
+    Route::put('/admin/pengaturan/metode-bayar/{paymentMethod}', [AdminSettingsController::class, 'updatePaymentMethod'])->name('admin.settings.payment-method');
     Route::post('/admin/pengaturan/storage/fix', [AdminSettingsController::class, 'fixStorageLink'])->name('admin.settings.storage.fix');
     Route::get('/admin/pengaturan/logs', [AdminSettingsController::class, 'getLogs'])->name('admin.settings.logs');
     Route::post('/admin/pengaturan/logs/clear', [AdminSettingsController::class, 'clearLogs'])->name('admin.settings.logs.clear');

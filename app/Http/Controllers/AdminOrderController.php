@@ -62,6 +62,7 @@ class AdminOrderController extends Controller
         $order = DB::transaction(function () use ($validated, $priced, $shippingCost, $request): Order {
             $order = Order::create([
                 'order_number' => OrderPricing::nextOrderNumber(),
+                'tracking_token' => OrderPricing::trackingToken(),
                 'customer_name' => $validated['name'],
                 'customer_email' => $validated['email'] ?? '',
                 'customer_phone' => $validated['phone'],
@@ -72,6 +73,8 @@ class AdminOrderController extends Controller
                 'note' => $validated['note'] ?? null,
                 'admin_note' => $validated['adminNote'] ?? null,
                 'status' => $validated['status'],
+                'payment_status' => in_array($validated['status'], ['paid', 'processing', 'shipped', 'completed'], true) ? 'paid' : 'unpaid',
+                'fulfillment_type' => 'delivery',
                 'channel' => 'Admin',
                 'shipping_cost' => $shippingCost,
                 'subtotal' => $priced['subtotal'],
@@ -106,6 +109,19 @@ class AdminOrderController extends Controller
         return Inertia::render('admin/OrderDetailPage', [
             'order' => $order->load(['items', 'shippingMethod', 'paymentMethod'])->toCatalog(),
         ]);
+    }
+
+    public function updatePayment(Request $request, Order $order): RedirectResponse
+    {
+        $validated = $request->validate([
+            'payment_status' => ['required', Rule::in(['unpaid', 'paid', 'refunded'])],
+        ]);
+
+        $order->update(['payment_status' => $validated['payment_status']]);
+
+        $label = ['unpaid' => 'Belum bayar', 'paid' => 'Lunas', 'refunded' => 'Refund'][$validated['payment_status']];
+
+        return back()->with('success', "Pembayaran {$order->order_number} ditandai: {$label}.");
     }
 
     public function destroy(Request $request, Order $order): RedirectResponse
@@ -166,7 +182,7 @@ class AdminOrderController extends Controller
                 throw new RuntimeException('Tidak dapat membuka output untuk ekspor CSV.');
             }
 
-            fputcsv($out, ['No. Pesanan', 'Tanggal', 'Pelanggan', 'Email', 'Telepon', 'Status', 'Pembayaran', 'Kanal', 'Barang Terjual', 'Subtotal', 'Ongkir', 'Total', 'Alamat']);
+            fputcsv($out, ['No. Pesanan', 'Tanggal', 'Pelanggan', 'Email', 'Telepon', 'Tipe', 'Status', 'Status Bayar', 'Pembayaran', 'Kanal', 'Barang Terjual', 'Subtotal', 'Diskon', 'Ongkir', 'Total', 'Alamat']);
 
             Order::with(['items', 'shippingMethod', 'paymentMethod'])->latest()->cursor()->each(function (Order $order) use ($out): void {
                 fputcsv($out, [
@@ -175,11 +191,14 @@ class AdminOrderController extends Controller
                     $order->customer_name,
                     $order->customer_email,
                     $order->customer_phone,
+                    $order->isPickup() ? 'Ambil di Tempat' : 'Diantar',
                     $order->status,
+                    $order->payment_status ?? 'unpaid',
                     optional($order->paymentMethod)->name ?? '',
                     $order->channel ?? '',
                     $order->items->sum(fn ($item) => (int) $item->qty),
                     $order->subtotal,
+                    $order->discount_total,
                     $order->shipping_cost,
                     $order->total,
                     trim(implode(', ', array_filter([
@@ -207,9 +226,16 @@ class AdminOrderController extends Controller
             'admin_note' => $validated['adminNote'] ?? null,
         ];
 
+        // Status pesanan yang lebih maju menandakan pembayaran sudah diterima, kecuali
+        // admin sudah menandainya refund.
+        if (($order->payment_status ?? 'unpaid') === 'unpaid'
+            && in_array($validated['status'], ['paid', 'processing', 'shipped', 'completed'], true)) {
+            $update['payment_status'] = 'paid';
+        }
+
         if (array_key_exists('shippingCost', $validated) && $validated['shippingCost'] !== null) {
             $update['shipping_cost'] = $validated['shippingCost'];
-            $update['total'] = $order->subtotal + $validated['shippingCost'];
+            $update['total'] = $order->subtotal - (int) $order->discount_total + $validated['shippingCost'];
         }
 
         DB::transaction(function () use ($order, $update, $validated, $request): void {

@@ -10,13 +10,14 @@ import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { orderStatuses, orderTotal } from '@/data/admin'
+import { orderStatuses, orderTotal, paymentStatusMeta, paymentStatuses, fulfillmentMeta } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ order: { type: Object, default: null } })
 const { push } = useToast()
 const order = props.order
+const isPickup = order?.fulfillment === 'pickup'
 
 const form = useForm({
   status: order?.status ?? 'pending',
@@ -24,6 +25,13 @@ const form = useForm({
   shippingCost: order?.shipping.cost ?? 0,
   adminNote: order?.admin_note ?? '',
 })
+
+const markPayment = (status) => {
+  router.patch(`/admin/pesanan/${order.id}/pembayaran`, { payment_status: status }, {
+    preserveScroll: true,
+    onSuccess: () => push(`Pembayaran ${order.id}: ${paymentStatusMeta(status).label}`, { tone: 'success' }),
+  })
+}
 
 const save = () => {
   form.put(`/admin/pesanan/${order.id}`, {
@@ -70,12 +78,13 @@ const printLabel = () => {
 </style></head><body>
   <h1>Label pengiriman — ${esc(order.id)}</h1>
   <div class="row"><span class="muted">Tanggal</span><span>${esc(formatDateTime(order.date))}</span></div>
-  <div class="row"><span class="muted">Status</span><span>${esc(order.status)}</span></div>
+  <div class="row"><span class="muted">Tipe</span><span>${esc(fulfillmentMeta(order.fulfillment).label)}</span></div>
+  <div class="row"><span class="muted">Status</span><span>${esc(order.status)} · ${esc(paymentStatusMeta(order.paymentStatus).label)}</span></div>
   <div class="box">
-    <b>Dikirim ke</b>
+    <b>${isPickup ? 'Ambil di toko' : 'Dikirim ke'}</b>
     <p class="mt">${esc(order.customer)}</p>
     <p>${esc(order.phone)}</p>
-    <p class="mt">${esc(order.address)}</p>
+    <p class="mt">${esc(isPickup ? (order.shipping.method || 'Ambil di toko ArafahGift') : order.address)}</p>
   </div>
   <div class="row mt"><span><b>Resi</b> ${esc(order.shipping.awb || '—')}</span><span><b>Kurir</b> ${esc(order.shipping.courier)}</span></div>
   <table>
@@ -102,7 +111,12 @@ const printLabel = () => {
         <h1 class="text-[2.1rem] leading-none">{{ order.id }}</h1>
         <p class="mt-3 text-[0.85rem] text-muted">{{ formatDateTime(order.date) }} · via {{ order.channel }}</p>
       </div>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
+        <span class="rounded-full border border-line bg-ivory px-3 py-1 text-[0.72rem] font-semibold text-forest">{{ fulfillmentMeta(order.fulfillment).label }}</span>
+        <span
+          class="rounded-full border px-3 py-1 text-[0.72rem] font-semibold"
+          :class="order.paymentStatus === 'paid' ? 'border-olive/40 bg-olive/10 text-olive' : order.paymentStatus === 'refunded' ? 'border-line bg-ivory text-muted' : 'border-gold/45 bg-gold/10 text-forest'"
+        >{{ paymentStatusMeta(order.paymentStatus).label }}</span>
         <StatusPill :status="order.status" />
         <AppButton variant="quiet" size="sm" @click="printLabel">
           <template #icon><Printer class="h-3.5 w-3.5" /></template>
@@ -126,8 +140,9 @@ const printLabel = () => {
           </li>
         </ul>
         <dl class="space-y-2.5 border-t border-line px-6 py-5 text-[0.85rem]">
-          <div class="flex justify-between"><dt class="text-muted">Subtotal</dt><dd>{{ formatIDR(orderTotal(order) - order.shipping.cost) }}</dd></div>
-          <div class="flex justify-between"><dt class="text-muted">Ongkir · {{ order.shipping.method }}</dt><dd>{{ formatIDR(order.shipping.cost) }}</dd></div>
+          <div class="flex justify-between"><dt class="text-muted">Subtotal</dt><dd>{{ formatIDR(order.items.reduce((s, i) => s + i.price * i.qty, 0)) }}</dd></div>
+          <div v-if="order.discount > 0" class="flex justify-between"><dt class="text-muted">Diskon<span v-if="order.voucherCode"> ({{ order.voucherCode }})</span></dt><dd class="text-olive">-{{ formatIDR(order.discount) }}</dd></div>
+          <div class="flex justify-between"><dt class="text-muted">{{ isPickup ? 'Pengambilan' : `Ongkir · ${order.shipping.method}` }}</dt><dd>{{ isPickup ? 'Gratis' : formatIDR(order.shipping.cost) }}</dd></div>
           <div class="flex justify-between border-t border-line pt-3 text-[1rem]">
             <dt class="text-forest">Total</dt>
             <dd class="font-display text-2xl text-forest">{{ formatIDR(orderTotal(order)) }}</dd>
@@ -136,6 +151,27 @@ const printLabel = () => {
       </section>
 
       <div class="space-y-6">
+        <section class="border border-line bg-surface p-6">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="font-display text-2xl">Pembayaran</h2>
+            <span
+              class="rounded-full border px-2.5 py-0.5 text-[0.7rem] font-semibold"
+              :class="order.paymentStatus === 'paid' ? 'border-olive/40 bg-olive/10 text-olive' : order.paymentStatus === 'refunded' ? 'border-line bg-ivory text-muted' : 'border-gold/45 bg-gold/10 text-forest'"
+            >{{ paymentStatusMeta(order.paymentStatus).label }}</span>
+          </div>
+          <p class="mt-4 text-[0.9rem] font-semibold text-forest">{{ order.payment }}</p>
+          <p v-if="order.paymentNote" class="mt-0.5 text-[0.75rem] text-muted">{{ order.paymentNote }}</p>
+          <p v-if="order.paymentInstructions" class="mt-3 whitespace-pre-line border border-line bg-ivory/50 px-3 py-2.5 text-[0.78rem] leading-relaxed text-muted">{{ order.paymentInstructions }}</p>
+          <div class="mt-4 flex flex-wrap gap-2">
+            <AppButton
+              v-for="s in paymentStatuses" :key="s.id" size="sm"
+              :variant="order.paymentStatus === s.id ? 'primary' : 'outline'"
+              :disabled="order.paymentStatus === s.id"
+              @click="markPayment(s.id)"
+            >{{ s.label }}</AppButton>
+          </div>
+        </section>
+
         <section class="border border-line bg-surface p-6">
           <h2 class="font-display text-2xl">Ubah status</h2>
           <label class="field-label mt-5" for="status">Status pesanan</label>
@@ -159,7 +195,7 @@ const printLabel = () => {
           <p class="mt-4 text-forest">{{ order.customer }}</p>
           <p>{{ order.email }}</p>
           <p>{{ order.phone }}</p>
-          <p class="mt-4 border-t border-line pt-4">{{ order.address }}</p>
+          <p class="mt-4 border-t border-line pt-4">{{ isPickup ? 'Ambil di toko · tanpa ongkir' : order.address }}</p>
         </section>
 
         <section v-if="order.note" class="border border-dashed border-gold/40 bg-gold/[0.07] p-6">

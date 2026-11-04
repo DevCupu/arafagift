@@ -11,7 +11,7 @@ import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import { orderStatuses, orderTotal } from '@/data/admin'
+import { orderStatuses, orderTotal, paymentStatuses, paymentStatusMeta, fulfillmentMeta } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
 
@@ -22,6 +22,7 @@ const props = defineProps({
 const { push } = useToast()
 const query = ref('')
 const filter = ref('semua')
+const paymentFilter = ref('semua')
 const showTrashed = ref(false)
 
 const restoreOrder = (order) => {
@@ -44,19 +45,21 @@ const columns = [
 const rows = computed(() =>
   props.orders.filter((o) => {
     const okStatus = filter.value === 'semua' || o.status === filter.value
+    const okPayment = paymentFilter.value === 'semua' || (o.paymentStatus ?? 'unpaid') === paymentFilter.value
     const q = query.value.trim().toLowerCase()
     const okQuery = !q || `${o.id} ${o.customer} ${o.email}`.toLowerCase().includes(q)
-    return okStatus && okQuery
+    return okStatus && okPayment && okQuery
   }),
 )
 
-const pendingCount = computed(() => props.orders.filter((o) => o.status === 'pending').length)
+const pendingCount = computed(() => props.orders.filter((o) => (o.paymentStatus ?? 'unpaid') === 'unpaid').length)
 
 const countOf = (id) =>
   props.orders.filter((o) => {
     const q = query.value.trim().toLowerCase()
     const okQuery = !q || `${o.id} ${o.customer} ${o.email}`.toLowerCase().includes(q)
-    return (id === 'semua' || o.status === id) && okQuery
+    const okPayment = paymentFilter.value === 'semua' || (o.paymentStatus ?? 'unpaid') === paymentFilter.value
+    return (id === 'semua' || o.status === id) && okPayment && okQuery
   }).length
 
 const tabs = computed(() => [
@@ -125,6 +128,12 @@ const bulkDelete = () => {
           <X class="h-3.5 w-3.5" />
         </button>
       </div>
+
+      <label class="sr-only" for="order-payment-filter">Filter status pembayaran</label>
+      <select id="order-payment-filter" v-model="paymentFilter" class="field w-full max-w-[11rem]">
+        <option value="semua">Semua pembayaran</option>
+        <option v-for="s in paymentStatuses" :key="s.id" :value="s.id">{{ s.label }}</option>
+      </select>
     </div>
 
     <p class="mt-5 text-[0.78rem] text-muted">
@@ -143,6 +152,7 @@ const bulkDelete = () => {
       >
         <template #cell-id="{ row }">
           <Link :href="`/admin/pesanan/${row.id}`" class="link-underline font-medium">{{ row.id }}</Link>
+          <span class="mt-1 block text-[0.66rem] uppercase tracking-[0.08em] text-muted">{{ fulfillmentMeta(row.fulfillment).label }}</span>
         </template>
         <template #cell-customer="{ row }">
           <span class="block">{{ row.customer }}</span>
@@ -151,7 +161,13 @@ const bulkDelete = () => {
         <template #cell-date="{ row }"><span class="text-muted">{{ formatDateTime(row.date) }}</span></template>
         <template #cell-items="{ row }">{{ row.items.reduce((n, i) => n + i.qty, 0) }} pcs</template>
         <template #cell-total="{ row }"><span class="font-medium">{{ formatIDR(orderTotal(row)) }}</span></template>
-        <template #cell-payment="{ row }"><span class="text-muted">{{ row.payment }}</span></template>
+        <template #cell-payment="{ row }">
+          <span class="block text-muted">{{ row.payment }}</span>
+          <span
+            class="mt-1 inline-block rounded-full px-2 py-0.5 text-[0.64rem] font-semibold uppercase tracking-[0.08em]"
+            :class="row.paymentStatus === 'paid' ? 'bg-olive/10 text-olive' : row.paymentStatus === 'refunded' ? 'bg-line/60 text-muted' : 'bg-gold/15 text-forest'"
+          >{{ paymentStatusMeta(row.paymentStatus).label }}</span>
+        </template>
         <template #cell-status="{ row }"><StatusPill :status="row.status" /></template>
       </DataTable>
     </div>
