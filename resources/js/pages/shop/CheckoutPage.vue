@@ -702,9 +702,9 @@ watch(fulfillment, (mode) => {
           <span class="mx-auto grid h-14 w-14 place-items-center rounded-full border border-gold/50 bg-gold/15">
             <Check class="h-7 w-7 text-gold" :stroke-width="2" />
           </span>
-          <h1 class="mt-5 text-[1.7rem] leading-tight text-ivory sm:text-[1.9rem]">Pesanan berhasil dibuat</h1>
+          <h1 class="mt-5 text-[1.7rem] leading-tight text-ivory sm:text-[1.9rem]">Pesanan siap dikonfirmasi</h1>
           <p class="mx-auto mt-2 max-w-sm text-[0.82rem] leading-relaxed text-ivory/70">
-            Terima kasih, {{ placedOrder.customer }}. Satu langkah lagi: konfirmasi pesanan lewat WhatsApp.
+            Terima kasih, {{ placedOrder.customer }}. Pesanan Anda sudah tercatat. Kirim konfirmasi agar admin dapat menyiapkan langkah berikutnya.
           </p>
         </div>
 
@@ -749,6 +749,25 @@ watch(fulfillment, (mode) => {
           </li>
         </ol>
 
+        <div class="mx-6 mb-5 rounded-[0.75rem] border border-forest/15 bg-forest/[0.045] p-4">
+          <div class="flex items-start gap-3">
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-forest text-ivory">
+              <MessageCircle class="h-4 w-4" :stroke-width="1.8" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-[0.88rem] font-semibold text-forest">Konfirmasi sekarang supaya pesanan tidak tertunda</p>
+              <p class="mt-1 text-[0.76rem] leading-relaxed text-muted">
+                Admin akan mengecek detail pesanan, mengonfirmasi ongkir atau jadwal antar, lalu mengirim instruksi pembayaran yang sesuai.
+              </p>
+            </div>
+          </div>
+          <AppButton size="lg" block class="mt-4" @click="confirmViaWhatsapp">
+            <template #icon><MessageCircle class="h-4 w-4" /></template>
+            Konfirmasi lewat WhatsApp
+          </AppButton>
+          <p class="mt-2 text-center text-[0.68rem] leading-relaxed text-muted">Pesan WhatsApp sudah disiapkan dengan nomor pesanan {{ placedOrder.id }}.</p>
+        </div>
+
         <dl class="divide-y divide-line border-y border-line px-6 text-[0.87rem]">
           <div v-for="(it, i) in placedOrder.items" :key="i" class="flex justify-between gap-6 py-3">
             <dt class="text-muted">{{ it.name }} × {{ it.qty }}</dt>
@@ -765,6 +784,10 @@ watch(fulfillment, (mode) => {
           <div v-if="placedOrder.fulfillment === 'pickup'" class="flex justify-between gap-6 py-3">
             <dt class="text-muted">Pengambilan</dt>
             <dd class="font-semibold text-olive">Ambil di toko</dd>
+          </div>
+          <div v-if="placedOrder.subtotal" class="flex justify-between gap-6 py-3">
+            <dt class="text-muted">Subtotal</dt>
+            <dd class="text-forest">{{ formatIDR(placedOrder.subtotal) }}</dd>
           </div>
           <div class="flex items-baseline justify-between gap-6 py-4">
             <dt class="font-semibold text-forest">Total</dt>
@@ -783,6 +806,9 @@ watch(fulfillment, (mode) => {
               >{{ placedOrder.paymentStatus === 'paid' ? 'Lunas' : 'Belum dibayar' }}</span>
             </div>
             <p class="mt-1.5 text-[0.92rem] font-semibold text-forest">{{ placedOrder.payment }}</p>
+            <p v-if="placedOrder.paymentStatus !== 'paid'" class="mt-2 text-[0.76rem] leading-relaxed text-forest/80">
+              Belum ada pembayaran otomatis. Konfirmasi dulu melalui WhatsApp, lalu ikuti instruksi admin.
+            </p>
 
             <dl
               v-if="placedOrder.paymentStatus !== 'paid' && placedOrder.paymentCode === 'transfer' && store.bankAccountNumber"
@@ -829,10 +855,6 @@ watch(fulfillment, (mode) => {
             <MapPin class="mt-0.5 h-4 w-4 flex-none text-gold" :stroke-width="1.5" /> {{ placedOrder.address }}
           </p>
 
-          <AppButton size="lg" block class="mt-6" @click="confirmViaWhatsapp">
-            <template #icon><MessageCircle class="h-4 w-4" /></template>
-            Kirim pesanan via WhatsApp
-          </AppButton>
           <div class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[0.78rem] text-muted">
             <a v-if="placedOrder.trackingUrl" :href="placedOrder.trackingUrl" class="font-semibold text-forest underline underline-offset-4 transition hover:text-olive">Lacak pesanan</a>
             <Link href="/lacak-pesanan" class="underline underline-offset-4 transition hover:text-forest">Lacak via nomor pesanan</Link>

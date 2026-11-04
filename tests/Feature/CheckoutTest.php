@@ -34,13 +34,15 @@ beforeEach(function () {
 it('prices the order from the database, ignoring any price sent by the client', function () {
     $product = Product::factory()->create(['price' => 100000, 'stock' => 10]);
 
-    $this->actingAs(User::factory()->create())->postJson('/checkout', checkoutPayload([
+    $response = $this->actingAs(User::factory()->create())->postJson('/checkout', checkoutPayload([
         'items' => [['id' => $product->id, 'qty' => 2, 'price' => 1]],
     ]))->assertOk();
 
     $order = Order::latest()->first();
     expect((int) $order->subtotal)->toBe(200000);
     expect((int) $order->items->first()->price)->toBe(100000);
+    expect($response->json('subtotal'))->toBe(200000)
+        ->and($response->json('total'))->toBe(200000);
 });
 
 it('rejects checkout when the requested quantity exceeds available stock', function () {
