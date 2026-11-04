@@ -768,6 +768,20 @@ watch(fulfillment, (mode) => {
           <p class="mt-2 text-center text-[0.68rem] leading-relaxed text-muted">Pesan WhatsApp sudah disiapkan dengan nomor pesanan {{ placedOrder.id }}.</p>
         </div>
 
+        <div class="mx-6 mb-5 rounded-[0.75rem] border border-gold/35 bg-gold/[0.07] p-4">
+          <div class="flex items-start gap-3">
+            <span class="grid h-9 w-9 flex-none place-items-center rounded-full bg-gold/20 text-forest">
+              <MessageCircle class="h-4 w-4" :stroke-width="1.8" />
+            </span>
+            <div class="min-w-0">
+              <p class="text-[0.88rem] font-semibold text-forest">Langkah terakhir: konfirmasi pesanan</p>
+              <p class="mt-1 text-[0.76rem] leading-relaxed text-muted">
+                Klik WhatsApp di atas agar admin dapat mengecek pesanan, mengonfirmasi ongkir atau jadwal pengantaran, lalu mengirim instruksi pembayaran.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <dl class="divide-y divide-line border-y border-line px-6 text-[0.87rem]">
           <div v-for="(it, i) in placedOrder.items" :key="i" class="flex justify-between gap-6 py-3">
             <dt class="text-muted">{{ it.name }} × {{ it.qty }}</dt>
