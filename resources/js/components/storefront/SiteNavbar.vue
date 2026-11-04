@@ -122,25 +122,25 @@ onUnmounted(() => { document.body.style.overflow = '' })
         <div
           v-if="menuOpen"
           id="mobile-navigation"
-          class="fixed inset-y-0 left-0 z-[120] flex w-[88%] max-w-sm flex-col border-r border-ivory/10 bg-forest-deep shadow-[24px_0_60px_-32px_rgb(4_43_38/0.95)] lg:hidden"
+          class="fixed inset-y-0 left-0 z-[120] flex w-[88%] max-w-[22rem] flex-col rounded-r-[1.1rem] border-r border-ivory/10 bg-forest-deep shadow-[24px_0_60px_-32px_rgb(4_43_38/0.95)] lg:hidden"
           role="dialog"
           aria-modal="true"
           aria-label="Menu navigasi"
           @keydown.esc="menuOpen = false"
         >
           <!-- Header drawer -->
-          <div class="flex h-[4.25rem] items-center justify-between border-b border-ivory/10 px-5">
+          <div class="flex h-16 items-center justify-between border-b border-ivory/10 px-4">
             <BrandLogo tone="ivory" size="sm" />
-            <button class="grid h-11 w-11 place-items-center rounded-lg text-ivory/70 transition hover:bg-ivory/10 hover:text-ivory" aria-label="Tutup menu" @click="menuOpen = false">
+            <button class="grid h-10 w-10 place-items-center rounded-full text-ivory/70 transition hover:bg-ivory/10 hover:text-ivory" aria-label="Tutup menu" @click="menuOpen = false">
               <X class="h-5 w-5" :stroke-width="1.5" />
             </button>
           </div>
           <!-- Nav links -->
-          <ul class="flex-1 overflow-y-auto px-5 py-4">
+          <ul class="flex-1 overflow-y-auto px-4 py-3">
             <li v-for="link in links" :key="link.to">
               <Link
                 :href="link.to"
-                class="flex min-h-14 items-center rounded-lg border-l-2 px-4 font-display text-[1.2rem] transition-colors"
+                class="flex min-h-12 items-center rounded-lg border-l-2 px-3.5 text-[0.94rem] font-semibold transition-colors"
                 :class="isActive(link.to) ? 'border-gold bg-ivory/[0.07] text-ivory' : 'border-transparent text-ivory/68 hover:bg-ivory/[0.05] hover:text-ivory'"
                 :aria-current="isActive(link.to) ? 'page' : undefined"
                 @click="closeOverlays"
@@ -150,26 +150,28 @@ onUnmounted(() => { document.body.style.overflow = '' })
             </li>
           </ul>
           <!-- Drawer footer -->
-          <div class="space-y-1 border-t border-ivory/10 px-5 py-5 pb-safe">
-            <Link href="/akun" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory" @click="closeOverlays">
-              <User class="h-4 w-4 text-gold" :stroke-width="1.5" /> Akun saya
-            </Link>
+          <div class="border-t border-ivory/10 px-4 py-4 pb-safe">
+            <div class="grid grid-cols-3 gap-2">
+              <Link href="/akun" class="flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-lg bg-ivory/[0.05] px-2 text-[0.68rem] text-ivory/72 transition hover:bg-ivory/[0.1] hover:text-ivory" @click="closeOverlays">
+                <User class="h-4 w-4 text-gold" :stroke-width="1.5" /> Akun
+              </Link>
             <button
-              class="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory"
+              class="relative flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-lg bg-ivory/[0.05] px-2 text-[0.68rem] text-ivory/72 transition hover:bg-ivory/[0.1] hover:text-ivory"
               @click="menuOpen = false; openDrawer()"
             >
               <ShoppingBag class="h-4 w-4 text-gold" :stroke-width="1.5" /> Keranjang
-              <span v-if="count" class="ml-auto grid h-5 min-w-5 place-items-center rounded-full bg-gold px-1.5 text-[0.62rem] font-bold text-forest-deep">{{ count }}</span>
+              <span v-if="count" class="absolute right-2 top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-gold px-1 text-[0.58rem] font-bold text-forest-deep">{{ count }}</span>
             </button>
-            <Link href="/lacak-pesanan" class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory" @click="closeOverlays">
-              <Search class="h-4 w-4 text-gold" :stroke-width="1.5" /> Lacak pesanan
-            </Link>
+              <Link href="/lacak-pesanan" class="flex min-h-[3.75rem] flex-col items-center justify-center gap-1 rounded-lg bg-ivory/[0.05] px-2 text-[0.68rem] text-ivory/72 transition hover:bg-ivory/[0.1] hover:text-ivory" @click="closeOverlays">
+                <Search class="h-4 w-4 text-gold" :stroke-width="1.5" /> Lacak
+              </Link>
+            </div>
             <a
               :href="whatsappHref()" target="_blank" rel="noopener"
-              class="flex min-h-11 items-center gap-3 rounded-lg px-3 text-[0.88rem] text-ivory/72 transition hover:bg-ivory/[0.06] hover:text-ivory"
+              class="mt-2 flex min-h-11 items-center justify-center gap-2 rounded-lg border border-gold/35 bg-gold/[0.08] px-3 text-[0.78rem] font-semibold text-ivory transition hover:bg-gold/[0.14]"
             >
               <MessageCircle class="h-4 w-4 flex-none text-gold" :stroke-width="1.5" />
-              Chat WhatsApp
+              Butuh bantuan? Chat WhatsApp
             </a>
           </div>
         </div>
