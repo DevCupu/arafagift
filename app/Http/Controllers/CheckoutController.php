@@ -37,7 +37,7 @@ class CheckoutController extends Controller
             'voucher_code' => ['nullable', 'string', 'max:40'],
             'name' => ['required', 'string', 'min:3', 'max:100'],
             'phone' => ['required', 'string', 'regex:/^0[0-9]{8,15}$/'],
-            'email' => ['nullable', 'string', 'email', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255'],
             'address' => [Rule::requiredIf($fulfillment === 'delivery'), 'nullable', 'string', 'min:8', 'max:500'],
             'city' => [Rule::requiredIf($fulfillment === 'delivery'), 'nullable', 'string', 'min:2', 'max:100'],
             'province' => ['nullable', 'string', 'max:100'],

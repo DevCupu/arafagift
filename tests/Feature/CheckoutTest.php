@@ -17,6 +17,7 @@ function checkoutPayload(array $overrides = []): array
         'payment_method' => 'transfer',
         'name' => 'Budi Santoso',
         'phone' => '081234567890',
+        'email' => 'budi@example.test',
         'address' => 'Jl. Mawar No. 1',
         'city' => 'Jakarta',
         'destination_id' => '17473',

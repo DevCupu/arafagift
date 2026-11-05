@@ -74,7 +74,7 @@ it('emails the customer and admin when an order is placed', function () {
         && $mail->hasTo('admin@arafagift.test'));
 });
 
-it('still notifies the admin when the customer leaves the email empty', function () {
+it('requires an email at checkout so every customer gets a confirmation', function () {
     $product = Product::factory()->create(['price' => 100000, 'stock' => 10]);
 
     $this->postJson('/checkout', [
@@ -86,12 +86,9 @@ it('still notifies the admin when the customer leaves the email empty', function
         'address' => 'Jl. Mawar No. 1',
         'city' => 'Makassar',
         'items' => [['id' => $product->id, 'qty' => 1]],
-    ])->assertOk();
+    ])->assertJsonValidationErrors('email');
 
-    Mail::assertSent(OrderNotificationMail::class, fn (OrderNotificationMail $mail) => $mail->template === 'placed-admin'
-        && $mail->hasTo('admin@arafagift.test'));
-
-    Mail::assertNotSent(OrderNotificationMail::class, fn (OrderNotificationMail $mail) => $mail->template === 'placed');
+    Mail::assertNothingSent();
 });
 
 it('emails the admin when a customer uploads a payment proof', function () {

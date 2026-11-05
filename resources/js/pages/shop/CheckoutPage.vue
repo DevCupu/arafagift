@@ -179,6 +179,7 @@ const validate = (current) => {
   if (current === 1) {
     if (form.name.trim().length < 3) errors.name = 'Tulis nama lengkap penerima pesanan.'
     if (form.phone.replace(/\D/g, '').length < 9) errors.phone = 'Nomor WhatsApp minimal 9 angka.'
+    if (!/^\S+@\S+\.\S+$/.test(form.email.trim())) errors.email = 'Isi email yang valid untuk menerima konfirmasi pesanan.'
     if (!isPickup.value) {
       if (form.street.trim().length < 8) errors.address = 'Tulis nama jalan dan nomor rumah.'
       if (manualCity.value) {
@@ -1084,8 +1085,9 @@ watch(fulfillment, (mode) => {
                 <p v-if="errors.phone" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.phone }}</p>
               </div>
               <div>
-                <label class="field-label" for="email">Email (opsional)</label>
-                <input id="email" v-model="form.email" type="email" autocomplete="email" class="field" />
+                <label class="field-label" for="email">Email</label>
+                <input id="email" v-model="form.email" type="email" autocomplete="email" class="field" :aria-invalid="!!errors.email" />
+                <p v-if="errors.email" class="mt-1.5 text-[0.75rem] text-danger">{{ errors.email }}</p>
               </div>
             </div>
           </div>
@@ -1333,7 +1335,7 @@ watch(fulfillment, (mode) => {
                 <dd class="text-right text-forest">
                   {{ form.name }}
                   <span class="block text-[0.76rem] text-muted">{{ form.phone }}<template v-if="form.email"> · {{ form.email }}</template></span>
-                  <span v-if="errors.name || errors.phone" class="mt-1 block text-[0.75rem] text-danger">{{ errors.name || errors.phone }}</span>
+                  <span v-if="errors.name || errors.phone || errors.email" class="mt-1 block text-[0.75rem] text-danger">{{ errors.name || errors.phone || errors.email }}</span>
                 </dd>
               </div>
               <div class="flex justify-between gap-6 py-3.5">
