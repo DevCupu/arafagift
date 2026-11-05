@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -110,6 +111,7 @@ class AdminSettingsController extends Controller
             'bank_account_number' => ['nullable', 'string', 'max:50'],
             'bank_account_name' => ['nullable', 'string', 'max:100'],
             'payment_instructions' => ['nullable', 'string', 'max:1000'],
+            'payment_window_hours' => ['nullable', 'integer', 'min:1', 'max:168'],
             'qris_image' => ['nullable', 'image', 'max:2048'],
 
             // SEO & Analitik
@@ -127,6 +129,7 @@ class AdminSettingsController extends Controller
         $validated['arafagift_delivery_start'] = $validated['arafagift_delivery_start'] ?? '13:00';
         $validated['arafagift_delivery_end'] = $validated['arafagift_delivery_end'] ?? '16:00';
         $validated['min_order_amount'] = $validated['min_order_amount'] ?? 0;
+        $validated['payment_window_hours'] = $validated['payment_window_hours'] ?? 24;
 
         $settings = Setting::firstOrFail();
 
@@ -135,7 +138,7 @@ class AdminSettingsController extends Controller
             $validated['qris_image_path'] = $request->file('qris_image')->store('payment', 'public');
 
             if ($oldPath) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+                Storage::disk('public')->delete($oldPath);
             }
         }
 

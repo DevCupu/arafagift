@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 #[Fillable([
     'category_id', 'name', 'slug', 'sku', 'unit', 'price', 'compare_price', 'cost',
     'rating', 'reviews_count', 'badge', 'art', 'image', 'stock', 'low_stock_threshold',
-    'storage_location', 'supplier_id',
+    'storage_location', 'supplier_id', 'low_stock_notified_at',
     'weight', 'status', 'featured', 'featured_order', 'short', 'description', 'includes', 'details',
 ])]
 class Product extends Model
@@ -32,6 +32,7 @@ class Product extends Model
     {
         return [
             'featured' => 'boolean',
+            'low_stock_notified_at' => 'datetime',
             'includes' => 'array',
             'details' => 'array',
         ];
@@ -47,6 +48,12 @@ class Product extends Model
     public function supplier(): BelongsTo
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    /** @return HasMany<ProductReview, $this> */
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
     }
 
     /** @return HasMany<StockMovement, $this> */

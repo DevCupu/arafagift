@@ -65,7 +65,7 @@ class SitemapController extends Controller
     /**
      * Generate sitemap XML tanpa Blade — aman dipakai saat template corrupt.
      *
-     * @param array<int, array{loc: string, changefreq?: string, priority?: string, lastmod?: string}> $urls
+     * @param  array<int, array{loc: string, changefreq?: string, priority?: string, lastmod?: string}>  $urls
      */
     private static function buildXml(array $urls): string
     {

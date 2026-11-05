@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { router, usePage } from '@inertiajs/vue3'
 import AccountShell from '@/components/storefront/AccountShell.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
@@ -8,15 +9,26 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { orderTotal } from '@/data/admin'
 import { formatDate, formatIDR } from '@/composables/useFormat'
 import { useStore } from '@/composables/useStore'
+import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ order: { type: Object, default: null } })
-const order = props.order
+const order = computed(() => props.order)
 const { whatsappHref } = useStore()
+const { push } = useToast()
+const errors = computed(() => usePage().props.errors)
+
+const cancelOrder = () => {
+  if (!window.confirm('Batalkan pesanan ini? Tindakan ini tidak bisa dibatalkan.')) return
+  router.post(`/akun/pesanan/${order.value.id}/batal`, {}, {
+    preserveScroll: true,
+    onSuccess: () => push('Pesanan dibatalkan.', { tone: 'success' }),
+  })
+}
 
 const steps = ['Pesanan dibuat', 'Pembayaran diterima', 'Dikemas', 'Dikirim', 'Diterima']
 const statusDone = { pending: 1, paid: 2, processing: 3, shipped: 4, completed: 5 }
 const timeline = computed(() =>
-  steps.map((label, i) => ({ label, done: order ? i < (statusDone[order.status] ?? 1) : false })),
+  steps.map((label, i) => ({ label, done: order.value ? i < (statusDone[order.value.status] ?? 1) : false })),
 )
 </script>
 
@@ -68,6 +80,9 @@ const timeline = computed(() =>
           <p>{{ order.address }}</p>
           <p class="mt-2">{{ order.phone }}</p>
         </div>
+        <AppButton :href="`/akun/pesanan/${order.id}/invoice`" variant="quiet" block target="_blank" rel="noopener">Lihat / cetak invoice</AppButton>
+        <AppButton v-if="order.canCancel" variant="quiet" block @click="cancelOrder">Batalkan pesanan</AppButton>
+        <p v-if="errors.cancel" class="text-[0.72rem] text-danger">{{ errors.cancel }}</p>
         <AppButton :href="whatsappHref('Halo ArafahGift, saya mau tanya tentang pesanan saya.')" variant="quiet" block target="_blank" rel="noopener">Tanya tentang pesanan ini</AppButton>
       </aside>
     </div>

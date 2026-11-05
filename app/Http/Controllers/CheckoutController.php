@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Exceptions\RajaOngkirException;
 use App\Models\Order;
+use App\Models\OrderEvent;
 use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Services\OrderLifecycle;
+use App\Services\OrderNotifier;
 use App\Services\OrderPricing;
 use App\Services\RajaOngkirService;
 use App\Services\VoucherPricing;
@@ -15,8 +18,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CheckoutController extends Controller
 {
@@ -106,7 +109,9 @@ class CheckoutController extends Controller
             $validated, $priced, $store,
         );
 
-        $order = DB::transaction(function () use ($request, $validated, $priced, $payment, $voucher, $discount, $shippingCost, $shippingCourier, $shippingService, $shippingEtd, $note): Order {
+        $paymentDueAt = OrderLifecycle::paymentDueAt($payment->code, $store);
+
+        $order = DB::transaction(function () use ($request, $validated, $priced, $payment, $voucher, $discount, $shippingCost, $shippingCourier, $shippingService, $shippingEtd, $note, $paymentDueAt): Order {
             $isPickup = $validated['fulfillment_type'] === 'pickup';
 
             $order = Order::create([
@@ -128,6 +133,7 @@ class CheckoutController extends Controller
                 'payment_method_id' => $payment->id,
                 'fulfillment_type' => $validated['fulfillment_type'],
                 'payment_status' => 'unpaid',
+                'payment_due_at' => $paymentDueAt,
                 'voucher_code' => $voucher['promotion']->code ?? null,
                 'discount_total' => $discount,
                 'gift_message' => $validated['giftMessage'] ?? null,
@@ -154,10 +160,19 @@ class CheckoutController extends Controller
                 $voucher['promotion']->increment('used_count');
             }
 
+            OrderEvent::log($order, OrderEvent::TYPE_ORDER_CREATED, null, 'pending', $request->user(), [
+                'channel' => 'Website',
+                'payment_due_at' => $paymentDueAt?->toIso8601String(),
+            ]);
+
             return $order;
         });
 
         Cache::forget('pending-orders-count');
+
+        // Email dikirim setelah transaksi commit; kegagalan SMTP ditangani
+        // OrderNotifier dan tidak membatalkan pesanan.
+        OrderNotifier::orderPlaced($order);
 
         $catalog = $order->load(['items', 'paymentMethod'])->toCatalog();
         $catalog['trackingUrl'] = route('order.track.token', $order->tracking_token);

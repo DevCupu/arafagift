@@ -40,7 +40,14 @@ class Inventory
             'document_number' => StockMovement::nextDocumentNumber($type),
         ]);
 
-        $product->update(['stock' => $balanceAfter]);
+        $update = ['stock' => $balanceAfter];
+
+        // Stok pulih di atas ambang: periode menipis berikutnya boleh memicu alert baru.
+        if ($balanceAfter > $product->low_stock_threshold) {
+            $update['low_stock_notified_at'] = null;
+        }
+
+        $product->update($update);
 
         return $movement;
     }

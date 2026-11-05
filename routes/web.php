@@ -12,6 +12,7 @@ use App\Http\Controllers\AdminOrderController;
 use App\Http\Controllers\AdminProductController;
 use App\Http\Controllers\AdminPromotionController;
 use App\Http\Controllers\AdminReportController;
+use App\Http\Controllers\AdminReviewController;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminSupplierController;
 use App\Http\Controllers\CheckoutController;
@@ -19,10 +20,12 @@ use App\Http\Controllers\CheckoutVoucherController;
 use App\Http\Controllers\CollectionController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LandingController;
 use App\Http\Controllers\OrderTrackingController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ProductReviewController;
 use App\Http\Controllers\ShippingController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\WishlistController;
@@ -52,18 +55,32 @@ Route::get('/lacak/{token}', [OrderTrackingController::class, 'showByToken'])
     ->where('token', '[A-Za-z0-9]{16,64}')
     ->middleware('throttle:30,1,lacak-token')
     ->name('order.track.token');
+Route::post('/lacak/{token}/bukti-bayar', [OrderTrackingController::class, 'uploadProof'])
+    ->where('token', '[A-Za-z0-9]{16,64}')
+    ->middleware('throttle:10,1,lacak-bukti')
+    ->name('order.track.proof');
+Route::get('/lacak/{token}/invoice', [InvoiceController::class, 'token'])
+    ->where('token', '[A-Za-z0-9]{16,64}')
+    ->middleware('throttle:30,1,lacak-invoice')
+    ->name('order.track.invoice');
+Route::post('/lacak/{token}/batal', [OrderTrackingController::class, 'cancel'])
+    ->where('token', '[A-Za-z0-9]{16,64}')
+    ->middleware('throttle:10,1,lacak-batal')
+    ->name('order.track.cancel');
 Route::get('/tentang', [PageController::class, 'about'])->name('about');
 Route::get('/faq', [PageController::class, 'faq'])->name('faq');
 Route::get('/legal/{slug}', [PageController::class, 'legal'])->name('legal');
 
 // ---------- Customer account (authed customers only) ----------
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/akun', [AccountProfileController::class, 'edit'])->name('account');
     Route::put('/akun', [AccountProfileController::class, 'update'])->name('account.update');
     Route::put('/akun/kata-sandi', [AccountProfileController::class, 'updatePassword'])->name('account.password');
 
     Route::get('/akun/pesanan', [AccountOrderController::class, 'index'])->name('account.orders');
     Route::get('/akun/pesanan/{order:order_number}', [AccountOrderController::class, 'show'])->name('account.order');
+
+    Route::post('/akun/pesanan/{order:order_number}/batal', [AccountOrderController::class, 'cancel'])->name('account.order.cancel');
 
     Route::get('/akun/alamat', [AccountAddressController::class, 'index'])->name('account.address');
     Route::post('/akun/alamat', [AccountAddressController::class, 'store'])->name('account.address.store');
@@ -72,6 +89,8 @@ Route::middleware('auth')->group(function () {
     Route::patch('/akun/alamat/{address}/utama', [AccountAddressController::class, 'setPrimary'])->name('account.address.primary');
 
     Route::get('/akun/wishlist', [WishlistController::class, 'index'])->name('account.wishlist');
+    Route::post('/produk/{product:slug}/ulasan', [ProductReviewController::class, 'store'])->middleware('throttle:5,1,ulasan')->name('product.review.store');
+    Route::get('/akun/pesanan/{order:order_number}/invoice', [InvoiceController::class, 'account'])->name('account.order.invoice');
     Route::post('/wishlist/{product}/toggle', [WishlistController::class, 'toggle'])->name('wishlist.toggle');
 });
 
@@ -84,10 +103,17 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/pesanan/ekspor', [AdminOrderController::class, 'export'])->name('admin.orders.export');
     Route::patch('/admin/pesanan/{order_number}/pulihkan', [AdminOrderController::class, 'restore'])->name('admin.order.restore');
     Route::delete('/admin/pesanan/bulk', [AdminOrderController::class, 'bulkDestroy'])->name('admin.orders.bulkDestroy');
+    Route::get('/admin/bukti-bayar/{confirmation}', [AdminOrderController::class, 'paymentProof'])->name('admin.payment.proof');
+    Route::post('/admin/pesanan/{order:order_number}/pembayaran/{confirmation}/verifikasi', [AdminOrderController::class, 'verifyPayment'])->name('admin.order.payment.verify');
+    Route::post('/admin/pesanan/{order:order_number}/pembayaran/{confirmation}/tolak', [AdminOrderController::class, 'rejectPayment'])->name('admin.order.payment.reject');
     Route::get('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'show'])->name('admin.order');
     Route::put('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'update'])->name('admin.order.update');
     Route::patch('/admin/pesanan/{order:order_number}/pembayaran', [AdminOrderController::class, 'updatePayment'])->name('admin.order.payment');
     Route::delete('/admin/pesanan/{order:order_number}', [AdminOrderController::class, 'destroy'])->name('admin.order.destroy');
+    Route::get('/admin/ulasan', [AdminReviewController::class, 'index'])->name('admin.reviews');
+    Route::put('/admin/ulasan/{review}', [AdminReviewController::class, 'update'])->name('admin.reviews.update');
+    Route::delete('/admin/ulasan/{review}', [AdminReviewController::class, 'destroy'])->name('admin.reviews.destroy');
+    Route::get('/admin/pesanan/{order:order_number}/invoice', [InvoiceController::class, 'admin'])->name('admin.order.invoice');
     Route::get('/admin/produk', [AdminProductController::class, 'index'])->name('admin.products');
     Route::get('/admin/produk/baru', [AdminProductController::class, 'create'])->name('admin.products.new');
     Route::post('/admin/produk', [AdminProductController::class, 'store'])->name('admin.products.store');

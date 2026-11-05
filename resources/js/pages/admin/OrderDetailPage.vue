@@ -4,20 +4,31 @@ export default { layout: AdminLayout }
 </script>
 
 <script setup>
+import { computed, ref } from 'vue'
 import { Link, router, useForm } from '@inertiajs/vue3'
-import { ArrowLeft, Printer, Trash2 } from 'lucide-vue-next'
+import { ArrowLeft, Check, ExternalLink, FileText, MessageCircle, Printer, ShieldCheck, Trash2, X } from 'lucide-vue-next'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
 import AppButton from '@/components/ui/AppButton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
-import { orderStatuses, orderTotal, paymentStatusMeta, paymentStatuses, fulfillmentMeta } from '@/data/admin'
+import { orderStatuses, orderTotal, orderValueLabel, paymentPillClass, paymentStatusMeta, manualPaymentStatuses, fulfillmentMeta } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
+import { buildWhatsAppHref } from '@/composables/whatsapp'
 import { useToast } from '@/composables/useToast'
 
 const props = defineProps({ order: { type: Object, default: null } })
 const { push } = useToast()
 const order = props.order
 const isPickup = order?.fulfillment === 'pickup'
+
+const paymentReference = ref(order?.paymentReference ?? '')
+const paymentProofs = computed(() => order?.paymentProofs ?? [])
+const isWaitingVerification = computed(() => order?.paymentStatus === 'waiting_confirmation')
+const isOverdue = computed(() =>
+  !!order?.paymentDueAt
+  && order.paymentStatus === 'unpaid'
+  && new Date(order.paymentDueAt).getTime() < Date.now(),
+)
 
 const form = useForm({
   status: order?.status ?? 'pending',
@@ -27,11 +38,61 @@ const form = useForm({
 })
 
 const markPayment = (status) => {
-  router.patch(`/admin/pesanan/${order.id}/pembayaran`, { payment_status: status }, {
+  router.patch(`/admin/pesanan/${order.id}/pembayaran`, {
+    payment_status: status,
+    payment_reference: paymentReference.value || null,
+  }, {
     preserveScroll: true,
     onSuccess: () => push(`Pembayaran ${order.id}: ${paymentStatusMeta(status).label}`, { tone: 'success' }),
   })
 }
+
+const verifyProof = (proof) => {
+  router.post(`/admin/pesanan/${order.id}/pembayaran/${proof.id}/verifikasi`, {
+    payment_reference: paymentReference.value || null,
+  }, {
+    preserveScroll: true,
+    onSuccess: () => push(`Pembayaran ${order.id} diverifikasi`, { tone: 'success' }),
+  })
+}
+
+const rejectingProofId = ref(null)
+const rejectionReason = ref('')
+const rejectionProcessing = ref(false)
+
+const startReject = (proof) => {
+  rejectingProofId.value = proof.id
+  rejectionReason.value = ''
+}
+
+const cancelReject = () => {
+  rejectingProofId.value = null
+  rejectionReason.value = ''
+}
+
+const rejectProof = (proof) => {
+  const reason = rejectionReason.value.trim()
+  if (!reason) return
+
+  router.post(`/admin/pesanan/${order.id}/pembayaran/${proof.id}/tolak`, {
+    rejection_reason: reason,
+  }, {
+    preserveScroll: true,
+    onStart: () => { rejectionProcessing.value = true },
+    onFinish: () => { rejectionProcessing.value = false },
+    onSuccess: () => {
+      cancelReject()
+      push(`Bukti pembayaran ${order.id} ditolak`, { tone: 'success' })
+    },
+  })
+}
+
+const customerWaHref = computed(() =>
+  buildWhatsAppHref(
+    order?.phone,
+    `Halo ${order?.customer ?? 'kak'}, kami dari ArafahGift ingin mengonfirmasi pembayaran pesanan ${order?.id ?? ''}.`,
+  ),
+)
 
 const save = () => {
   form.put(`/admin/pesanan/${order.id}`, {
@@ -115,12 +176,16 @@ const printLabel = () => {
         <span class="rounded-full border border-line bg-ivory px-3 py-1 text-[0.72rem] font-semibold text-forest">{{ fulfillmentMeta(order.fulfillment).label }}</span>
         <span
           class="rounded-full border px-3 py-1 text-[0.72rem] font-semibold"
-          :class="order.paymentStatus === 'paid' ? 'border-olive/40 bg-olive/10 text-olive' : order.paymentStatus === 'refunded' ? 'border-line bg-ivory text-muted' : 'border-gold/45 bg-gold/10 text-forest'"
+          :class="paymentPillClass(order.paymentStatus)"
         >{{ paymentStatusMeta(order.paymentStatus).label }}</span>
         <StatusPill :status="order.status" />
         <AppButton variant="quiet" size="sm" @click="printLabel">
           <template #icon><Printer class="h-3.5 w-3.5" /></template>
           Cetak label
+        </AppButton>
+        <AppButton :href="`/admin/pesanan/${order.id}/invoice`" variant="quiet" size="sm" target="_blank" rel="noopener">
+          <template #icon><FileText class="h-3.5 w-3.5" /></template>
+          Invoice
         </AppButton>
       </div>
     </header>
@@ -152,24 +217,140 @@ const printLabel = () => {
 
       <div class="space-y-6">
         <section class="border border-line bg-surface p-6">
-          <div class="flex items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 class="font-display text-2xl">Pembayaran</h2>
             <span
               class="rounded-full border px-2.5 py-0.5 text-[0.7rem] font-semibold"
-              :class="order.paymentStatus === 'paid' ? 'border-olive/40 bg-olive/10 text-olive' : order.paymentStatus === 'refunded' ? 'border-line bg-ivory text-muted' : 'border-gold/45 bg-gold/10 text-forest'"
+              :class="paymentPillClass(order.paymentStatus)"
             >{{ paymentStatusMeta(order.paymentStatus).label }}</span>
           </div>
           <p class="mt-4 text-[0.9rem] font-semibold text-forest">{{ order.payment }}</p>
           <p v-if="order.paymentNote" class="mt-0.5 text-[0.75rem] text-muted">{{ order.paymentNote }}</p>
-          <p v-if="order.paymentInstructions" class="mt-3 whitespace-pre-line border border-line bg-ivory/50 px-3 py-2.5 text-[0.78rem] leading-relaxed text-muted">{{ order.paymentInstructions }}</p>
+
+          <div class="mt-4 space-y-2 border-y border-line py-3 text-[0.8rem]">
+            <div v-if="order.paymentDueAt" class="flex items-center justify-between gap-3">
+              <span class="text-muted">Batas bayar</span>
+              <span :class="isOverdue ? 'font-semibold text-danger' : 'text-forest'">{{ formatDateTime(order.paymentDueAt) }}</span>
+            </div>
+            <div v-if="order.paymentConfirmedAt" class="flex items-center justify-between gap-3">
+              <span class="text-muted">Dikonfirmasi</span>
+              <span class="text-forest">{{ formatDateTime(order.paymentConfirmedAt) }}</span>
+            </div>
+            <p v-if="isOverdue" class="flex items-start gap-2 border border-danger/30 bg-danger/5 p-2 text-[0.75rem] leading-relaxed text-danger">
+              <ShieldCheck class="mt-0.5 h-3.5 w-3.5 flex-none" :stroke-width="1.5" />
+              Batas bayar sudah lewat. Pesanan otomatis dibatalkan bila pelanggan belum membayar.
+            </p>
+          </div>
+
+          <label class="field-label mt-4" for="paymentReference">Referensi / berita transfer</label>
+          <input id="paymentReference" v-model="paymentReference" class="field" maxlength="100" placeholder="Contoh: BSI 123456789 a.n. Budi" />
+
+          <div v-if="paymentProofs.length" class="mt-4 space-y-3">
+            <p class="text-[0.7rem] uppercase tracking-[0.12em] text-muted">Bukti pembayaran ({{ paymentProofs.length }})</p>
+            <article v-for="proof in paymentProofs" :key="proof.id" class="border border-line bg-ivory/40 p-3">
+              <div class="flex flex-wrap items-start justify-between gap-2">
+                <div class="min-w-0">
+                  <a
+                    :href="proof.url" target="_blank" rel="noopener"
+                    class="inline-flex max-w-full items-center gap-1.5 text-[0.82rem] font-medium text-forest underline underline-offset-4"
+                  >
+                    <FileText class="h-3.5 w-3.5 flex-none" :stroke-width="1.5" />
+                    <span class="truncate">{{ proof.fileName }}</span>
+                    <ExternalLink class="h-3 w-3 flex-none" :stroke-width="1.5" />
+                  </a>
+                  <p class="mt-1 text-[0.72rem] text-muted">
+                    {{ formatDateTime(proof.submittedAt) }}
+                    <span v-if="proof.amount"> · {{ formatIDR(proof.amount) }}</span>
+                    <span v-if="proof.senderName"> · a.n. {{ proof.senderName }}</span>
+                  </p>
+                  <p v-if="proof.note" class="mt-1 text-[0.75rem] text-muted">{{ proof.note }}</p>
+                </div>
+                <span
+                  class="rounded-full border px-2 py-0.5 text-[0.66rem] font-semibold uppercase tracking-[0.06em]"
+                  :class="proof.status === 'verified'
+                    ? 'border-olive/40 bg-olive/10 text-olive'
+                    : proof.status === 'rejected'
+                      ? 'border-danger/30 bg-danger/10 text-danger'
+                      : 'border-sky-300 bg-sky-50 text-sky-800'"
+                >{{ proof.statusLabel }}</span>
+              </div>
+
+              <p v-if="proof.rejectionReason" class="mt-2 text-[0.75rem] text-danger">Alasan: {{ proof.rejectionReason }}</p>
+              <p v-if="proof.reviewer && proof.reviewedAt" class="mt-1 text-[0.7rem] text-muted">Ditinjau {{ proof.reviewer }} · {{ formatDateTime(proof.reviewedAt) }}</p>
+
+              <div v-if="proof.status === 'submitted' && isWaitingVerification" class="mt-3">
+                <div v-if="rejectingProofId !== proof.id" class="flex flex-wrap gap-2">
+                  <AppButton size="sm" @click="verifyProof(proof)">
+                    <template #icon><Check class="h-3.5 w-3.5" /></template>
+                    Verifikasi &amp; lunas
+                  </AppButton>
+                  <AppButton size="sm" variant="outline" @click="startReject(proof)">
+                    <template #icon><X class="h-3.5 w-3.5" /></template>
+                    Tolak
+                  </AppButton>
+                </div>
+
+                <div v-else class="border border-danger/30 bg-danger/5 p-3">
+                  <label class="field-label" :for="`reject-${proof.id}`">Alasan penolakan</label>
+                  <textarea
+                    :id="`reject-${proof.id}`"
+                    v-model="rejectionReason"
+                    rows="2"
+                    maxlength="255"
+                    class="field"
+                    placeholder="Contoh: nominal transfer tidak sesuai total pesanan."
+                  />
+                  <p class="mt-1 text-[0.72rem] text-muted">Alasan ini akan terlihat pelanggan di halaman lacak pesanan.</p>
+                  <div class="mt-2 flex flex-wrap gap-2">
+                    <AppButton
+                      size="sm"
+                      variant="outline"
+                      :loading="rejectionProcessing"
+                      :disabled="!rejectionReason.trim()"
+                      @click="rejectProof(proof)"
+                    >Kirim penolakan</AppButton>
+                    <AppButton size="sm" variant="quiet" :disabled="rejectionProcessing" @click="cancelReject">Batal</AppButton>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+          <p v-else class="mt-4 text-[0.78rem] text-muted">Belum ada bukti pembayaran yang diunggah pelanggan.</p>
+
+          <p v-if="order.paymentInstructions" class="mt-4 whitespace-pre-line border border-line bg-ivory/50 px-3 py-2.5 text-[0.78rem] leading-relaxed text-muted">{{ order.paymentInstructions }}</p>
+
           <div class="mt-4 flex flex-wrap gap-2">
             <AppButton
-              v-for="s in paymentStatuses" :key="s.id" size="sm"
+              v-for="s in manualPaymentStatuses" :key="s.id" size="sm"
               :variant="order.paymentStatus === s.id ? 'primary' : 'outline'"
               :disabled="order.paymentStatus === s.id"
               @click="markPayment(s.id)"
             >{{ s.label }}</AppButton>
           </div>
+
+          <a
+            :href="customerWaHref" target="_blank" rel="noopener"
+            class="mt-3 inline-flex items-center gap-1.5 text-[0.78rem] text-forest underline underline-offset-4"
+          >
+            <MessageCircle class="h-3.5 w-3.5" :stroke-width="1.5" /> Chat pelanggan via WhatsApp
+          </a>
+        </section>
+
+        <section v-if="order.events?.length" class="border border-line bg-surface p-6">
+          <h2 class="font-display text-2xl">Riwayat</h2>
+          <ol class="mt-4 space-y-3">
+            <li v-for="event in order.events" :key="event.id" class="flex gap-3 text-[0.8rem]">
+              <span class="mt-1.5 h-1.5 w-1.5 flex-none rotate-45 bg-gold" />
+              <div class="min-w-0">
+                <p class="text-forest">
+                  {{ event.label }}
+                  <span v-if="event.from || event.to" class="text-muted">· {{ orderValueLabel(event.from) }} → {{ orderValueLabel(event.to) }}</span>
+                </p>
+                <p class="text-[0.72rem] text-muted">{{ formatDateTime(event.at) }} · {{ event.actor }}</p>
+                <p v-if="event.meta?.reason" class="mt-0.5 text-[0.72rem] text-muted">{{ event.meta.reason }}</p>
+              </div>
+            </li>
+          </ol>
         </section>
 
         <section class="border border-line bg-surface p-6">

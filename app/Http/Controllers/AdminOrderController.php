@@ -3,14 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\OrderItem;
+use App\Models\OrderEvent;
+use App\Models\PaymentConfirmation;
 use App\Models\Product;
-use App\Services\Inventory;
+use App\Services\OrderLifecycle;
+use App\Services\OrderNotifier;
 use App\Services\OrderPricing;
+use App\Services\OrderStock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,9 +27,16 @@ class AdminOrderController extends Controller
 
     public function index(): Response
     {
+        OrderLifecycle::sweepIfDue();
+
         return Inertia::render('admin/OrdersPage', [
-            'orders' => Order::with(['items', 'shippingMethod', 'paymentMethod'])->latest()->get()->map->toCatalog()->values(),
-            'trashedOrders' => Order::onlyTrashed()->with(['items', 'shippingMethod', 'paymentMethod'])->latest('deleted_at')->limit(20)->get()->map->toCatalog()->values(),
+            'orders' => Order::with(['items', 'shippingMethod', 'paymentMethod', 'latestPaymentConfirmation'])
+                ->latest()
+                ->get()
+                ->map->toCatalog()
+                ->values(),
+            'trashedOrders' => Order::onlyTrashed()->with(['items', 'shippingMethod', 'paymentMethod'])
+                ->latest('deleted_at')->limit(20)->get()->map->toCatalog()->values(),
         ]);
     }
 
@@ -60,6 +71,8 @@ class AdminOrderController extends Controller
         $shippingCost = (float) ($validated['shippingCost'] ?? 0);
 
         $order = DB::transaction(function () use ($validated, $priced, $shippingCost, $request): Order {
+            $paid = in_array($validated['status'], ['paid', 'processing', 'shipped', 'completed'], true);
+
             $order = Order::create([
                 'order_number' => OrderPricing::nextOrderNumber(),
                 'tracking_token' => OrderPricing::trackingToken(),
@@ -73,7 +86,10 @@ class AdminOrderController extends Controller
                 'note' => $validated['note'] ?? null,
                 'admin_note' => $validated['adminNote'] ?? null,
                 'status' => $validated['status'],
-                'payment_status' => in_array($validated['status'], ['paid', 'processing', 'shipped', 'completed'], true) ? 'paid' : 'unpaid',
+                'payment_status' => $paid ? 'paid' : 'unpaid',
+                // Pesanan yang dibuat admin tidak punya batas bayar otomatis:
+                // pembayarannya disepakati langsung dengan pelanggan.
+                'payment_confirmed_at' => $paid ? now() : null,
                 'fulfillment_type' => 'delivery',
                 'channel' => 'Admin',
                 'shipping_cost' => $shippingCost,
@@ -92,6 +108,16 @@ class AdminOrderController extends Controller
                 ]);
             }
 
+            OrderEvent::log($order, OrderEvent::TYPE_ORDER_CREATED, null, $validated['status'], $request->user(), [
+                'channel' => 'Admin',
+            ]);
+
+            if ($paid) {
+                OrderEvent::log($order, OrderEvent::TYPE_PAYMENT_STATUS_CHANGED, 'unpaid', 'paid', $request->user(), [
+                    'reason' => 'dibuat admin',
+                ]);
+            }
+
             // Pesanan customer selalu mulai dari 'pending' (belum potong stok) — pesanan manual admin
             // bisa langsung dibuat dengan status lebih maju, jadi potong stok kalau perlu.
             $this->syncStock($order, 'pending', $validated['status'], $request->user()->id);
@@ -101,33 +127,201 @@ class AdminOrderController extends Controller
 
         Cache::forget('pending-orders-count');
 
+        // Admin yang membuat pesanan tidak perlu salinan email "pesanan baru",
+        // tapi pelanggan tetap dapat konfirmasi kalau emailnya diisi.
+        OrderNotifier::orderPlaced($order, notifyAdmin: false);
+
         return redirect()->route('admin.order', $order)->with('success', "Pesanan {$order->order_number} dibuat");
     }
 
     public function show(Order $order): Response
     {
+        OrderLifecycle::sweepIfDue();
+
+        $order->load([
+            'items',
+            'shippingMethod',
+            'paymentMethod',
+            'paymentConfirmations' => fn ($query) => $query->latest(),
+            'paymentConfirmations.reviewer',
+            'latestPaymentConfirmation',
+            'events.actor',
+        ]);
+
         return Inertia::render('admin/OrderDetailPage', [
-            'order' => $order->load(['items', 'shippingMethod', 'paymentMethod'])->toCatalog(),
+            'order' => $order->toCatalog(),
         ]);
     }
 
     public function updatePayment(Request $request, Order $order): RedirectResponse
     {
         $validated = $request->validate([
-            'payment_status' => ['required', Rule::in(['unpaid', 'paid', 'refunded'])],
+            'payment_status' => ['required', Rule::in(OrderLifecycle::PAYMENT_STATUSES)],
+            'payment_reference' => ['nullable', 'string', 'max:100'],
         ]);
 
-        $order->update(['payment_status' => $validated['payment_status']]);
+        $previous = $order->payment_status ?? 'unpaid';
 
-        $label = ['unpaid' => 'Belum bayar', 'paid' => 'Lunas', 'refunded' => 'Refund'][$validated['payment_status']];
+        OrderLifecycle::changePaymentStatus(
+            $order,
+            $validated['payment_status'],
+            $request->user(),
+            $validated['payment_reference'] ?? null,
+        );
+
+        if ($validated['payment_status'] === 'paid' && $previous !== 'paid') {
+            OrderNotifier::paymentVerified($order);
+        }
+
+        $label = match ($validated['payment_status']) {
+            'paid' => 'Lunas',
+            'refunded' => 'Refund',
+            'waiting_confirmation' => 'Menunggu verifikasi',
+            default => 'Belum bayar',
+        };
+
+        Cache::forget('pending-orders-count');
 
         return back()->with('success', "Pembayaran {$order->order_number} ditandai: {$label}.");
+    }
+
+    /**
+     * Admin memverifikasi bukti bayar: pesanan langsung lunas, bukti lain yang
+     * masih menunggu otomatis ditolak supaya tidak ada dua bukti aktif.
+     */
+    public function verifyPayment(Request $request, Order $order, PaymentConfirmation $confirmation): RedirectResponse
+    {
+        abort_unless($confirmation->order_id === $order->id, 404);
+
+        $validated = $request->validate([
+            'payment_reference' => ['nullable', 'string', 'max:100'],
+        ]);
+
+        if ($confirmation->status === PaymentConfirmation::STATUS_VERIFIED) {
+            return back()->with('success', 'Bukti pembayaran ini sudah diverifikasi sebelumnya.');
+        }
+
+        DB::transaction(function () use ($request, $order, $confirmation, $validated): void {
+            $confirmation->update([
+                'status' => PaymentConfirmation::STATUS_VERIFIED,
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+                'rejection_reason' => null,
+            ]);
+
+            $order->paymentConfirmations()
+                ->whereKeyNot($confirmation->id)
+                ->where('status', PaymentConfirmation::STATUS_SUBMITTED)
+                ->update([
+                    'status' => PaymentConfirmation::STATUS_REJECTED,
+                    'rejection_reason' => 'Digantikan bukti lain yang sudah diverifikasi.',
+                    'reviewed_by' => $request->user()->id,
+                    'reviewed_at' => now(),
+                ]);
+
+            OrderLifecycle::changePaymentStatus(
+                $order,
+                'paid',
+                $request->user(),
+                $validated['payment_reference'] ?? null,
+                'Bukti pembayaran diverifikasi',
+            );
+
+            OrderEvent::log($order, OrderEvent::TYPE_PAYMENT_VERIFIED, null, null, $request->user(), [
+                'confirmation_id' => $confirmation->id,
+                'amount' => $confirmation->amount,
+                'sender_name' => $confirmation->sender_name,
+            ]);
+        });
+
+        Cache::forget('pending-orders-count');
+
+        OrderNotifier::paymentVerified($order);
+
+        return back()->with('success', "Pembayaran {$order->order_number} diverifikasi dan ditandai lunas.");
+    }
+
+    public function rejectPayment(Request $request, Order $order, PaymentConfirmation $confirmation): RedirectResponse
+    {
+        abort_unless($confirmation->order_id === $order->id, 404);
+
+        $validated = $request->validate([
+            'rejection_reason' => ['required', 'string', 'max:255'],
+        ], [
+            'rejection_reason.required' => 'Tulis alasan penolakan agar pelanggan tahu apa yang harus diperbaiki.',
+        ]);
+
+        DB::transaction(function () use ($request, $order, $confirmation, $validated): void {
+            $confirmation->update([
+                'status' => PaymentConfirmation::STATUS_REJECTED,
+                'reviewed_by' => $request->user()->id,
+                'reviewed_at' => now(),
+                'rejection_reason' => $validated['rejection_reason'],
+            ]);
+
+            $hasOtherProof = $order->paymentConfirmations()
+                ->where('status', PaymentConfirmation::STATUS_SUBMITTED)
+                ->exists();
+
+            if (! $hasOtherProof && $order->payment_status === 'waiting_confirmation') {
+                OrderLifecycle::changePaymentStatus(
+                    $order,
+                    'unpaid',
+                    $request->user(),
+                    null,
+                    $validated['rejection_reason'],
+                );
+
+                // Kalau tenggat lama sudah lewat (atau tidak ada), mulai ulang
+                // supaya pelanggan sempat mengunggah bukti pengganti.
+                if ($order->payment_due_at === null || $order->payment_due_at->isPast()) {
+                    OrderLifecycle::extendPaymentWindow($order);
+                }
+            }
+
+            OrderEvent::log($order, OrderEvent::TYPE_PAYMENT_REJECTED, null, null, $request->user(), [
+                'confirmation_id' => $confirmation->id,
+                'reason' => $validated['rejection_reason'],
+            ]);
+        });
+
+        Cache::forget('pending-orders-count');
+
+        OrderNotifier::paymentRejected($order, $validated['rejection_reason']);
+
+        return back()->with('success', "Bukti pembayaran {$order->order_number} ditolak. Pelanggan bisa mengunggah ulang.");
+    }
+
+    /**
+     * Bukti bayar disimpan di disk private, jadi hanya admin yang login yang
+     * bisa membukanya. Header no-store mencegah file tersimpan di cache browser
+     * atau proxy.
+     */
+    public function paymentProof(PaymentConfirmation $confirmation): StreamedResponse
+    {
+        abort_unless(Storage::disk('local')->exists($confirmation->path), 404);
+
+        // Hanya tipe yang memang diizinkan saat unggah. Data lama bisa saja
+        // menyimpan MIME dari klien, jadi jangan langsung percaya kolom itu.
+        $mime = in_array($confirmation->mime, ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'], true)
+            ? $confirmation->mime
+            : 'application/octet-stream';
+
+        return Storage::disk('local')->response(
+            $confirmation->path,
+            $confirmation->original_name ?: basename($confirmation->path),
+            [
+                'Content-Type' => $mime,
+                'Cache-Control' => 'private, no-store, max-age=0',
+                'X-Content-Type-Options' => 'nosniff',
+            ],
+        );
     }
 
     public function destroy(Request $request, Order $order): RedirectResponse
     {
         DB::transaction(function () use ($order, $request): void {
-            $this->restoreDeductedStock($order, $request->user()->id);
+            OrderStock::restore($order, $request->user()->id);
             $order->delete();
         });
 
@@ -147,7 +341,7 @@ class AdminOrderController extends Controller
 
         DB::transaction(function () use ($orders, $request): void {
             foreach ($orders as $order) {
-                $this->restoreDeductedStock($order, $request->user()->id);
+                OrderStock::restore($order, $request->user()->id);
                 $order->delete();
             }
         });
@@ -182,7 +376,7 @@ class AdminOrderController extends Controller
                 throw new RuntimeException('Tidak dapat membuka output untuk ekspor CSV.');
             }
 
-            fputcsv($out, ['No. Pesanan', 'Tanggal', 'Pelanggan', 'Email', 'Telepon', 'Tipe', 'Status', 'Status Bayar', 'Pembayaran', 'Kanal', 'Barang Terjual', 'Subtotal', 'Diskon', 'Ongkir', 'Total', 'Alamat']);
+            fputcsv($out, ['No. Pesanan', 'Tanggal', 'Pelanggan', 'Email', 'Telepon', 'Tipe', 'Status', 'Status Bayar', 'Batas Bayar', 'Referensi Bayar', 'Pembayaran', 'Kanal', 'Barang Terjual', 'Subtotal', 'Diskon', 'Ongkir', 'Total', 'Alamat']);
 
             Order::with(['items', 'shippingMethod', 'paymentMethod'])->latest()->cursor()->each(function (Order $order) use ($out): void {
                 fputcsv($out, [
@@ -194,6 +388,8 @@ class AdminOrderController extends Controller
                     $order->isPickup() ? 'Ambil di Tempat' : 'Diantar',
                     $order->status,
                     $order->payment_status ?? 'unpaid',
+                    $order->payment_due_at?->toDateTimeString() ?? '',
+                    $order->payment_reference ?? '',
                     optional($order->paymentMethod)->name ?? '',
                     $order->channel ?? '',
                     $order->items->sum(fn ($item) => (int) $item->qty),
@@ -220,6 +416,9 @@ class AdminOrderController extends Controller
             'adminNote' => ['nullable', 'string', 'max:2000'],
         ]);
 
+        $previousStatus = $order->status;
+        $previousPayment = $order->payment_status ?? 'unpaid';
+
         $update = [
             'status' => $validated['status'],
             'awb' => $validated['awb'] ?? null,
@@ -228,9 +427,10 @@ class AdminOrderController extends Controller
 
         // Status pesanan yang lebih maju menandakan pembayaran sudah diterima, kecuali
         // admin sudah menandainya refund.
-        if (($order->payment_status ?? 'unpaid') === 'unpaid'
+        if (in_array($previousPayment, ['unpaid', 'waiting_confirmation'], true)
             && in_array($validated['status'], ['paid', 'processing', 'shipped', 'completed'], true)) {
             $update['payment_status'] = 'paid';
+            $update['payment_confirmed_at'] = $order->payment_confirmed_at ?? now();
         }
 
         if (array_key_exists('shippingCost', $validated) && $validated['shippingCost'] !== null) {
@@ -238,10 +438,20 @@ class AdminOrderController extends Controller
             $update['total'] = $order->subtotal - (int) $order->discount_total + $validated['shippingCost'];
         }
 
-        DB::transaction(function () use ($order, $update, $validated, $request): void {
-            $previous = $order->status;
+        DB::transaction(function () use ($order, $update, $validated, $request, $previousStatus, $previousPayment): void {
             $order->update($update);
-            $this->syncStock($order, $previous, $validated['status'], $request->user()->id);
+
+            if ($previousStatus !== $validated['status']) {
+                OrderEvent::log($order, OrderEvent::TYPE_STATUS_CHANGED, $previousStatus, $validated['status'], $request->user());
+            }
+
+            if (isset($update['payment_status']) && $previousPayment !== $update['payment_status']) {
+                OrderEvent::log($order, OrderEvent::TYPE_PAYMENT_STATUS_CHANGED, $previousPayment, $update['payment_status'], $request->user(), [
+                    'reason' => 'status pesanan diperbarui',
+                ]);
+            }
+
+            $this->syncStock($order, $previousStatus, $validated['status'], $request->user()->id);
         });
 
         Cache::forget('pending-orders-count');
@@ -251,84 +461,21 @@ class AdminOrderController extends Controller
 
     /**
      * Potong stok saat pesanan masuk ke processing/shipped dan kembalikan saat dibatalkan.
-     * Idempoten: gerakan unik per (produk, nomor pesanan, jenis).
      */
-    private function syncStock(Order $order, string $from, string $to, int $userId): void
+    private function syncStock(Order $order, string $from, string $to, ?int $userId): void
     {
         if ($from === $to) {
             return;
         }
 
-        $items = $order->items()->whereNotNull('product_id')->with('product')->get();
-
         if (in_array($to, self::STOCK_DEDUCT_STATES, true)) {
-            foreach ($items as $item) {
-                if (! $item->product || $this->isCurrentlyDeducted($item, $order)) {
-                    continue;
-                }
-
-                Inventory::lock($item->product, fn (Product $locked) => Inventory::apply(
-                    $locked,
-                    'sale',
-                    -(int) $item->qty,
-                    $userId,
-                    null,
-                    "Pesanan {$order->order_number}",
-                    $order->order_number,
-                ));
-            }
+            OrderStock::deduct($order, $userId);
 
             return;
         }
 
         if ($to === 'cancelled') {
-            $this->restoreDeductedStock($order, $userId);
+            OrderStock::restore($order, $userId);
         }
-    }
-
-    /**
-     * Kembalikan stok yang sudah terpotong untuk pesanan ini (idempoten — aman dipanggil berkali-kali,
-     * atau untuk pesanan yang belum pernah potong stok sama sekali). Dipakai saat pesanan dibatalkan
-     * maupun saat pesanan dihapus, supaya angka stok tidak pernah "nyangkut" pada pesanan yang sudah tidak ada.
-     */
-    private function restoreDeductedStock(Order $order, int $userId): void
-    {
-        $items = $order->items()->whereNotNull('product_id')->with('product')->get();
-
-        foreach ($items as $item) {
-            if (! $item->product || ! $this->isCurrentlyDeducted($item, $order)) {
-                continue;
-            }
-
-            Inventory::lock($item->product, fn (Product $locked) => Inventory::apply(
-                $locked,
-                'sale_cancelled',
-                (int) $item->qty,
-                $userId,
-                null,
-                "Pesanan {$order->order_number} dihapus/dibatalkan",
-                $order->order_number,
-            ));
-        }
-    }
-
-    /**
-     * Apakah stok item ini SAAT INI masih dalam keadaan terpotong untuk pesanan ini — dihitung dari selisih
-     * jumlah gerakan 'sale' dan 'sale_cancelled', bukan sekadar "pernah ada gerakan sale", supaya siklus
-     * potong→kembalikan→potong lagi (mis. processing → dihapus → dipulihkan) tetap dihitung benar.
-     */
-    private function isCurrentlyDeducted(OrderItem $item, Order $order): bool
-    {
-        $deductedCount = $item->product->movements()
-            ->where('type', 'sale')
-            ->where('order_number', $order->order_number)
-            ->count();
-
-        $restoredCount = $item->product->movements()
-            ->where('type', 'sale_cancelled')
-            ->where('order_number', $order->order_number)
-            ->count();
-
-        return $deductedCount > $restoredCount;
     }
 }

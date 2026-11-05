@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Setting;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 
 class StoreSettingsCache
 {
@@ -50,8 +51,9 @@ class StoreSettingsCache
                 'bankAccountNumber' => $settings?->bank_account_number,
                 'bankAccountName' => $settings?->bank_account_name,
                 'paymentInstructions' => $settings?->payment_instructions,
+                'paymentWindowHours' => (int) ($settings?->payment_window_hours ?? 24),
                 'qrisImageUrl' => $settings?->qris_image_path
-                    ? \Illuminate\Support\Facades\Storage::disk('public')->url($settings->qris_image_path)
+                    ? Storage::disk('public')->url($settings->qris_image_path)
                     : null,
                 'metaTitle' => $settings?->meta_title,
                 'metaDescription' => $settings?->meta_description,

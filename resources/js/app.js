@@ -3,6 +3,7 @@ import { createApp, h } from 'vue'
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers'
 import { reveal } from './composables/useReveal'
 import StorefrontLayout from './layouts/StorefrontLayout.vue'
+import AnalyticsConsent from './components/storefront/AnalyticsConsent.vue'
 
 createInertiaApp({
   // Judul sudah dikirim lengkap dari server lewat prop seoHead (lihat PageSeo),
@@ -21,7 +22,16 @@ createInertiaApp({
     return page
   },
   setup({ el, App, props, plugin }) {
-    createApp({ render: () => h(App, props) })
+    // Banner consent hanya untuk storefront/checkout. Halaman admin tidak
+    // memuat analytics sama sekali.
+    const isAdminPage = String(props.initialPage?.component ?? '').startsWith('admin/')
+
+    createApp({
+      render: () => [
+        h(App, props),
+        isAdminPage ? null : h(AnalyticsConsent),
+      ],
+    })
       .use(plugin)
       .directive('reveal', reveal)
       .mount(el)

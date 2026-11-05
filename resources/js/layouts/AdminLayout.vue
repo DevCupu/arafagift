@@ -15,6 +15,7 @@ const SEG_LABELS = {
   produk: 'Produk',
   kategori: 'Kategori',
   pelanggan: 'Pelanggan',
+  ulasan: 'Ulasan',
   inventori: 'Inventori',
   supplier: 'Supplier',
   promo: 'Promo',

@@ -48,6 +48,20 @@
             />
         @endif
 
+        {{-- Konfigurasi analytics hanya dikirim sebagai data. Script GA4/Pixel
+             baru dimuat setelah pelanggan menyetujui banner cookie (lihat
+             AnalyticsConsent.vue). Halaman admin tidak perlu tracking. --}}
+        @php($analyticsStore = $page['props']['store'] ?? [])
+        @if (! str_starts_with((string) ($page['component'] ?? ''), 'admin/'))
+            @php($analyticsConfig = array_filter([
+                'ga4' => $analyticsStore['googleAnalyticsId'] ?? null,
+                'pixel' => $analyticsStore['facebookPixelId'] ?? null,
+            ]))
+            @if ($analyticsConfig)
+                <script>window.__ANALYTICS_CONFIG__ = @json($analyticsConfig);</script>
+            @endif
+        @endif
+
         @vite(['resources/css/app.css', 'resources/js/app.js', "resources/js/pages/{$page['component']}.vue"])
 
         {{-- Tag SEO per halaman dikirim controller sebagai prop `seoHead` (lihat

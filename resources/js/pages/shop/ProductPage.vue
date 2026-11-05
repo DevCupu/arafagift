@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Head, Link, router } from '@inertiajs/vue3'
+import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { Gift, Heart, PackageCheck, Truck } from 'lucide-vue-next'
 import AppBadge from '@/components/ui/AppBadge.vue'
 import AppButton from '@/components/ui/AppButton.vue'
@@ -12,12 +12,16 @@ import EmptyState from '@/components/ui/EmptyState.vue'
 import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 import { useWishlist } from '@/composables/useWishlist'
+import { track } from '@/composables/useAnalytics'
 import { productWhatsAppMessage } from '@/composables/useProductWhatsApp'
 import { useStore } from '@/composables/useStore'
 
 const props = defineProps({
   product: { type: Object, default: null },
   related: { type: Array, default: () => [] },
+  reviews: { type: Array, default: () => [] },
+  canReview: { type: Boolean, default: false },
+  myReview: { type: Object, default: null },
   seoHead: { type: Object, required: true },
 })
 const cart = useCart()
@@ -25,8 +29,35 @@ const wishlist = useWishlist()
 const { store, whatsappHref } = useStore()
 
 const qty = ref(1)
+
+// ── Ulasan ──
+const page = usePage()
+const reviewForm = useForm({ rating: 0, title: '', body: '' })
+const submitReview = () => {
+  reviewForm.post(`/produk/${props.product.slug}/ulasan`, {
+    preserveScroll: true,
+    onSuccess: () => reviewForm.reset(),
+  })
+}
 const tab = ref('deskripsi')
-watch(() => props.product?.slug, () => { qty.value = 1; tab.value = 'deskripsi' })
+watch(() => props.product?.slug, () => {
+  qty.value = 1
+  tab.value = 'deskripsi'
+
+  if (props.product) {
+    track('view_item', {
+      currency: 'IDR',
+      value: props.product.price,
+      items: [{
+        item_id: props.product.id,
+        item_name: props.product.name,
+        item_category: props.product.category,
+        price: props.product.price,
+        quantity: 1,
+      }],
+    })
+  }
+}, { immediate: true })
 
 const soldOut = computed(() => props.product?.stock === 0)
 const lowStock = computed(() => props.product && props.product.stock > 0 && props.product.stock <= (props.product.lowStock ?? 10))
@@ -48,9 +79,8 @@ const buyNow = () => {
 <template>
   <div v-if="product">
     <!-- Hanya judul. Meta, canonical, OG, dan JSON-LD Produk sudah dirender
-         server oleh ProductController::seoHead(). aggregateRating sengaja
-         tidak ada: kolom rating masih placeholder, dan Google menghitung
-         markup rating yang tidak didukung sebagai spam structured data. -->
+         server oleh ProductController::seoHead(), termasuk aggregateRating
+         yang hanya muncul bila ada ulasan yang disetujui. -->
     <Head :title="seoHead.title" />
     <div class="shell pt-8">
       <nav class="flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.14em] text-muted" aria-label="Breadcrumb">
@@ -79,7 +109,7 @@ const buyNow = () => {
         >{{ product.name }}</h1>
 
         <div class="mt-4 flex items-center gap-4">
-          <AppRating :value="product.rating" :count="product.reviews" size="md" />
+          <AppRating v-if="product.reviews" :value="product.rating" :count="product.reviews" size="md" />
           <a href="#ulasan" class="link-underline text-[0.78rem] text-muted" @click="tab = 'ulasan'">Baca ulasan</a>
         </div>
 
@@ -164,16 +194,47 @@ const buyNow = () => {
             <div class="flex flex-wrap items-center gap-6 border border-line bg-surface px-6 py-5">
               <div>
                 <p class="font-display text-4xl text-forest">{{ product.rating.toFixed(1) }}</p>
-                <AppRating :value="product.rating" class="mt-2" />
+                <AppRating v-if="product.reviews" :value="product.rating" class="mt-2" />
               </div>
-              <p class="text-[0.83rem] text-muted">Dari {{ product.reviews }} ulasan pembeli terverifikasi.</p>
-            </div>
-            <div class="mt-10 border border-dashed border-line px-6 py-12 text-center">
-              <p class="font-display text-xl text-forest">Ulasan akan ditampilkan di sini</p>
-              <p class="mt-2 text-[0.85rem] text-muted">
-                Cerita dari pembeli terverifikasi muncul di tab ini begitu sudah terkumpul.
+              <p class="text-[0.83rem] text-muted">
+                {{ product.reviews ? `Dari ${product.reviews} ulasan pembeli terverifikasi.` : 'Belum ada ulasan.' }}
               </p>
             </div>
+            <ul v-if="reviews.length" class="mt-8 divide-y divide-line border-y border-line">
+              <li v-for="r in reviews" :key="r.id" class="py-5">
+                <AppRating :value="r.rating" />
+                <p v-if="r.title" class="mt-2 font-display text-lg text-forest">{{ r.title }}</p>
+                <p class="mt-1 text-[0.88rem] leading-relaxed text-muted">{{ r.body }}</p>
+                <p class="mt-2 text-[0.72rem] text-muted">{{ r.author }} · pembeli terverifikasi</p>
+              </li>
+            </ul>
+            <div v-else class="mt-8 border border-dashed border-line px-6 py-12 text-center">
+              <p class="font-display text-xl text-forest">Belum ada ulasan</p>
+              <p class="mt-2 text-[0.85rem] text-muted">Jadilah yang pertama berbagi cerita setelah pesanan Anda sampai.</p>
+            </div>
+
+            <p v-if="myReview" class="mt-6 border border-gold/40 bg-gold/[0.08] p-4 text-[0.82rem] text-forest">
+              Ulasan Anda
+              {{ myReview.status === 'approved' ? 'sudah tayang.' : myReview.status === 'rejected' ? 'tidak dapat ditayangkan.' : 'sedang kami tinjau.' }}
+            </p>
+
+            <form v-else-if="canReview" class="mt-8 space-y-4 border border-line bg-surface p-6" @submit.prevent="submitReview">
+              <h3 class="font-display text-xl">Tulis ulasan</h3>
+              <div class="flex gap-1" role="radiogroup" aria-label="Rating">
+                <button
+                  v-for="n in 5" :key="n" type="button" role="radio" :aria-checked="reviewForm.rating === n"
+                  class="text-2xl leading-none transition" :class="n <= reviewForm.rating ? 'text-gold' : 'text-sand'"
+                  :aria-label="`${n} bintang`" @click="reviewForm.rating = n"
+                >★</button>
+              </div>
+              <p v-if="reviewForm.errors.rating" class="text-[0.72rem] text-danger">{{ reviewForm.errors.rating }}</p>
+              <input v-model="reviewForm.title" class="field" maxlength="120" placeholder="Judul (opsional)" />
+              <textarea v-model="reviewForm.body" class="field" rows="4" maxlength="2000" placeholder="Ceritakan pengalaman Anda" />
+              <p v-if="reviewForm.errors.body" class="text-[0.72rem] text-danger">{{ reviewForm.errors.body }}</p>
+              <p v-if="page.props.errors.review" class="text-[0.72rem] text-danger">{{ page.props.errors.review }}</p>
+              <AppButton type="submit" :loading="reviewForm.processing">Kirim ulasan</AppButton>
+            </form>
+            <p v-else class="mt-6 text-[0.78rem] text-muted">Ulasan dapat ditulis oleh pembeli setelah pesanan selesai.</p>
           </div>
         </div>
 

@@ -3,6 +3,7 @@
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Inventory;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['is_admin' => true]);
@@ -63,7 +64,7 @@ it('soft-deletes an order and restores stock that had been deducted', function (
     $product = Product::factory()->create(['stock' => 10]);
     $order = Order::factory()->create(['status' => 'processing']);
     $order->items()->create(['product_id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'art' => $product->art, 'qty' => 4, 'price' => $product->price]);
-    \App\Services\Inventory::lock($product, fn ($p) => \App\Services\Inventory::apply($p, 'sale', -4, $this->admin->id, null, 'test', $order->order_number));
+    Inventory::lock($product, fn ($p) => Inventory::apply($p, 'sale', -4, $this->admin->id, null, 'test', $order->order_number));
 
     expect($product->fresh()->stock)->toBe(6);
 
@@ -88,7 +89,7 @@ it('lets an admin restore a deleted order without crashing, even for an already-
     $product = Product::factory()->create(['stock' => 10]);
     $order = Order::factory()->create(['status' => 'shipped']);
     $order->items()->create(['product_id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'art' => $product->art, 'qty' => 2, 'price' => $product->price]);
-    \App\Services\Inventory::lock($product, fn ($p) => \App\Services\Inventory::apply($p, 'sale', -2, $this->admin->id, null, 'test', $order->order_number));
+    Inventory::lock($product, fn ($p) => Inventory::apply($p, 'sale', -2, $this->admin->id, null, 'test', $order->order_number));
 
     $this->actingAs($this->admin)->delete(route('admin.order.destroy', $order));
     expect($product->fresh()->stock)->toBe(10);

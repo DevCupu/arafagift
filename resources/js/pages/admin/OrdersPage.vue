@@ -6,12 +6,12 @@ export default { layout: AdminLayout }
 <script setup>
 import { computed, ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
-import { Download, Plus, RotateCcw, Search, X } from 'lucide-vue-next'
+import { Download, Plus, RotateCcw, Search, ShieldCheck, X } from 'lucide-vue-next'
 import BulkActionBar from '@/components/admin/BulkActionBar.vue'
 import DataTable from '@/components/admin/DataTable.vue'
 import StatusPill from '@/components/admin/StatusPill.vue'
 import AppButton from '@/components/ui/AppButton.vue'
-import { orderStatuses, orderTotal, paymentStatuses, paymentStatusMeta, fulfillmentMeta } from '@/data/admin'
+import { orderStatuses, orderTotal, paymentPillClass, paymentStatuses, paymentStatusMeta, fulfillmentMeta } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 import { useToast } from '@/composables/useToast'
 
@@ -53,6 +53,7 @@ const rows = computed(() =>
 )
 
 const pendingCount = computed(() => props.orders.filter((o) => (o.paymentStatus ?? 'unpaid') === 'unpaid').length)
+const waitingVerificationCount = computed(() => props.orders.filter((o) => o.paymentStatus === 'waiting_confirmation').length)
 
 const countOf = (id) =>
   props.orders.filter((o) => {
@@ -85,7 +86,7 @@ const bulkDelete = () => {
     <header class="flex flex-wrap items-end justify-between gap-4">
       <div>
         <h1 class="text-[2.1rem] leading-none">Pesanan</h1>
-        <p class="mt-3 text-[0.85rem] text-muted">{{ orders.length }} pesanan · {{ pendingCount }} menunggu pembayaran</p>
+        <p class="mt-3 text-[0.85rem] text-muted">{{ orders.length }} pesanan · {{ pendingCount }} menunggu pembayaran · {{ waitingVerificationCount }} perlu verifikasi</p>
       </div>
       <div class="flex flex-wrap items-center gap-3">
         <AppButton href="/admin/pesanan/ekspor" variant="outline" size="sm">
@@ -98,6 +99,19 @@ const bulkDelete = () => {
         </AppButton>
       </div>
     </header>
+
+    <button
+      v-if="waitingVerificationCount"
+      type="button"
+      class="mt-6 flex w-full flex-wrap items-center justify-between gap-3 border border-sky-300 bg-sky-50 px-5 py-3.5 text-left transition hover:bg-sky-100"
+      @click="paymentFilter = 'waiting_confirmation'"
+    >
+      <span class="flex items-center gap-2 text-[0.85rem] text-sky-900">
+        <ShieldCheck class="h-4 w-4" :stroke-width="1.5" />
+        <span><strong>{{ waitingVerificationCount }} bukti pembayaran</strong> menunggu verifikasi.</span>
+      </span>
+      <span class="text-[0.75rem] font-semibold text-sky-900">Lihat →</span>
+    </button>
 
     <div class="no-scrollbar mt-8 flex gap-6 overflow-x-auto border-b border-line">
       <button
@@ -165,7 +179,7 @@ const bulkDelete = () => {
           <span class="block text-muted">{{ row.payment }}</span>
           <span
             class="mt-1 inline-block rounded-full px-2 py-0.5 text-[0.64rem] font-semibold uppercase tracking-[0.08em]"
-            :class="row.paymentStatus === 'paid' ? 'bg-olive/10 text-olive' : row.paymentStatus === 'refunded' ? 'bg-line/60 text-muted' : 'bg-gold/15 text-forest'"
+            :class="paymentPillClass(row.paymentStatus)"
           >{{ paymentStatusMeta(row.paymentStatus).label }}</span>
         </template>
         <template #cell-status="{ row }"><StatusPill :status="row.status" /></template>

@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
     'store_status', 'closed_message', 'low_stock_threshold',
     'maintenance_title', 'maintenance_end_time', 'maintenance_whitelist_ips', 'maintenance_secret',
     'bank_name', 'bank_account_number', 'bank_account_name', 'payment_instructions', 'qris_image_path',
+    'payment_window_hours',
     'meta_title', 'meta_description', 'google_analytics_id', 'facebook_pixel_id',
 ])]
 class Setting extends Model
@@ -27,6 +28,7 @@ class Setting extends Model
             'free_shipping_from' => 'integer',
             'bulk_minimum' => 'integer',
             'low_stock_threshold' => 'integer',
+            'payment_window_hours' => 'integer',
             'arafagift_delivery_start' => 'datetime:H:i',
             'arafagift_delivery_end' => 'datetime:H:i',
         ];
@@ -43,6 +45,7 @@ class Setting extends Model
             ->values()
             ->all();
     }
+
     /**
      * @return list<string>
      */

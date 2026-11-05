@@ -1,11 +1,11 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
-import { Head, router, usePage } from '@inertiajs/vue3'
-import { CircleCheck, CircleX, Clock, Copy, MessageCircle, Package, PackageCheck, PackageSearch, Search, Truck, Wallet } from 'lucide-vue-next'
+import { Head, router, useForm, usePage } from '@inertiajs/vue3'
+import { CircleAlert, CircleCheck, CircleX, Clock, Copy, MessageCircle, Package, PackageCheck, PackageSearch, Search, ShieldCheck, Truck, Upload, Wallet } from 'lucide-vue-next'
 import AppButton from '@/components/ui/AppButton.vue'
 import EmptyState from '@/components/ui/EmptyState.vue'
 import ProductArt from '@/components/art/ProductArt.vue'
-import { paymentStatusMeta, orderTotal, orderStepLabel } from '@/data/admin'
+import { paymentPillClass, paymentStatusMeta, orderTotal, orderStepLabel } from '@/data/admin'
 import { formatDateTime, formatIDR } from '@/composables/useFormat'
 import { useStore } from '@/composables/useStore'
 import { useToast } from '@/composables/useToast'
@@ -50,7 +50,9 @@ const steps = computed(() => [
 ])
 
 const statusHelp = computed(() => ({
-  pending: 'Menunggu konfirmasi pembayaran. Instruksi pembayaran ada di bawah — konfirmasi lewat WhatsApp.',
+  pending: isWaiting.value
+    ? 'Bukti pembayaran sudah diterima. Admin akan memverifikasi maksimal 1×24 jam.'
+    : 'Menunggu pembayaran. Unggah bukti transfer di bawah agar pesanan segera diproses.',
   paid: 'Pembayaran sudah kami terima. Pesanan akan segera masuk proses pengemasan.',
   processing: 'Pesanan sedang dikemas oleh tim kami.',
   shipped: isPickup.value
@@ -62,8 +64,44 @@ const statusHelp = computed(() => ({
 }))
 
 const isCancelled = computed(() => props.order?.status === 'cancelled')
-const isUnpaid = computed(() => (props.order?.paymentStatus ?? 'unpaid') !== 'paid')
+const paymentStatus = computed(() => props.order?.paymentStatus ?? 'unpaid')
+const isUnpaid = computed(() => paymentStatus.value === 'unpaid')
+const isWaiting = computed(() => paymentStatus.value === 'waiting_confirmation')
+const isPaid = computed(() => paymentStatus.value === 'paid')
+const isCod = computed(() => props.order?.paymentCode === 'cod')
+const paymentProof = computed(() => props.order?.paymentProof ?? null)
+const rejectedProof = computed(() => (paymentProof.value?.status === 'rejected' ? paymentProof.value : null))
 const currentStepIndex = computed(() => steps.value.findIndex((s) => s.id === props.order?.status))
+
+// ── Unggah bukti pembayaran (tamu tetap bisa, lewat token lacak) ──
+const proofInput = ref(null)
+const uploadForm = useForm({ proof: null, amount: '', sender_name: '', note: '' })
+
+const onProofChange = (event) => {
+  uploadForm.proof = event.target.files?.[0] ?? null
+}
+
+const submitProof = () => {
+  uploadForm.post(`/lacak/${props.order.trackingToken}/bukti-bayar`, {
+    forceFormData: true,
+    preserveScroll: true,
+    onSuccess: () => {
+      uploadForm.reset()
+      if (proofInput.value) proofInput.value.value = ''
+      push('Bukti pembayaran terkirim. Menunggu verifikasi admin.', { tone: 'success' })
+    },
+    onError: () => push('Periksa kembali file bukti dan nominal transfer.', { tone: 'danger' }),
+  })
+}
+
+
+const cancelOrder = () => {
+  if (!window.confirm('Batalkan pesanan ini? Tindakan ini tidak bisa dibatalkan.')) return
+  router.post(`/lacak/${props.order.trackingToken}/batal`, {}, {
+    preserveScroll: true,
+    onSuccess: () => push('Pesanan dibatalkan.', { tone: 'success' }),
+  })
+}
 
 // Instruksi bayar manual, termasuk rekening toko untuk transfer.
 const paymentInfo = computed(() => {
@@ -130,11 +168,7 @@ const paymentInfo = computed(() => {
               <span class="text-[0.8rem] text-forest">{{ orderStepLabel(order.status, order.fulfillment) }}</span>
               <span
                 class="rounded-full border px-2.5 py-0.5 text-[0.66rem] font-semibold uppercase tracking-[0.08em]"
-                :class="order.paymentStatus === 'paid'
-                  ? 'border-olive/40 bg-olive/10 text-olive'
-                  : order.paymentStatus === 'refunded'
-                    ? 'border-line bg-ivory text-muted'
-                    : 'border-gold/45 bg-gold/10 text-forest'"
+                :class="paymentPillClass(order.paymentStatus)"
               >{{ paymentStatusMeta(order.paymentStatus).label }}</span>
             </div>
           </header>
@@ -170,20 +204,88 @@ const paymentInfo = computed(() => {
             </li>
           </ol>
 
-          <!-- ════════ INSTRUKSI PEMBAYARAN ════════ -->
-          <div v-if="isUnpaid && !isCancelled" class="mt-8 border border-gold/40 bg-gold/[0.07] p-5">
+          <!-- ════════ STATUS PEMBAYARAN ════════ -->
+          <div v-if="isPaid && !isCancelled" class="mt-8 border border-olive/40 bg-olive/5 p-5">
+            <p class="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted">
+              <CircleCheck class="h-3.5 w-3.5 text-olive" :stroke-width="1.5" /> Pembayaran lunas
+            </p>
+            <p class="mt-2 text-[0.92rem] font-semibold text-forest">{{ order.payment }}</p>
+            <p v-if="order.paymentConfirmedAt" class="mt-1 text-[0.82rem] text-muted">Dikonfirmasi {{ formatDateTime(order.paymentConfirmedAt) }}</p>
+            <p v-if="order.paymentReference" class="mt-1 text-[0.82rem] text-muted">Referensi: {{ order.paymentReference }}</p>
+          </div>
+
+          <div v-else-if="isWaiting && !isCancelled" class="mt-8 border border-sky-300 bg-sky-50 p-5">
+            <p class="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-sky-800">
+              <ShieldCheck class="h-3.5 w-3.5" :stroke-width="1.5" /> Menunggu verifikasi
+            </p>
+            <p class="mt-2 text-[0.92rem] font-semibold text-forest">Bukti pembayaran sudah kami terima</p>
+            <p class="mt-1 text-[0.82rem] leading-relaxed text-forest/90">Admin akan memeriksa bukti Anda maksimal 1×24 jam. Buka kembali halaman ini untuk melihat status terbaru.</p>
+            <dl v-if="paymentProof" class="mt-4 space-y-1.5 border-t border-sky-200 pt-3 text-[0.8rem]">
+              <div class="flex justify-between gap-4"><dt class="text-muted">File</dt><dd class="truncate text-forest">{{ paymentProof.fileName }}</dd></div>
+              <div v-if="paymentProof.amount" class="flex justify-between gap-4"><dt class="text-muted">Nominal</dt><dd class="text-forest">{{ formatIDR(paymentProof.amount) }}</dd></div>
+              <div v-if="paymentProof.senderName" class="flex justify-between gap-4"><dt class="text-muted">Pengirim</dt><dd class="text-forest">{{ paymentProof.senderName }}</dd></div>
+              <div class="flex justify-between gap-4"><dt class="text-muted">Dikirim</dt><dd class="text-forest">{{ formatDateTime(paymentProof.submittedAt) }}</dd></div>
+            </dl>
+            <p class="mt-3 text-[0.75rem] leading-relaxed text-muted">
+              Salah unggah file?
+              <a :href="whatsappHref(`Halo ArafahGift, saya perlu mengganti bukti pembayaran untuk pesanan ${order.id}.`)" target="_blank" rel="noopener" class="link-underline text-forest">Hubungi kami di WhatsApp</a>.
+            </p>
+          </div>
+
+          <div v-else-if="isUnpaid && !isCancelled" class="mt-8 border border-gold/40 bg-gold/[0.07] p-5">
             <p class="flex items-center gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted">
               <Wallet class="h-3.5 w-3.5 text-gold" :stroke-width="1.5" /> Instruksi pembayaran
             </p>
             <p class="mt-2 text-[0.92rem] font-semibold text-forest">{{ order.payment }}</p>
+            <p v-if="order.paymentDueAt" class="mt-1 text-[0.78rem] font-semibold text-danger">Bayar sebelum {{ formatDateTime(order.paymentDueAt) }}</p>
             <p class="mt-1.5 whitespace-pre-line text-[0.82rem] leading-relaxed text-forest/90">{{ paymentInfo }}</p>
             <img
               v-if="order.paymentCode === 'qris' && store.qrisImageUrl"
               :src="store.qrisImageUrl" alt="Kode QRIS ArafahGift"
               class="mt-3 h-48 w-48 border border-line bg-surface object-contain p-2"
             />
-            <p class="mt-3 text-[0.75rem] leading-relaxed text-muted">
-              Sudah bayar? Kirim bukti transfer lewat WhatsApp agar pesanan segera kami proses.
+
+            <div v-if="rejectedProof" class="mt-4 border border-danger/30 bg-danger/5 p-4">
+              <p class="flex items-center gap-1.5 text-[0.8rem] font-semibold text-danger">
+                <CircleAlert class="h-3.5 w-3.5" :stroke-width="1.5" /> Bukti sebelumnya ditolak
+              </p>
+              <p class="mt-1 text-[0.78rem] leading-relaxed text-forest/90">{{ rejectedProof.rejectionReason || 'Silakan unggah ulang bukti yang lebih jelas.' }}</p>
+            </div>
+
+            <form v-if="!isCod" class="mt-5 border-t border-gold/30 pt-4" @submit.prevent="submitProof">
+              <p class="text-[0.8rem] font-semibold text-forest">Unggah bukti pembayaran</p>
+              <p class="mt-1 text-[0.72rem] leading-relaxed text-muted">JPG, PNG, WebP, atau PDF maksimal 5 MB. Setelah dikirim, admin memverifikasi maksimal 1×24 jam.</p>
+              <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                  <label class="field-label" :for="`proof-${order.id}`">File bukti</label>
+                  <input :id="`proof-${order.id}`" ref="proofInput" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" class="field text-xs" @change="onProofChange" />
+                  <p v-if="uploadForm.errors.proof" class="mt-1 text-[0.72rem] text-danger">{{ uploadForm.errors.proof }}</p>
+                </div>
+                <div>
+                  <label class="field-label" :for="`amount-${order.id}`">Nominal transfer</label>
+                  <input :id="`amount-${order.id}`" v-model="uploadForm.amount" type="number" min="0" class="field" placeholder="150000" />
+                  <p v-if="uploadForm.errors.amount" class="mt-1 text-[0.72rem] text-danger">{{ uploadForm.errors.amount }}</p>
+                </div>
+                <div>
+                  <label class="field-label" :for="`sender-${order.id}`">Nama pengirim</label>
+                  <input :id="`sender-${order.id}`" v-model="uploadForm.sender_name" maxlength="100" class="field" placeholder="Nama di rekening" />
+                </div>
+                <div class="sm:col-span-2">
+                  <label class="field-label" :for="`proof-note-${order.id}`">Catatan (opsional)</label>
+                  <input :id="`proof-note-${order.id}`" v-model="uploadForm.note" maxlength="500" class="field" placeholder="Contoh: transfer dari rekening BSI" />
+                </div>
+              </div>
+              <AppButton type="submit" class="mt-4" block :loading="uploadForm.processing">
+                <template #icon><Upload class="h-4 w-4" /></template>
+                Kirim bukti pembayaran
+              </AppButton>
+              <p class="mt-2 text-[0.72rem] leading-relaxed text-muted">
+                Lebih nyaman lewat WhatsApp?
+                <a :href="whatsappHref(`Halo ArafahGift, saya mau kirim bukti pembayaran untuk pesanan ${order.id}.`)" target="_blank" rel="noopener" class="link-underline text-forest">Kirim bukti ke WhatsApp kami</a>.
+              </p>
+            </form>
+            <p v-else class="mt-4 border-t border-gold/30 pt-3 text-[0.78rem] leading-relaxed text-muted">
+              Pesanan COD dibayar saat barang diterima, jadi tidak perlu unggah bukti sekarang.
             </p>
           </div>
 
@@ -242,6 +344,12 @@ const paymentInfo = computed(() => {
             <span class="text-[0.85rem] text-muted">Total</span>
             <span class="font-display text-2xl text-forest">{{ formatIDR(orderTotal(order)) }}</span>
           </div>
+
+          <div class="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <a :href="`/lacak/${order.trackingToken}/invoice`" target="_blank" rel="noopener" class="link-underline text-[0.8rem] text-forest">Lihat / cetak invoice</a>
+            <button v-if="order.canCancel" type="button" class="text-[0.8rem] text-danger underline underline-offset-4" @click="cancelOrder">Batalkan pesanan</button>
+          </div>
+          <p v-if="errors.cancel" class="mt-2 text-center text-[0.72rem] text-danger">{{ errors.cancel }}</p>
 
           <p class="mt-8 text-center text-[0.8rem] text-muted">
             Ada pertanyaan soal pesanan ini?

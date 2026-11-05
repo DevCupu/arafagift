@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
+use App\Services\OrderLifecycle;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,5 +25,14 @@ class AccountOrderController extends Controller
         return Inertia::render('account/OrderDetailPage', [
             'order' => $order->load(['items', 'shippingMethod', 'paymentMethod'])->toCatalog(),
         ]);
+    }
+
+    public function cancel(Request $request, Order $order): RedirectResponse
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        return OrderLifecycle::cancelByCustomer($order, $request->user())
+            ? back()->with('success', 'Pesanan dibatalkan.')
+            : back()->withErrors(['cancel' => 'Pesanan ini sudah diproses atau dibayar, sehingga tidak bisa dibatalkan sendiri. Hubungi kami via WhatsApp.']);
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\ProductReviewService;
 use App\Support\Image\CatalogImage;
 use App\Support\Seo\PageSeo;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +18,7 @@ class ProductController extends Controller
     {
         // New payload includes responsive image sources. Do not reuse an old
         // cached product payload that only contains the original image URL.
-        return "product-page:v2:{$slug}";
+        return "product-page:v3:{$slug}";
     }
 
     public function search(Request $request): JsonResponse
@@ -60,17 +61,22 @@ class ProductController extends Controller
             404,
         );
 
+        $user = $request->user();
+        $myReview = $user ? $product->reviews()->where('user_id', $user->id)->first() : null;
+
         return Inertia::render('shop/ProductPage', [
             ...self::page($product),
+            'canReview' => $user && ! $myReview && ProductReviewService::eligibleOrder($user, $product) !== null,
+            'myReview' => $myReview?->toCatalog(),
             'seoHead' => self::seoHead($product),
         ]);
     }
 
     /**
-     * aggregateRating sengaja tidak pernah dikirim. Kolom rating/review di
-     * database masih berisi nilai placeholder, dan Google memperlakukan
-     * rating yang tidak didukung data nyata sebagai pelanggaran spam
-     * structured data, yang bisa costing seluruh halaman produk di rich result.
+     * aggregateRating hanya dikirim kalau ada ulasan yang sudah disetujui.
+     * Dihitung dari tabel ulasan, bukan kolom rating produk yang bisa berisi
+     * nilai placeholder; Google menganggap rating tanpa data nyata sebagai spam
+     * structured data.
      *
      * @return list<string>
      */
@@ -110,6 +116,16 @@ class ProductController extends Controller
                 'seller' => ['@type' => 'Organization', 'name' => PageSeo::BRAND],
             ],
         ];
+
+        $reviews = $product->reviews()->approved();
+
+        if (($reviewCount = $reviews->count()) > 0) {
+            $graph['aggregateRating'] = [
+                '@type' => 'AggregateRating',
+                'ratingValue' => round((float) $reviews->avg('rating'), 1),
+                'reviewCount' => $reviewCount,
+            ];
+        }
 
         if ($image !== null) {
             $graph['image'] = [str_starts_with($image, '/') ? url($image) : $image];
@@ -158,7 +174,7 @@ class ProductController extends Controller
     }
 
     /**
-     * @return array{product: array<string, mixed>, related: array<int, array<string, mixed>>}
+     * @return array{reviews: array<int, array<string, mixed>>, product: array<string, mixed>, related: array<int, array<string, mixed>>}
      */
     public static function page(Product $product): array
     {
@@ -173,6 +189,7 @@ class ProductController extends Controller
                 ->get();
 
             return [
+                'reviews' => $product->reviews()->approved()->latest('id')->limit(20)->get()->map->toPublic()->values()->all(),
                 'product' => $product->toCatalog(),
                 'related' => $related->map->toCard()->values()->all(),
             ];

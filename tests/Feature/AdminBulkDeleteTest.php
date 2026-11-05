@@ -8,6 +8,7 @@ use App\Models\Promotion;
 use App\Models\Supplier;
 use App\Models\Testimonial;
 use App\Models\User;
+use App\Services\Inventory;
 
 beforeEach(function () {
     $this->admin = User::factory()->create(['is_admin' => true]);
@@ -18,7 +19,7 @@ it('bulk deletes orders and restores their deducted stock', function () {
     $orders = Order::factory()->count(2)->create(['status' => 'processing']);
     foreach ($orders as $order) {
         $order->items()->create(['product_id' => $product->id, 'name' => $product->name, 'sku' => $product->sku, 'art' => $product->art, 'qty' => 2, 'price' => $product->price]);
-        \App\Services\Inventory::lock($product, fn ($p) => \App\Services\Inventory::apply($p, 'sale', -2, $this->admin->id, null, 'test', $order->order_number));
+        Inventory::lock($product, fn ($p) => Inventory::apply($p, 'sale', -2, $this->admin->id, null, 'test', $order->order_number));
     }
     expect($product->fresh()->stock)->toBe(6);
 

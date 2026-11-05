@@ -11,6 +11,7 @@ import {
   BadgeCheck,
   CheckCircle2,
   ChevronRight,
+  Clock,
   Copy,
   CreditCard,
   Database,
@@ -145,6 +146,7 @@ const form = useForm({
   bank_account_number:       props.settings.bank_account_number ?? '',
   bank_account_name:         props.settings.bank_account_name ?? '',
   payment_instructions:      props.settings.payment_instructions ?? '',
+  payment_window_hours:      props.settings.payment_window_hours ?? 24,
   qris_image:                null,
   meta_title:                props.settings.meta_title ?? '',
   meta_description:          props.settings.meta_description ?? '',
@@ -716,6 +718,20 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
             </div>
 
             <div class="sm:col-span-2 rounded-xl border border-line bg-ivory/40 p-5">
+              <p class="flex items-center gap-1.5 text-sm font-semibold text-forest">
+                <Clock class="h-4 w-4 text-gold" />Batas Waktu Pembayaran
+              </p>
+              <p class="mt-1 text-xs text-muted">Pesanan transfer/QRIS yang belum dibayar sampai batas ini otomatis dibatalkan dan stoknya dikembalikan. Pesanan COD tidak dibatasi.</p>
+              <div class="mt-3 flex items-center gap-3">
+                <div class="max-w-[140px]">
+                  <input id="s-payment-window" v-model.number="form.payment_window_hours" type="number" min="1" max="168" class="field text-center" placeholder="24" />
+                </div>
+                <span class="text-xs text-muted">jam</span>
+              </div>
+              <p v-if="form.errors.payment_window_hours" class="mt-1 text-xs text-danger">{{ form.errors.payment_window_hours }}</p>
+            </div>
+
+            <div class="sm:col-span-2 rounded-xl border border-line bg-ivory/40 p-5">
               <p class="text-sm font-semibold text-forest">Gambar QRIS Toko</p>
               <p class="mt-0.5 text-xs text-muted">Ditampilkan di checkout dan halaman lacak saat pelanggan memilih QRIS.</p>
               <div class="mt-3 flex flex-wrap items-start gap-4">
@@ -823,6 +839,11 @@ const formatRp = (n) => new Intl.NumberFormat('id-ID').format(n || 0)
               <label class="field-label" for="s-pixel">Meta / Facebook Pixel ID</label>
               <input id="s-pixel" v-model="form.facebook_pixel_id" class="field font-mono" placeholder="123456789012345" />
             </div>
+
+            <p class="sm:col-span-2 text-xs leading-relaxed text-muted">
+              Script GA4 &amp; Meta Pixel baru dimuat setelah pengunjung menekan <strong>Terima</strong> pada banner cookie.
+              Tidak ada data pelanggan yang dikirim ke pihak ketiga sebelum itu.
+            </p>
 
             <div class="sm:col-span-2 rounded-xl border border-line bg-white p-5 space-y-1">
               <p class="text-[0.65rem] text-muted mb-2 font-mono uppercase tracking-wider">Preview Google Search Result</p>

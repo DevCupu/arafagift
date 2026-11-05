@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\PaymentMethod;
 use App\Models\Setting;
 use App\Models\User;
 use App\Support\StoreSettingsCache;
@@ -56,7 +57,7 @@ it('lets an admin configure the ArafahGift delivery window', function () {
 });
 
 it('lets an admin activate or deactivate a payment method', function () {
-    $method = \App\Models\PaymentMethod::firstOrCreate(
+    $method = PaymentMethod::firstOrCreate(
         ['code' => 'cod'],
         ['name' => 'COD', 'is_active' => true, 'sort_order' => 30],
     );

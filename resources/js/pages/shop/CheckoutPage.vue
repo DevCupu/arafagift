@@ -20,6 +20,7 @@ import { formatIDR } from '@/composables/useFormat'
 import { useCart } from '@/composables/useCart'
 import { useStore } from '@/composables/useStore'
 import { useToast } from '@/composables/useToast'
+import { track } from '@/composables/useAnalytics'
 import { statusMeta } from '@/data/admin'
 
 const page = usePage()
@@ -29,6 +30,15 @@ const paymentMethods = computed(() => page.props.paymentMethods ?? [])
 const cart = useCart()
 const { whatsappHref } = useStore()
 const { push } = useToast()
+
+// Bentuk item untuk GA4/Meta. Item pesanan lama hanya punya SKU, bukan id.
+const analyticsItems = (items) => (items ?? []).map((item) => ({
+  item_id: item.id ?? item.sku ?? item.name,
+  item_name: item.name,
+  item_category: item.category,
+  price: item.price,
+  quantity: item.qty ?? item.quantity ?? 1,
+}))
 
 const helpHref = computed(() =>
   whatsappHref('Halo ArafahGift, saya butuh bantuan untuk menyelesaikan pesanan saya.'),
@@ -674,6 +684,13 @@ const placeOrder = async () => {
     }
 
     placedOrder.value = await res.json()
+    track('purchase', {
+      transaction_id: placedOrder.value.id,
+      currency: 'IDR',
+      value: placedOrder.value.total,
+      shipping: placedOrder.value.shipping?.cost ?? 0,
+      items: analyticsItems(placedOrder.value.items),
+    })
     startConfirmationTimer(placedOrder.value)
     persistProfile()
     cart.clear()
@@ -695,6 +712,15 @@ onUnmounted(() => {
 
 onMounted(() => {
   loadProfile()
+
+  if (cart.items.value.length) {
+    track('begin_checkout', {
+      currency: 'IDR',
+      value: cart.subtotal.value,
+      items: analyticsItems(cart.items.value),
+    })
+  }
+
   if (!paymentMethod.value) paymentMethod.value = paymentMethods.value[0]?.id ?? ''
   if (user.value) {
     if (!form.name) form.name = user.value.name ?? ''

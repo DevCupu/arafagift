@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { useToast } from '@/composables/useToast'
+import { track } from '@/composables/useAnalytics'
 
 const STORAGE_KEY = 'arafahgift.cart'
 const { push } = useToast()
@@ -63,6 +64,17 @@ export function useCart() {
       }]
     }
     pulse.value++
+    track('add_to_cart', {
+      currency: 'IDR',
+      value: product.price * qty,
+      items: [{
+        item_id: product.id,
+        item_name: product.name,
+        item_category: product.category,
+        price: product.price,
+        quantity: qty,
+      }],
+    })
     if (!silent) push(`${product.name} masuk keranjang`, { tone: 'success' })
   }
 

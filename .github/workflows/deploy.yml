@@ -1,50 +1,151 @@
 name: Deploy Arafagift
 
+# Push ke main = deploy. PR hanya menjalankan lint + test (tanpa menyentuh server).
+# workflow_dispatch dipakai untuk deploy ulang manual kalau langkah SSH sempat gagal.
 on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
+# Hanya satu deploy per branch pada satu waktu. Deploy TIDAK dibatalkan di tengah
+# jalan supaya maintenance mode tidak pernah tertinggal menyala.
 concurrency:
-  group: production
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
+permissions:
+  contents: read
 
+env:
+  PHP_VERSION: "8.3"
+  NODE_VERSION: "22"
+  APP_PATH: /home/izim8295/arafagift
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 1. Build aset di runner. Server tidak perlu Node.
+  # ─────────────────────────────────────────────────────────────────────────────
+  build:
+    name: Build aset
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      # 1. Checkout source
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: ${{ env.NODE_VERSION }}
           cache: npm
 
-      # 3. Install frontend dependencies
       - name: Install Node dependencies
         run: npm ci
 
-      # 4. Build frontend di GitHub Actions
       - name: Build frontend
         run: npm run build
 
-      # 5. Update source + Composer di server
-      - name: Update source and install PHP dependencies
+      - name: Upload hasil build
+        uses: actions/upload-artifact@v4
+        with:
+          name: vite-build
+          # `/**` membuat isi folder jadi root artifact (manifest.json + assets/),
+          # sehingga download ke `public/build` mengembalikan struktur yang sama.
+          path: public/build/**
+          if-no-files-found: error
+          retention-days: 3
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 2. Gerbang kualitas. Deploy TIDAK akan jalan kalau job ini gagal.
+  #
+  # Test dijalankan dengan artifact build yang sama persis dengan yang nanti
+  # di-upload ke server, jadi kalau manifest Vite bermasalah ketahuan di sini.
+  # ─────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Lint & test
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, fileinfo, pdo_sqlite, sqlite3, gd, zip, intl, bcmath, curl
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Install PHP dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Ambil hasil build
+        uses: actions/download-artifact@v4
+        with:
+          name: vite-build
+          path: public/build
+
+      - name: Siapkan environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Pint (format check)
+        run: ./vendor/bin/pint --test
+
+      - name: Test suite
+        run: php artisan test --compact
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # 3. Deploy.
+  #
+  # Urutan ini disengaja: maintenance mode dinyalakan SEBELUM kode diganti, dan
+  # situs baru dinyalakan setelah aset + migrasi terverifikasi. Versi lama
+  # melakukan `git reset --hard` saat situs masih melayani trafik, sehingga ada
+  # jendela di mana kode baru berjalan di atas skema database lama.
+  # ─────────────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy ke production
+    needs: [build, test]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Ambil hasil build
+        uses: actions/download-artifact@v4
+        with:
+          name: vite-build
+          path: public/build
+
+      # 3a. Maintenance ON, lalu tarik kode + dependency + migrasi.
+      - name: Maintenance mode, sinkron kode, dan migrasi
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
             set -e
+            cd "${{ env.APP_PATH }}"
 
-            cd /home/izim8295/arafagift
+            # Situs masuk maintenance SEBELUM ada file yang diganti.
+            php artisan down --render="errors::503" --retry=60
 
             git fetch origin main
             git reset --hard origin/main
@@ -55,8 +156,14 @@ jobs:
               --no-interaction \
               --prefer-dist
 
-      # 6. Upload hasil Vite
-      - name: Upload Vite build
+            # Pratinjau SQL hanya untuk log (tidak mengubah apa pun).
+            php artisan migrate --pretend --force || true
+
+            php artisan migrate --force
+
+      # 3b. Upload aset. Situs masih maintenance, jadi tidak ada pengunjung
+      # yang menerima HTML lama dengan manifest baru (atau sebaliknya).
+      - name: Upload aset Vite
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -64,44 +171,80 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "public/build"
-          target: "/home/izim8295/arafagift/public"
+          target: "${{ env.APP_PATH }}/public"
           strip_components: 1
           overwrite: true
 
-      # 7. Maintenance + migration + optimize
-      - name: Run Laravel deployment tasks
+      # 3c. Bersihkan cache lama + optimasi. Belum keluar dari maintenance.
+      - name: Bersihkan cache dan optimasi
         uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           port: ${{ secrets.SSH_PORT }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 10m
           script: |
             set -e
+            cd "${{ env.APP_PATH }}"
 
-            cd /home/izim8295/arafagift
-
-            # Pastikan maintenance dimatikan walaupun deployment gagal
-            trap 'php artisan up || true' EXIT
-
-            php artisan down --render="errors::503"
-
-            # Pastikan symlink public/storage ada via bash tanpa memanggil PHP exec()
             if [ ! -e public/storage ]; then
               ln -sfn ../storage/app/public public/storage 2>/dev/null || true
             fi
 
-            php artisan migrate --force
-
-            # Bersihkan cache dan compiled view lama agar menggunakan template & kode terbaru
             php artisan cache:clear
             php artisan view:clear
-
             php artisan optimize
             php artisan app:cache-warm
 
-            # Sinyal LiteSpeed agar proses detached PHP me-reload opcache
             touch /home/izim8295/.lsphp_restart.txt 2>/dev/null || true
 
+      # 3d. Satu-satunya tempat yang mematikan maintenance mode.
+      #
+      # `always()` penting: kalau salah satu langkah di atas gagal (termasuk
+      # gangguan jaringan saat SCP), situs tidak boleh tertinggal 503 selamanya.
+      # Tapi situs juga tidak dinyalakan kalau aset atau migrasi belum beres —
+      # lebih baik 503 daripada 500 dengan skema setengah jadi.
+      - name: Gerbang kesehatan dan keluar dari maintenance
+        if: always()
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          port: ${{ secrets.SSH_PORT }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          command_timeout: 5m
+          script: |
+            set -e
+            cd "${{ env.APP_PATH }}"
+
+            if [ ! -f public/build/manifest.json ]; then
+              echo "::error::public/build/manifest.json tidak ada — situs DIBIARKAN dalam maintenance mode."
+              exit 1
+            fi
+
+            status_output=$(php artisan migrate:status --no-ansi 2>&1) || {
+              echo "::error::Tidak bisa membaca status migrasi — situs DIBIARKAN dalam maintenance mode."
+              echo "$status_output"
+              exit 1
+            }
+
+            if echo "$status_output" | grep -qiE '\bpending\b'; then
+              echo "::error::Masih ada migrasi pending — situs DIBIARKAN dalam maintenance mode."
+              echo "$status_output"
+              exit 1
+            fi
+
             php artisan up
-            trap - EXIT
+
+            # Smoke test ringan. Sengaja tidak menggagalkan job karena hosting
+            # bisa saja memasang proteksi bot di depan domain.
+            APP_URL=$(grep -E '^APP_URL=' .env | head -n1 | cut -d= -f2- | tr -d '"' | tr -d "'" || true)
+            if [ -n "$APP_URL" ]; then
+              code=$(curl -s -o /dev/null -w "%{http_code}" -L -m 20 "$APP_URL/" || echo "000")
+              echo "Smoke test $APP_URL -> HTTP $code"
+              case "$code" in
+                2*|3*) ;;
+                *) echo "::warning::Smoke test mengembalikan HTTP $code" ;;
+              esac
+            fi
